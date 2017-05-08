@@ -1,0 +1,6 @@
+dev/*
+*.DS_Store
+*.ipynb_checkpoints
+*.pyc
+build/*
+*.ipynb
