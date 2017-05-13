@@ -39,9 +39,18 @@ class Lmer(object):
         self.formula = formula
         self.data = data
 
+
+    def __repr__(self):
+        return "%s.%s(formula='%s', fitted=%s)" % (
+        self.__class__.__module__,
+        self.__class__.__name__,
+        self.formula,
+        self.fitted
+        )
+
     def _sig_stars(self,val):
         star = ''
-        if 0 < val < .001:
+        if 0 <= val < .001:
             star = '***'
         elif .001 <= val < 0.01:
             star = '**'
