@@ -14,6 +14,7 @@ class Lmer(object):
     Args:
         formula (string): Complete lmer-style model formula
         data (dataframe): pandas dataframe of input data
+        family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)
 
     Attributes:
         fitted: (bool) whether fit method has been called yet
@@ -33,18 +34,23 @@ class Lmer(object):
 
     """
 
-    def __init__(self,formula,data):
+    def __init__(self,formula,data,family='gaussian'):
 
         self.fitted = False
         self.formula = formula
         self.data = data
+        self.family = family
+        implemented_fams = ['gaussian','binomial']
+        if self.family not in implemented_fams:
+            raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
 
 
     def __repr__(self):
-        return "%s.%s(formula='%s', fitted=%s)" % (
+        return "%s.%s(formula='%s', family='%s', fitted=%s)" % (
         self.__class__.__module__,
         self.__class__.__name__,
         self.formula,
+        self.family,
         self.fitted
         )
 
@@ -72,12 +78,17 @@ class Lmer(object):
 
         """
 
-        print("Fitting model using lmer with "+conf_int+" confidence intervals...\n")
-        self.fitted = True
-        lmer = importr('lmerTest')
+        if self.family == 'gaussian':
+            print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
+            lmer = importr('lmerTest')
+            model = lmer.lmer(self.formula,data=self.data)
+        else:
+            print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
+            lmer = importr('lme4')
+            model = lmer.lmer(self.formula,data=self.data,family=self.family)
+
         base = importr('base')
 
-        model = lmer.lmer(self.formula,data=self.data)
         summary = base.summary(model)
         unsum = base.unclass(summary)
 
@@ -85,10 +96,6 @@ class Lmer(object):
         self.ngrps = unsum.rx2('ngrps')[0]
         self.AIC = unsum.rx2('AICtab')[0]
         self.logLike = unsum.rx2('logLik')[0]
-        if type(unsum.rx2('family')) is rpy2.rinterface.RNULLType:
-            self.family = 'linear'
-        else:
-            self.family = unsum.rx2('family')[0]
 
         if len(unsum.rx2('optinfo').rx2('warnings')) == 0:
             self.warnings = None
@@ -147,29 +154,58 @@ class Lmer(object):
         self.data['fits'] = copy(self.fits)
 
         #Coefficients, and inference statistics
-        rstring = """
-            function(model){
-            out.df <- data.frame(unclass(summary(model))$coefficients)
-            out.df
-            }
-        """
-        estimates_func = robjects.r(rstring)
-        df = pandas2ri.ri2py(estimates_func(model))
-        df.columns = ['Estimate','Std','DF','T-stat','P-val']
+        if self.family == 'gaussian':
 
-        rstring = """
-            function(model){
-            out.df <- data.frame(confint(model,method='"""+conf_int+"""'))
-            out.df
-            }
-        """
-        conf_func = robjects.r(rstring)
-        df_c = pandas2ri.ri2py(conf_func(model))
-        df_c = df_c.loc['(Intercept)':,:]
-        df_c.columns = ['2.5_ci','97.5_ci']
-        df = pd.concat([df,df_c],axis=1)
+            rstring = """
+                function(model){
+                out.coef <- data.frame(unclass(summary(model))$coefficients)
+                out.ci <- data.frame(confint(model,method='"""+conf_int+"""'))
+                n <- c(rownames(out.ci))
+                idx <- max(grep('sig',n))
+                out.ci <- out.ci[-seq(1:idx),]
+                out <- cbind(out.coef,out.ci)
+                out
+                }
+            """
+            estimates_func = robjects.r(rstring)
+            df = pandas2ri.ri2py(estimates_func(model))
+
+            df.columns = ['Estimate','SE','DF','T-stat','P-val','2.5_ci','97.5_ci']
+
+            df = df[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']]
+
+        elif self.family == 'binomial':
+
+            rstring = """
+                function(model){
+                out.coef <- data.frame(unclass(summary(model))$coefficients)
+                out.ci <- data.frame(confint(model,method='"""+conf_int+"""'))
+                n <- c(rownames(out.ci))
+                idx <- max(grep('sig',n))
+                out.ci <- out.ci[-seq(1:idx),]
+                out <- cbind(out.coef,out.ci)
+                odds <- exp(out.coef[1])
+                colnames(odds) <- "OR"
+                probs <- data.frame(sapply(out.coef[1],plogis))
+                colnames(probs) <- "Prob"
+                odds.ci <- exp(out.ci)
+                colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
+                probs.ci <- data.frame(sapply(out.ci,plogis))
+                colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
+                out <- cbind(out,odds,odds.ci,probs,probs.ci)
+                out
+                }
+            """
+
+            estimates_func = robjects.r(rstring)
+            df = pandas2ri.ri2py(estimates_func(model))
+
+            df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci']
+            df = df[['Estimate','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','SE','Z-stat','P-val']]
+
         df['Sig'] = df['P-val'].apply(lambda x: self._sig_stars(x))
         self.coefs = df
+        self.fitted = True
 
         print("Number of groups: %s\n" % (self.ngrps))
         print("Log-likelihood: %s \t AIC: %s\n" % (self.logLike,self.AIC))
