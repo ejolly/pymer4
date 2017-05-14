@@ -4,3 +4,4 @@ dev/*
 *.pyc
 build/*
 *.ipynb
+.cache/*

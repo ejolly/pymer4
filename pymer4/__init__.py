@@ -1,2 +1,2 @@
-__all__ = ["models"]
+__all__ = ["models", "utils"]
 from models import Lmer
