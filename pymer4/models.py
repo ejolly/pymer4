@@ -38,7 +38,7 @@ class Lmer(object):
 
         self.fitted = False
         self.formula = formula
-        self.data = data
+        self.data = copy(data)
         self.family = family
         implemented_fams = ['gaussian','binomial']
         if self.family not in implemented_fams:
@@ -55,6 +55,7 @@ class Lmer(object):
         )
 
     def _sig_stars(self,val):
+        """Adds sig stars to coef table prettier output."""
         star = ''
         if 0 <= val < .001:
             star = '***'
@@ -66,26 +67,52 @@ class Lmer(object):
             star = '.'
         return star
 
-    def fit(self,conf_int='Wald'):
+    def _make_factors(self,D):
+        """Takes a dict of df columns to convert to R factor levels."""
+
+        rstring = """
+            function(df,f,lv){
+            df[,f] <- factor(df[,f],lv)
+            df
+            }
+        """
+        factorize = robjects.r(rstring)
+        df = copy(self.data)
+        for k in D.iterkeys():
+            df[k] = df[k].astype(str)
+
+        r_df = pandas2ri.py2ri(df)
+        for k,v in D.iteritems():
+
+            r_df = factorize(r_df,k,v)
+
+        return r_df
+
+    def fit(self,conf_int='Wald',factors=None):
         """Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
 
         Args:
             conf_int: (string) which method to compute confidence intervals: profile, Wald (default), or boot (parametric bootstrap)
+            factors: (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
 
         Returns:
             coefs: (dataframe) dataframe of R style summary() table
             model: (Lmer) model object with numerous additional computed attributions
 
         """
+        if factors:
+            dat = self._make_factors(factors)
+        else:
+            dat = self.data
 
         if self.family == 'gaussian':
             print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lmerTest')
-            model = lmer.lmer(self.formula,data=self.data)
+            model = lmer.lmer(self.formula,data=dat)
         else:
             print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lme4')
-            model = lmer.lmer(self.formula,data=self.data,family=self.family)
+            model = lmer.lmer(self.formula,data=dat,family=self.family)
 
         base = importr('base')
 
@@ -93,7 +120,7 @@ class Lmer(object):
         unsum = base.unclass(summary)
 
         #Do scalars first cause they're easier
-        self.ngrps = unsum.rx2('ngrps')[0]
+        self.ngrps = np.array(unsum.rx2('ngrps'))
         self.AIC = unsum.rx2('AICtab')[0]
         self.logLike = unsum.rx2('logLik')[0]
 
@@ -104,12 +131,24 @@ class Lmer(object):
             for warning in self.warnings:
                 print(warning + ' \n')
 
-        #Vcovs
-        df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor'))).drop('var2',axis=1)
-        df.columns = ['Groups','Name','Var','Std']
-        self.vcov_ranef = df
+        #Random effect variances and correlations
+        df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
+        ran_vars = df.query("var2 == 'NA'").drop('var2',axis=1)
+        ran_vars.index = ran_vars['grp']
+        ran_vars.drop('grp',axis=1,inplace=True)
+        ran_vars.columns = ['Name','Var','Std']
+        ran_vars.index.name = None
 
-        #self.vcov_fixef = Gotta figure out how to parse this
+        ran_corrs = df.query("var2 != 'NA'").drop('vcov',axis=1)
+        ran_corrs.index = ran_corrs['grp']
+        ran_corrs.drop('grp',axis=1,inplace=True)
+        ran_corrs.columns = ['IV1','IV2','Corr']
+        ran_corrs.index.name = None
+
+        self.ranef_var = ran_vars
+        self.ranef_corr = ran_corrs
+
+        # TODO Parse and store fixed effects correlation matrix +enhancement id:2 gh:11
 
         #Cluster (e.g subject) level coefficients
         rstring = """
@@ -207,9 +246,11 @@ class Lmer(object):
         self.coefs = df
         self.fitted = True
 
+        # TODO: Add group names when printing number of groups +enhancement id:1 gh:10
         print("Number of groups: %s\n" % (self.ngrps))
-        print("Log-likelihood: %s \t AIC: %s\n" % (self.logLike,self.AIC))
+        print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
         print("Random effects:\n")
-        print self.vcov_ranef
+        print("%s\n" % (self.ranef_var.round(3)))
+        print("%s\n" % (self.ranef_corr.round(3)))
         print("Fixed effects:\n")
-        return self.coefs
+        return self.coefs.round(3)

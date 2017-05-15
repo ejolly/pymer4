@@ -5,3 +5,4 @@ dev/*
 build/*
 *.ipynb
 .cache/*
+.imdone/*
