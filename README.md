@@ -37,11 +37,13 @@ from pymer4.models import Lmer
 
 df = pandas.read_csv('mydata.csv')
 
-#Initialize a model object using plain old R-style formulae
-#Because this is just running R behind the scenes, any model specification that lme4 can handle will work here
+# Initialize a model object using plain old R-style formulae
+# Because this is just running R behind the scenes, any model specification that lme4 can handle will work here
+
 model = Lmer('DV ~ IV1 (IV1 | Subject)',data=df)
 
-#Fit it and voila! R-style summary statistics
+# Fit it and voila! R-style summary statistics
+
 model.fit(method = 'Wald')
 ```
 
