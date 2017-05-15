@@ -75,7 +75,7 @@ The full list includes:
 
 ## Advanced usage <a name="advanced-usage"></a>
 ```
-# Fit a multi-level logit model with categorical predictors and random slopes and intercepts using provided sample data
+# Fit a multi-level logit model with categorical predictors and random slopes and intercepts along with confidence intervals computed using parametric bootstrapping. Use provided sample data.
 
 import pandas as pd
 from pymer4.utils import get_resource_path
@@ -91,7 +91,7 @@ model = Lmer('DV_l ~ IV3*IV4 + (IV3|Group) + (IV3|Group_2)',data=df,family='bino
 model.fit(factors={
     'IV3':['1.0','0.5','1.5'],
     'IV4':['B','C','A']
-    })
+    }, conf_int = 'boot')
 ```
 
 ## Coming soon <a name="coming-soon"></a>

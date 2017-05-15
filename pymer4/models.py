@@ -92,7 +92,7 @@ class Lmer(object):
         """Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
 
         Args:
-            conf_int: (string) which method to compute confidence intervals: profile, Wald (default), or boot (parametric bootstrap)
+            conf_int: (string) which method to compute confidence intervals; profile, Wald (default), or boot (parametric bootstrap)
             factors: (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
 
         Returns:
