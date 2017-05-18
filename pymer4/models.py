@@ -88,11 +88,11 @@ class Lmer(object):
 
         return r_df
 
-    def fit(self,conf_int='Wald',factors=None):
+    def fit(self,conf_int='profile',factors=None):
         """Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
 
         Args:
-            conf_int: (string) which method to compute confidence intervals; profile, Wald (default), or boot (parametric bootstrap)
+            conf_int: (string) which method to compute confidence intervals; profile (default), Wald, or boot (parametric bootstrap)
             factors: (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
 
         Returns:
@@ -133,17 +133,21 @@ class Lmer(object):
 
         #Random effect variances and correlations
         df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
-        ran_vars = df.query("var2 == 'NA'").drop('var2',axis=1)
+        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop('var2',axis=1)
         ran_vars.index = ran_vars['grp']
         ran_vars.drop('grp',axis=1,inplace=True)
         ran_vars.columns = ['Name','Var','Std']
         ran_vars.index.name = None
+        ran_vars.replace('NA','',inplace=True)
 
-        ran_corrs = df.query("var2 != 'NA'").drop('vcov',axis=1)
-        ran_corrs.index = ran_corrs['grp']
-        ran_corrs.drop('grp',axis=1,inplace=True)
-        ran_corrs.columns = ['IV1','IV2','Corr']
-        ran_corrs.index.name = None
+        ran_corrs = df.query("(var2 != 'NA') & (var2 != 'N')").drop('vcov',axis=1)
+        if ran_corrs.shape[0] != 0:
+            ran_corrs.index = ran_corrs['grp']
+            ran_corrs.drop('grp',axis=1,inplace=True)
+            ran_corrs.columns = ['IV1','IV2','Corr']
+            ran_corrs.index.name = None
+        else:
+            ran_corrs = None
 
         self.ranef_var = ran_vars
         self.ranef_corr = ran_corrs
@@ -251,6 +255,9 @@ class Lmer(object):
         print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
         print("Random effects:\n")
         print("%s\n" % (self.ranef_var.round(3)))
-        print("%s\n" % (self.ranef_corr.round(3)))
+        if self.ranef_corr is not None:
+            print("%s\n" % (self.ranef_corr.round(3)))
+        else:
+            print("No random effect correlations specified\n")
         print("Fixed effects:\n")
         return self.coefs.round(3)
