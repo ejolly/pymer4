@@ -44,7 +44,7 @@ model = Lmer('DV ~ IV1 (IV1 | Subject)',data=df)
 
 # Fit it and voila! R-style summary statistics
 
-model.fit(method = 'Wald')
+model.fit(conf_int = 'Wald')
 ```
 
 ![](/misc/output.png)
@@ -75,7 +75,9 @@ The full list includes:
 
 ## Advanced usage <a name="advanced-usage"></a>
 ```
-# Fit a multi-level logit model with categorical predictors and random slopes and intercepts along with confidence intervals computed using parametric bootstrapping. Use provided sample data.
+# Fit a multi-level logit model with dummy-coded categorical predictors and random slopes and intercepts
+# Compute confidence intervals using parametric bootstrapping.
+# Use provided sample data.
 
 import pandas as pd
 from pymer4.utils import get_resource_path
@@ -85,7 +87,7 @@ from pymer4.models import Lmer
 data = os.path.join(get_resource_path(),'sample_data.csv')
 model = Lmer('DV_l ~ IV3*IV4 + (IV3|Group) + (IV3|Group_2)',data=df,family='binomial')
 
-# Dummy code factors and set 1.0 as the reference level for IV3 and A as the reference level for IV4
+# Dummy code factors and set 1.0 as the reference level for IV3 and B as the reference level for IV4
 # This assumes that these values already exist within the respective columns of the data frame
 
 model.fit(factors={
