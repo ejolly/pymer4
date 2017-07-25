@@ -112,7 +112,7 @@ class Lmer(object):
                 self.anova.columns = ['SS','MS','NumDF','DenomDF','F-stat','P-val']
                 self.anova['Sig'] = self.anova['P-val'].apply(lambda x: self._sig_stars(x))
         elif self.anova.shape[1] == 4:
-            warnings.warn("P-value computation did not occur because lmerTest choked. Check model specification or data...")
+            warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
             self.anova.columns = ['DF','SS','MS','F-stat']
         print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n")
         return self.anova
@@ -156,13 +156,25 @@ class Lmer(object):
         self.AIC = unsum.rx2('AICtab')[0]
         self.logLike = unsum.rx2('logLik')[0]
 
-        if len(unsum.rx2('optinfo').rx2('warnings')) == 0:
-            self.warnings = None
+        #First check for lme4 printed messages (e.g. convergence info is usually here instead of in warnings)
+        fit_messages = unsum.rx2('optinfo').rx2('conv').rx2('lme4').rx2('messages')
+        #Then check warnings for additional stuff
+        fit_warnings = unsum.rx2('optinfo').rx2('warnings')
+        if len(fit_warnings) != 0:
+            fit_warnings = [str(elem) for elem in fit_warnings]
+        else: fit_warnings = []
+        if not isinstance(fit_messages,rpy2.rinterface.RNULLType):
+            fit_messages = [str(elem) for elem in fit_messages]
         else:
-            self.warnings = unsum.rx2('optinfo').rx2('warnings')
-            self.warnings = [str(elem) for elem in self.warnings]
+            fit_messages = []
+
+        fit_messages_warnings = fit_messages + fit_warnings
+        if fit_messages_warnings:
+            self.warnings = fit_messages_warnings
             for warning in self.warnings:
                 print(warning + ' \n')
+        else:
+            self.warnings = None
 
         #Random effect variances and correlations
         df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
@@ -252,7 +264,7 @@ class Lmer(object):
 
             elif df.shape[1] == 5:
                 #Incase lmerTest chokes it won't return p-values
-                warnings.warn("P-value computation did not occur because lmerTest choked. Check model specification or data...")
+                warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
                 df.columns =['Estimate','SE','T-stat','2.5_ci','97.5_ci']
                 df = df[['Estimate','2.5_ci','97.5_ci','SE','T-stat']]
 
