@@ -284,7 +284,7 @@ class Lmer(object):
             df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci']
             df = df[['Estimate','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','SE','Z-stat','P-val']]
 
-        if 'P-Val' in df.columns:
+        if 'P-val' in df.columns:
             df['Sig'] = df['P-val'].apply(lambda x: self._sig_stars(x))
         self.coefs = df
         self.fitted = True
