@@ -118,13 +118,13 @@ class Lmer(object):
         return self.anova
 
 
-    def fit(self,conf_int='profile',factors=None,summary=True):
+    def fit(self,conf_int='profile',factors=None,summarize=True):
         """Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
 
         Args:
             conf_int: (string) which method to compute confidence intervals; profile (default), Wald, or boot (parametric bootstrap)
             factors: (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
-            summary: (bool) whether to print a model summary after fitting (default is True)
+            summarize: (bool) whether to print a model summary after fitting (default is True)
 
         Returns:
             coefs: (dataframe) dataframe of R style summary() table
@@ -160,6 +160,7 @@ class Lmer(object):
             self.warnings = None
         else:
             self.warnings = unsum.rx2('optinfo').rx2('warnings')
+            self.warnings = [str(elem) for elem in self.warnings]
             for warning in self.warnings:
                 print(warning + ' \n')
 
@@ -290,7 +291,7 @@ class Lmer(object):
         self.fitted = True
 
         # TODO: Add group names when printing number of groups +enhancement id:1 gh:10
-        if summary:
+        if summarize:
             print("Number of groups: %s\n" % (self.ngrps))
             print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
             print("Random effects:\n")
