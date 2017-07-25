@@ -212,7 +212,11 @@ class Lmer(object):
         #Cluster (e.g subject) level random deviations
         rstring = """
             function(model){
-            out <- ranef(model)
+            uniquify <- function(df){
+            colnames(df) <- make.unique(colnames(df))
+            df
+            }
+            out <- lapply(ranef(model),uniquify)
             out
             }
         """
