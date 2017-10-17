@@ -5,13 +5,16 @@ import rpy2
 from copy import copy
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import warnings
 warnings.simplefilter('always',UserWarning)
 pandas2ri.activate()
 
 class Lmer(object):
 
-    """Linear model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called
+    """
+    Linear model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called
 
     Args:
         formula (string): Complete lmer-style model formula
@@ -32,7 +35,6 @@ class Lmer(object):
         resid: (ndarray) model residuals
         fits: (ndarray) model fits/predictions
         coefs: (dataframe) dataframe of R style summary() table
-
 
     """
 
@@ -119,7 +121,8 @@ class Lmer(object):
 
 
     def fit(self,conf_int='profile',factors=None,summarize=True):
-        """Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
+        """
+        Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
 
         Args:
             conf_int: (string) which method to compute confidence intervals; profile (default), Wald, or boot (parametric bootstrap)
@@ -223,6 +226,12 @@ class Lmer(object):
         ranef_func = robjects.r(rstring)
         self.ranef = pandas2ri.ri2py(ranef_func(model)[0])
 
+        #Save the design matrix
+        #Make sure column names match fixef and ranef dataframes (why is R so frustrating!!!)
+        stats = importr('stats')
+        self.design_matrix = pandas2ri.ri2py(base.data_frame(stats.model_matrix(model)))
+        self.design_matrix.columns = self.fixef.columns[:]
+
         #Model residuals
         rstring = """
             function(model){
@@ -320,3 +329,84 @@ class Lmer(object):
             return self.coefs.round(3)
         else:
             return
+
+    def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=False,grps=[],ax=None):
+        """
+        Plot random and group level parameters from a fitted model
+
+        Args:
+            param (str): model parameter to plot, conditioned at mean of all other model params
+            figsize (tup): matplotlib desired figsize
+            xlabel (str): x-axis label
+            ylabel (str): y-axis label
+            plot_fixef (bool): plot fixed effect fit of param?; default True
+            plot_ci (bool): plot computed ci's of fixed effect?; default True
+            grps (list): plot specific group fits only; must correspond to index values in model.fixef
+
+        Returns:
+            figure: matplotlib figure handle
+            ax: matplotlib axes
+
+        """
+
+        assert self.fitted, "Model must be fit before plotting!"
+        if not ax:
+            f,ax = plt.subplots(1,1,figsize=figsize);
+
+        #Get range of unique values for desired parameter
+        x_vals = self.design_matrix[param].unique()
+        #Sort order to handle bug in matplotlib plotting
+        idx = np.argsort(x_vals)
+
+        #Get all other variables in G, excluding intercept
+        other_vals = [elem for elem in self.design_matrix.columns if elem not in ['(Intercept)',param]]
+        #Get mean values for other vals to make conditional predictions
+        other_vals_means = self.design_matrix[other_vals].mean(axis=0)
+
+        #Generate group effects predictions first
+        #Prediction = Intercept + coef * desired_param_value_range + coef_2 * other_param_held_at_mean ....
+
+        #Get desired parameter part of the prediction
+        fixef_desired = self.coefs.loc['(Intercept)','Estimate'] + self.coefs.loc[param,'Estimate']*x_vals
+        fixef_desired_upper = self.coefs.loc['(Intercept)','97.5_ci'] + self.coefs.loc[param,'97.5_ci']*x_vals
+        fixef_desired_lower = self.coefs.loc['(Intercept)','2.5_ci'] + self.coefs.loc[param,'2.5_ci']*x_vals
+
+
+        #Get other parameters part of the prediction, held at their mean value
+        fixef_other = np.dot(other_vals_means,self.coefs.loc[other_vals,'Estimate'])
+        fixef_other_lower = np.dot(other_vals_means,self.coefs.loc[other_vals,'2.5_ci'])
+        fixef_other_upper = np.dot(other_vals_means,self.coefs.loc[other_vals,'97.5_ci'])
+
+        #Add them together for conditional prediction
+        fixef_pred = fixef_desired + fixef_other
+        fixef_pred_upper = fixef_desired_upper + fixef_other_upper
+        fixef_pred_lower = fixef_desired_lower + fixef_other_lower
+
+        if grps:
+            ran_dat = self.fixef.loc[grps,:]
+        else:
+            ran_dat = self.fixef
+
+        #Now generate random effects predictions
+        for i, row in ran_dat.iterrows():
+
+            ranef_desired = row['(Intercept)'] + row[param]*x_vals
+            ranef_other = np.dot(other_vals_means, row.loc[other_vals])
+            pred = ranef_desired + ranef_other
+
+            ax.plot(x_vals[idx],pred[idx],'-',linewidth=2);
+
+        if plot_fixef:
+            ax.plot(x_vals[idx],fixef_pred[idx],'--',color='black',linewidth=3,zorder=9999999);
+
+        if plot_ci:
+            ax.fill_between(x_vals[idx],fixef_pred_lower[idx],fixef_pred_upper[idx],facecolor='black',alpha=.25,zorder=9999998);
+
+        ax.set(ylim = (self.data.fits.min(), self.data.fits.max()),
+               xlim = (x_vals.min(),x_vals.max()),
+               xlabel = param);
+        if xlabel:
+            ax.set_xlabel(xlabel);
+        if ylabel:
+            ax.set_ylabel(ylabel);
+        return f,ax
