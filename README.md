@@ -4,7 +4,7 @@ Love mixed-modeling using lme4 in R but prefer to work in the scientific Python 
 \* *Currently this only includes linear and logit models*
 
 #### Documentation
-Current documentation and usage examples can be found [here](eshinjolly.com/pymer4/).
+Current documentation and usage examples can be found [here](http://eshinjolly.com/pymer4/).
 
 #### Installation
 

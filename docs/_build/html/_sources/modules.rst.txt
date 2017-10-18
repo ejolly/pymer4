@@ -1,7 +1,0 @@
-pymer4
-======
-
-.. toctree::
-   :maxdepth: 4
-
-   pymer4

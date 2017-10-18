@@ -3,6 +3,8 @@ dev/*
 *.ipynb_checkpoints
 *.pyc
 build/*
+docs/_build/
+docs/modules/
 *.ipynb
 .cache/*
 .imdone/*
