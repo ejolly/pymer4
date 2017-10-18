@@ -96,6 +96,7 @@ model.fit(factors={
     }, conf_int = 'boot')
 ```
 
-## Coming soon <a name="coming-soon"></a>
-- Specification of R-style contrast coding schemes on factors
-- Corrected pairwise post-hoct tests computed via the lsMeans package
+## Limitations <a name="limitations"></a>
+- Only support for dummy-coded or orthogonal polynomial contrasts for categorial model terms
+- Only support for linear or logit models
+- Limited support for ANOVA style F-tests

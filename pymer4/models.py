@@ -1,3 +1,4 @@
+from __future__ import division
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
@@ -14,49 +15,62 @@ pandas2ri.activate()
 class Lmer(object):
 
     """
-    Linear model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called
+    Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
 
     Args:
-        formula (string): Complete lmer-style model formula
-        data (dataframe): pandas dataframe of input data
+        formula (str): Complete lmer-style model formula
+        data (pandas.core.frame.DataFrame): input data
         family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)
 
     Attributes:
-        fitted: (bool) whether fit method has been called yet
-        formula: (string) model formula
-        data: (dataframe) pandas dataframe used to initialize instance
-        ngrps: (float) number of groups recognized by lmer
-        AIC: (float) model AIC
-        logLike: (float) model Log-likelihood
-        family: (string) what model family; currently only linear implemented
-        vconv_ranef: (dataframe) pandas dataframe of random effect variances and standard deviations
-        fixef: (dataframe) cluster-level fixed effect coefficients, lmer BLUPs
-        ranef: (dataframe) cluster-level fixed effect deviations from group fit
-        resid: (ndarray) model residuals
-        fits: (ndarray) model fits/predictions
-        coefs: (dataframe) dataframe of R style summary() table
+        fitted (bool): whether model has been fit
+        formula (str): model formula
+        data (pandas.core.frame.DataFrame): model copy of input data
+        ngrps (float): number of groups recognized by lmer
+        AIC (float): model akaike information criterion
+        logLike (float): model Log-likelihood
+        family (string): model family
+        ranef (pandas.core.frame.DataFrame): cluster-level differences from population parameters, i.e. difference between coefs and fixefs
+        fixef (pandas.core.frame.DataFrame): cluster-level parameters
+        coefs (pandas.core.frame.DataFrame): model summary table of population parameters
+        resid (numpy.ndarray): model residuals
+        fits (numpy.ndarray): model fits/predictions
 
     """
 
     def __init__(self,formula,data,family='gaussian'):
 
-        self.fitted = False
-        self.formula = formula
-        self.data = copy(data)
-        self.family = family
+
         implemented_fams = ['gaussian','binomial']
         if self.family not in implemented_fams:
             raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
+        else:
+            self.family = family
 
+
+        self.fitted = False
+        self.formula = formula
+        self.data = copy(data)
+        self.ngrps = None
+        self.AIC = None
+        self.logLike = None
+        self.warnings = None
+        self.ranef_var = None
+        self.ranef_corr = None
+        self.ranef = None
+        self.fixef = None
+        self.design_matrix = None
+        self.resid = None
+        self.coefs = None
 
     def __repr__(self):
-        return "%s.%s(formula='%s', family='%s', fitted=%s)" % (
+        out = "{}.{}(fitted={},formula={},family={})".format(
         self.__class__.__module__,
         self.__class__.__name__,
+        self.fitted,
         self.formula,
-        self.family,
-        self.fitted
-        )
+        self.fitted)
+        return out
 
     def _sig_stars(self,val):
         """Adds sig stars to coef table prettier output."""
@@ -71,22 +85,42 @@ class Lmer(object):
             star = '.'
         return star
 
-    def _make_factors(self,D):
-        """Takes a dict of df columns to convert to R factor levels."""
+    def _make_factors(self,factor_dict, ordered=False):
+        """
+        Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts
+
+        Args:
+            factor_dict: (dict) dictionary with column names specified as keys, and lists of unique values to treat as factor levels
+            ordered: (bool) whether to interpret factor_dict values as dummy-coded (1st list item is reference level) or as polynomial contrasts (linear contrast specified by ordered of list items)
+
+        Returns:
+            pandas.core.frame.DataFrame: copy of original data with factorized columns
+        """
+
+
+        if ordered:
+
+            rstring = """
+                function(df,f,lv){
+                df[,f] <- factor(df[,f],lv,ordered=T)
+                df
+                }
+            """
 
         rstring = """
             function(df,f,lv){
-            df[,f] <- factor(df[,f],lv)
+            df[,f] <- factor(df[,f],lv,ordered=F)
             df
             }
         """
+
         factorize = robjects.r(rstring)
         df = copy(self.data)
-        for k in D.iterkeys():
+        for k in factor_dict.iterkeys():
             df[k] = df[k].astype(str)
 
         r_df = pandas2ri.py2ri(df)
-        for k,v in D.iteritems():
+        for k,v in factor_dict.iteritems():
 
             r_df = factorize(r_df,k,v)
 
@@ -120,22 +154,23 @@ class Lmer(object):
         return self.anova
 
 
-    def fit(self,conf_int='profile',factors=None,summarize=True):
+    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True):
         """
-        Main method for fitting model object. Will modify the model's data attribute to add columns for residuls and fits for convenience.
+        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
         Args:
-            conf_int: (string) which method to compute confidence intervals; profile (default), Wald, or boot (parametric bootstrap)
-            factors: (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
-            summarize: (bool) whether to print a model summary after fitting (default is True)
+            conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
+            factors (dict): col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
+            ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
+            summarize (bool): whether to print a model summary after fitting; default is True
 
         Returns:
-            coefs: (dataframe) dataframe of R style summary() table
-            model: (Lmer) model object with numerous additional computed attributions
+            dataframe: R style summary() table
 
         """
+
         if factors:
-            dat = self._make_factors(factors)
+            dat = self._make_factors(factors,ordered)
             self.factors = factors
         else:
             dat = self.data
@@ -335,17 +370,17 @@ class Lmer(object):
         Plot random and group level parameters from a fitted model
 
         Args:
-            param (str): model parameter to plot, conditioned at mean of all other model params
+            param (str): model parameter (column name) to plot conditioned at mean of all other model params
             figsize (tup): matplotlib desired figsize
             xlabel (str): x-axis label
             ylabel (str): y-axis label
-            plot_fixef (bool): plot fixed effect fit of param?; default True
-            plot_ci (bool): plot computed ci's of fixed effect?; default True
+            plot_fixef (bool): plot population effect fit of param?; default True
+            plot_ci (bool): plot computed ci's of population effect?; default True
             grps (list): plot specific group fits only; must correspond to index values in model.fixef
+            ax (matplotlib.axes.Axes): axis handle for an existing plot; if provided will ensure that random parameter plots appear *behind* all other plot objects.
 
         Returns:
-            figure: matplotlib figure handle
-            ax: matplotlib axes
+            matplotlib figure handle, matplotlib axis handle
 
         """
 

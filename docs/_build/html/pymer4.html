@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pymer4 package &mdash; pymer4 0.2.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="pymer4 0.2.0 documentation" href="index.html"/>
+        <link rel="prev" title="API Reference" href="api.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> pymer4
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#continuous-predictor-variables-only">Continuous Predictor Variables Only</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#categorical-predictor-variables">Categorical Predictor Variables</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#pymer4-models-model-classes"><code class="docutils literal"><span class="pre">pymer4.models</span></code>: Model Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#module-pymer4.utils"><code class="docutils literal"><span class="pre">pymer4.utils</span></code>: Utilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pymer4 package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymer4.models">pymer4.models module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymer4.utils">pymer4.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pymer4">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pymer4</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>pymer4 package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pymer4.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pymer4-package">
+<h1>pymer4 package<a class="headerlink" href="#pymer4-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pymer4.models">
+<span id="pymer4-models-module"></span><h2>pymer4.models module<a class="headerlink" href="#module-pymer4.models" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pymer4.models.Lmer">
+<em class="property">class </em><code class="descclassname">pymer4.models.</code><code class="descname">Lmer</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em>, <em>family='gaussian'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Linear model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>formula</strong> (<em>string</em>) – Complete lmer-style model formula</li>
+<li><strong>data</strong> (<em>dataframe</em>) – pandas dataframe of input data</li>
+<li><strong>family</strong> (<em>string</em>) – what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Variables:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fitted</strong> – (bool) whether fit method has been called yet</li>
+<li><strong>formula</strong> – (string) model formula</li>
+<li><strong>data</strong> – (dataframe) pandas dataframe used to initialize instance</li>
+<li><strong>ngrps</strong> – (float) number of groups recognized by lmer</li>
+<li><strong>AIC</strong> – (float) model AIC</li>
+<li><strong>logLike</strong> – (float) model Log-likelihood</li>
+<li><strong>family</strong> – (string) what model family; currently only linear implemented</li>
+<li><strong>vconv_ranef</strong> – (dataframe) pandas dataframe of random effect variances and standard deviations</li>
+<li><strong>fixef</strong> – (dataframe) cluster-level fixed effect coefficients, lmer BLUPs</li>
+<li><strong>ranef</strong> – (dataframe) cluster-level fixed effect deviations from group fit</li>
+<li><strong>resid</strong> – (ndarray) model residuals</li>
+<li><strong>fits</strong> – (ndarray) model fits/predictions</li>
+<li><strong>coefs</strong> – (dataframe) dataframe of R style summary() table</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymer4.models.Lmer._make_factors">
+<code class="descname">_make_factors</code><span class="sig-paren">(</span><em>D</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer._make_factors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer._make_factors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dict of df columns to convert to R factor levels.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymer4.models.Lmer._sig_stars">
+<code class="descname">_sig_stars</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer._sig_stars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer._sig_stars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds sig stars to coef table prettier output.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymer4.models.Lmer.anova">
+<code class="descname">anova</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer.anova"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer.anova" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pymer4.models.Lmer.fit">
+<code class="descname">fit</code><span class="sig-paren">(</span><em>conf_int='profile'</em>, <em>factors=None</em>, <em>summarize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer.fit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main method for fitting model object. Will modify the model’s data attribute to add columns for residuls and fits for convenience.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>conf_int</strong> – (string) which method to compute confidence intervals; profile (default), Wald, or boot (parametric bootstrap)</li>
+<li><strong>factors</strong> – (dict) dictionary of col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {‘Col1’:[‘A’,’B’,’C’]}</li>
+<li><strong>summarize</strong> – (bool) whether to print a model summary after fitting (default is True)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(dataframe) dataframe of R style summary() table
+model: (Lmer) model object with numerous additional computed attributions</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">coefs</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymer4.models.Lmer.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>param</em>, <em>figsize=(8</em>, <em>6)</em>, <em>xlabel=''</em>, <em>ylabel=''</em>, <em>plot_fixef=True</em>, <em>plot_ci=False</em>, <em>grps=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/models.html#Lmer.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.models.Lmer.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot random and group level parameters from a fitted model</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>param</strong> (<em>str</em>) – model parameter to plot, conditioned at mean of all other model params</li>
+<li><strong>figsize</strong> (<em>tup</em>) – matplotlib desired figsize</li>
+<li><strong>xlabel</strong> (<em>str</em>) – x-axis label</li>
+<li><strong>ylabel</strong> (<em>str</em>) – y-axis label</li>
+<li><strong>plot_fixef</strong> (<em>bool</em>) – plot fixed effect fit of param?; default True</li>
+<li><strong>plot_ci</strong> (<em>bool</em>) – plot computed ci’s of fixed effect?; default True</li>
+<li><strong>grps</strong> (<em>list</em>) – plot specific group fits only; must correspond to index values in model.fixef</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">matplotlib figure handle
+ax: matplotlib axes</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">figure</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pymer4.utils">
+<span id="pymer4-utils-module"></span><h2>pymer4.utils module<a class="headerlink" href="#module-pymer4.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pymer4.utils.get_resource_path">
+<code class="descclassname">pymer4.utils.</code><code class="descname">get_resource_path</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pymer4/utils.html#get_resource_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymer4.utils.get_resource_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get path sample data directory.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pymer4">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pymer4" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="api.html" class="btn btn-neutral" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Eshin Jolly.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
