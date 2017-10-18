@@ -1,0 +1,11 @@
+langauge: python
+python:
+    - "2.7"
+install:
+    - pip install -r requirements.txt
+script:
+    - pytest
+before_install:
+    - sudo apt-get update
+    - sudo apt-get install r-base=3.2.3-4
+    - R -e "install.packages('versions'); library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
