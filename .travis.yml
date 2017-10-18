@@ -6,6 +6,9 @@ install:
 script:
     - pytest
 before_install:
+    - sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
+    - gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+    - gpg -a --export E084DAB9 | sudo apt-key add -
     - sudo apt-get update
-    - sudo apt-get install r-base=3.2.3-4
+    - sudo apt-get -y install r-base=3.2.3-4
     - R -e "install.packages('versions'); library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
