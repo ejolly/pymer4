@@ -5,7 +5,7 @@
 
 Pymer4
 ======
-Love mixed-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This this package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python.
+Love mixed-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This this package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python. (*Currently this only include linear and logit models*)
 
 This package's main purpose is to provide a clean interface that hides the back-and-forth code required when moving between R and Python. In other words a user can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. Behind the scenes this package simply uses `rpy2 <https://rpy2.readthedocs.io/en/version_2.8.x/>`_ to pass objects between languages, compute what's needed, parse everything, and convert to Python types (e.g. numpy arrays, pandas dataframes, etc).
 
