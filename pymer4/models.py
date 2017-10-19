@@ -26,32 +26,29 @@ class Lmer(object):
         fitted (bool): whether model has been fit
         formula (str): model formula
         data (pandas.core.frame.DataFrame): model copy of input data
-        ngrps (float): number of groups recognized by lmer
+        grps (dict): groups and number of observations per groups recognized by lmer
         AIC (float): model akaike information criterion
         logLike (float): model Log-likelihood
         family (string): model family
-        ranef (pandas.core.frame.DataFrame): cluster-level differences from population parameters, i.e. difference between coefs and fixefs
-        fixef (pandas.core.frame.DataFrame): cluster-level parameters
-        coefs (pandas.core.frame.DataFrame): model summary table of population parameters
+        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
+        model_obj(lmer model): rpy2 lmer model object
 
     """
 
     def __init__(self,formula,data,family='gaussian'):
 
-
+        self.family = family
         implemented_fams = ['gaussian','binomial']
         if self.family not in implemented_fams:
             raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
-        else:
-            self.family = family
-
-
         self.fitted = False
         self.formula = formula
         self.data = copy(data)
-        self.ngrps = None
+        self.grps = None
         self.AIC = None
         self.logLike = None
         self.warnings = None
@@ -62,14 +59,15 @@ class Lmer(object):
         self.design_matrix = None
         self.resid = None
         self.coefs = None
+        self.model_obj = None
 
     def __repr__(self):
-        out = "{}.{}(fitted={},formula={},family={})".format(
+        out = "{}.{}(fitted={}, formula={}, family={})".format(
         self.__class__.__module__,
         self.__class__.__name__,
         self.fitted,
         self.formula,
-        self.fitted)
+        self.family)
         return out
 
     def _sig_stars(self,val):
@@ -178,19 +176,20 @@ class Lmer(object):
         if self.family == 'gaussian':
             print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lmerTest')
-            model = lmer.lmer(self.formula,data=dat)
+            self.model_obj = lmer.lmer(self.formula,data=dat)
         else:
             print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lme4')
-            model = lmer.lmer(self.formula,data=dat,family=self.family)
+            self.model_obj = lmer.lmer(self.formula,data=dat,family=self.family)
 
         base = importr('base')
 
-        summary = base.summary(model)
+        summary = base.summary(self.model_obj)
         unsum = base.unclass(summary)
 
         #Do scalars first cause they're easier
-        self.ngrps = np.array(unsum.rx2('ngrps'))
+        grps = pandas2ri.ri2py(base.data_frame(unsum.rx2('ngrps')))
+        self.grps = dict(grps.T.iloc[0])
         self.AIC = unsum.rx2('AICtab')[0]
         self.logLike = unsum.rx2('logLik')[0]
 
@@ -214,81 +213,6 @@ class Lmer(object):
         else:
             self.warnings = None
 
-        #Random effect variances and correlations
-        df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
-        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop('var2',axis=1)
-        ran_vars.index = ran_vars['grp']
-        ran_vars.drop('grp',axis=1,inplace=True)
-        ran_vars.columns = ['Name','Var','Std']
-        ran_vars.index.name = None
-        ran_vars.replace('NA','',inplace=True)
-
-        ran_corrs = df.query("(var2 != 'NA') & (var2 != 'N')").drop('vcov',axis=1)
-        if ran_corrs.shape[0] != 0:
-            ran_corrs.index = ran_corrs['grp']
-            ran_corrs.drop('grp',axis=1,inplace=True)
-            ran_corrs.columns = ['IV1','IV2','Corr']
-            ran_corrs.index.name = None
-        else:
-            ran_corrs = None
-
-        self.ranef_var = ran_vars
-        self.ranef_corr = ran_corrs
-
-        # TODO Parse and store fixed effects correlation matrix +enhancement id:2 gh:11
-
-        #Cluster (e.g subject) level coefficients
-        rstring = """
-            function(model){
-            out <- coef(model)
-            out
-            }
-        """
-        fixef_func = robjects.r(rstring)
-        self.fixef = pandas2ri.ri2py(fixef_func(model)[0])
-
-        #Cluster (e.g subject) level random deviations
-        rstring = """
-            function(model){
-            uniquify <- function(df){
-            colnames(df) <- make.unique(colnames(df))
-            df
-            }
-            out <- lapply(ranef(model),uniquify)
-            out
-            }
-        """
-        ranef_func = robjects.r(rstring)
-        self.ranef = pandas2ri.ri2py(ranef_func(model)[0])
-
-        #Save the design matrix
-        #Make sure column names match fixef and ranef dataframes (why is R so frustrating!!!)
-        stats = importr('stats')
-        self.design_matrix = pandas2ri.ri2py(base.data_frame(stats.model_matrix(model)))
-        self.design_matrix.columns = self.fixef.columns[:]
-
-        #Model residuals
-        rstring = """
-            function(model){
-            out <- resid(model)
-            out
-            }
-        """
-        resid_func = robjects.r(rstring)
-        self.resid = pandas2ri.ri2py(resid_func(model))
-        self.data['residuals'] = copy(self.resid)
-
-        #Model fits
-        rstring = """
-            function(model){
-            out <- fitted(model)
-            out
-            }
-        """
-        fit_func = robjects.r(rstring)
-        self.fits = pandas2ri.ri2py(fit_func(model))
-        self.data['fits'] = copy(self.fits)
-
         #Coefficients, and inference statistics
         if self.family == 'gaussian':
 
@@ -304,7 +228,7 @@ class Lmer(object):
                 }
             """
             estimates_func = robjects.r(rstring)
-            df = pandas2ri.ri2py(estimates_func(model))
+            df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             if df.shape[1] == 7:
                 df.columns = ['Estimate','SE','DF','T-stat','P-val','2.5_ci','97.5_ci']
@@ -340,30 +264,167 @@ class Lmer(object):
             """
 
             estimates_func = robjects.r(rstring)
-            df = pandas2ri.ri2py(estimates_func(model))
+            df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci']
-            df = df[['Estimate','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','SE','Z-stat','P-val']]
+            df = df[['Estimate','2.5_ci','97.5_ci','SE','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','Z-stat','P-val']]
 
         if 'P-val' in df.columns:
             df['Sig'] = df['P-val'].apply(lambda x: self._sig_stars(x))
         self.coefs = df
         self.fitted = True
 
-        # TODO: Add group names when printing number of groups +enhancement id:1 gh:10
-        if summarize:
-            print("Number of groups: %s\n" % (self.ngrps))
-            print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
-            print("Random effects:\n")
-            print("%s\n" % (self.ranef_var.round(3)))
-            if self.ranef_corr is not None:
-                print("%s\n" % (self.ranef_corr.round(3)))
-            else:
-                print("No random effect correlations specified\n")
-            print("Fixed effects:\n")
-            return self.coefs.round(3)
+        #Random effect variances and correlations
+        df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
+        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop('var2',axis=1)
+        ran_vars.index = ran_vars['grp']
+        ran_vars.drop('grp',axis=1,inplace=True)
+        ran_vars.columns = ['Name','Var','Std']
+        ran_vars.index.name = None
+        ran_vars.replace('NA','',inplace=True)
+
+        ran_corrs = df.query("(var2 != 'NA') & (var2 != 'N')").drop('vcov',axis=1)
+        if ran_corrs.shape[0] != 0:
+            ran_corrs.index = ran_corrs['grp']
+            ran_corrs.drop('grp',axis=1,inplace=True)
+            ran_corrs.columns = ['IV1','IV2','Corr']
+            ran_corrs.index.name = None
         else:
-            return
+            ran_corrs = None
+
+        self.ranef_var = ran_vars
+        self.ranef_corr = ran_corrs
+
+        # TODO Parse and store fixed effects correlation matrix +enhancement id:2 gh:11
+
+        #Cluster (e.g subject) level coefficients
+        rstring = """
+            function(model){
+            out <- coef(model)
+            out
+            }
+        """
+        fixef_func = robjects.r(rstring)
+        fixefs = fixef_func(self.model_obj)
+        if len(fixefs) > 1:
+            f_corrected_order = []
+            for f in fixefs:
+                f = pandas2ri.ri2py(f)
+                f_corrected_order.append(f[list(self.coefs.index)+[elem for elem in f.columns if elem not in self.coefs.index]])
+            self.fixef = f_corrected_order
+            #self.fixef = [pandas2ri.ri2py(f) for f in fixefs]
+        else:
+            self.fixef = pandas2ri.ri2py(fixefs[0])
+            self.fixef = self.fixef[list(self.coefs.index)+[elem for elem in self.fixef.columns if elem not in self.coefs.index]]
+
+        #Sort column order to match population coefs
+        #This also handles cases in which random slope terms exist in the model without corresponding fixed effects terms, which generates extra columns in this dataframe. By default put those columns *after* the fixed effect columns of interest (i.e. population coefs)
+
+
+        #Cluster (e.g subject) level random deviations
+        rstring = """
+            function(model){
+            uniquify <- function(df){
+            colnames(df) <- make.unique(colnames(df))
+            df
+            }
+            out <- lapply(ranef(model),uniquify)
+            out
+            }
+        """
+        ranef_func = robjects.r(rstring)
+        ranefs = ranef_func(self.model_obj)
+        if len(ranefs) > 1:
+            self.ranef = [pandas2ri.ri2py(r) for r in ranefs]
+        else:
+            self.ranef = pandas2ri.ri2py(ranefs[0])
+
+        #Save the design matrix
+        #Make sure column names match population coefficients
+        stats = importr('stats')
+        self.design_matrix = pandas2ri.ri2py(stats.model_matrix(self.model_obj))
+        self.design_matrix = pd.DataFrame(self.design_matrix, columns = self.coefs.index[:])
+
+        #Model residuals
+        rstring = """
+            function(model){
+            out <- resid(model)
+            out
+            }
+        """
+        resid_func = robjects.r(rstring)
+        self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
+        self.data['residuals'] = copy(self.resid)
+
+        #Model fits
+        rstring = """
+            function(model){
+            out <- fitted(model)
+            out
+            }
+        """
+        fit_func = robjects.r(rstring)
+        self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
+        self.data['fits'] = copy(self.fits)
+
+        if summarize:
+            return self.summary()
+
+
+    def predict(self,data,use_rfx=False,pred_type='response'):
+        """
+        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the grouping factors that were used to fit the model random effects terms.
+
+        Args:
+            data (pandas.core.frame.DataFrame): input data to make predictions on
+            use_rfx (bool): whether to condition on random effects when making predictions
+            pred_type (str): whether the prediction should be on the 'response' scale (default); or on the 'link' scale of the predictors passed through the link function (e.g. log-odds scale in a logit model instead of probability values)
+
+        Returns:
+            numpy.ndarray of predictions
+
+        """
+        required_cols = self.design_matrix.columns[1:]
+        assert all([col in data.columns for col in required_cols]), "Column names do not match all fixed effects model terms!"
+
+        if use_rfx:
+            required_cols = set(list(required_cols) + self.grps.keys())
+            assert all([col in data.columns for col in required_cols]), "Column names are missing random effects model grouping terms!"
+
+            re_form = 'NULL'
+        else:
+            re_form = 'NA'
+
+        rstring = """
+            function(model,new){
+            out <- predict(model,new,allow.new.levels=TRUE,re.form="""+re_form+""",type='"""+pred_type+"""')
+            out
+            }
+        """
+
+        predict_func = robjects.r(rstring)
+        preds = pandas2ri.ri2py(predict_func(self.model_obj,data))
+        return preds
+
+    def summary(self):
+        """
+        Summarize the output of a fitted model.
+
+        """
+
+        assert self.fitted == True, "Model must be fitted to generate summary!"
+
+        print("Formula: {}\n".format(self.formula))
+        print("Number of observations: %s\t Groups: %s\n" % (self.data.shape[0],self.grps))
+        print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
+        print("Random effects:\n")
+        print("%s\n" % (self.ranef_var.round(3)))
+        if self.ranef_corr is not None:
+            print("%s\n" % (self.ranef_corr.round(3)))
+        else:
+            print("No random effect correlations specified\n")
+        print("Fixed effects:\n")
+        return self.coefs.round(3)
 
     def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=False,grps=[],ax=None):
         """
@@ -385,6 +446,8 @@ class Lmer(object):
         """
 
         assert self.fitted, "Model must be fit before plotting!"
+        if isinstance(self.fixef, list) or isinstance(self.ranef,list):
+            raise NotImplementedError("Plotting can currently only handle models with 1 random effect grouping variable!")
         if not ax:
             f,ax = plt.subplots(1,1,figsize=figsize);
 

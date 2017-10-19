@@ -1,14 +1,18 @@
+sudo: true
+dist: "trusty"
 langauge: python
 python:
     - "2.7"
 install:
-    - pip install -r requirements.txt
+    - sudo pip install -r requirements.txt
 script:
-    - pytest
+    - py.test
 before_install:
     - sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
     - gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
     - gpg -a --export E084DAB9 | sudo apt-key add -
+    - sudo rm -vf /etc/apt/sources.list.d/*riak*
     - sudo apt-get update
-    - sudo apt-get -y install r-base=3.2.3-4
-    - R -e "install.packages('versions'); library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
+    - sudo apt-get -y install r-base r-base-dev
+    - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org'); library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
+    - sudo pip install python-pytest
