@@ -13,7 +13,7 @@ def test_linear():
 
     assert model.coefs.shape == (3,8)
     estimates = np.array([ 12.04334602,  -1.52947016,   0.67768509])
-    assert np.allclose(model.coefs['Estimate'],estimates)
+    assert np.allclose(model.coefs['Estimate'],estimates,atol=.001)
 
     assert isinstance(model.fixef,list)
     assert model.fixef[0].shape == (47,3)
@@ -26,7 +26,7 @@ def test_linear():
     assert model.ranef_corr.shape == (1,3)
     assert model.ranef_var.shape == (4,3)
 
-    assert np.allclose(model.coefs.loc[:,'Estimate'],model.fixef[0].mean())
+    assert np.allclose(model.coefs.loc[:,'Estimate'],model.fixef[0].mean(),atol=.01)
 
     # Test prediction
     assert np.allclose(model.predict(model.data,use_rfx=True),model.data.fits)
@@ -39,7 +39,7 @@ def test_log():
 
     assert model.coefs.shape == (2,13)
     estimates = np.array([-0.16098421,  0.00296261])
-    assert np.allclose(model.coefs['Estimate'],estimates)
+    assert np.allclose(model.coefs['Estimate'],estimates,atol=.001)
 
     assert isinstance(model.fixef,pd.core.frame.DataFrame)
     assert model.fixef.shape == (47,2)
@@ -47,7 +47,7 @@ def test_log():
     assert isinstance(model.ranef,pd.core.frame.DataFrame)
     assert model.ranef.shape == (47,2)
 
-    assert np.allclose(model.coefs.loc[:,'Estimate'],model.fixef.mean(),atol=.005)
+    assert np.allclose(model.coefs.loc[:,'Estimate'],model.fixef.mean(),atol=.01)
 
     # Test prediction
     assert np.allclose(model.predict(model.data,use_rfx=True),model.data.fits)
