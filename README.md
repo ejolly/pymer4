@@ -1,3 +1,4 @@
+![](https://api.travis-ci.org/ejolly/pymer4.svg?branch=master)
 # pymer4
 
 Love mixed-modeling using lme4 in R but prefer to work in the scientific Python ecosystem? Then this package has got you covered! It's a small convenience package wrapping the basic functionality of [lme4](https://github.com/lme4/lme4)\*.  
