@@ -15,4 +15,4 @@ before_install:
     - sudo apt-get update
     - sudo apt-get -y install r-base r-base-dev
     - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org'); library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
-    - sudo pip install python-pytest
+    - sudo pip install pytest
