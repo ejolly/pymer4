@@ -36,6 +36,7 @@ class Lmer(object):
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
         model_obj(lmer model): rpy2 lmer model object
+        factors (dict): factors used to fit the model if any
 
     """
 
@@ -60,6 +61,7 @@ class Lmer(object):
         self.resid = None
         self.coefs = None
         self.model_obj = None
+        self.factors = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -431,7 +433,7 @@ class Lmer(object):
         Plot random and group level parameters from a fitted model
 
         Args:
-            param (str): model parameter (column name) to plot conditioned at mean of all other model params
+            param (str): model parameter (column name) to plot
             figsize (tup): matplotlib desired figsize
             xlabel (str): x-axis label
             ylabel (str): y-axis label
@@ -446,6 +448,8 @@ class Lmer(object):
         """
 
         assert self.fitted, "Model must be fit before plotting!"
+        if self.factors:
+            raise NotImplementedError("Plotting can currently only handle models with continuous predictors!")
         if isinstance(self.fixef, list) or isinstance(self.ranef,list):
             raise NotImplementedError("Plotting can currently only handle models with 1 random effect grouping variable!")
         if not ax:
@@ -456,10 +460,10 @@ class Lmer(object):
         #Sort order to handle bug in matplotlib plotting
         idx = np.argsort(x_vals)
 
-        #Get all other variables in G, excluding intercept
-        other_vals = [elem for elem in self.design_matrix.columns if elem not in ['(Intercept)',param]]
+        #Get all other variables, excluding intercept
+        #other_vals = [elem for elem in self.design_matrix.columns if elem not in ['(Intercept)',param]]
         #Get mean values for other vals to make conditional predictions
-        other_vals_means = self.design_matrix[other_vals].mean(axis=0)
+        #other_vals_means = self.design_matrix[other_vals].mean(axis=0)
 
         #Generate group effects predictions first
         #Prediction = Intercept + coef * desired_param_value_range + coef_2 * other_param_held_at_mean ....
@@ -471,17 +475,22 @@ class Lmer(object):
 
 
         #Get other parameters part of the prediction, held at their mean value
-        fixef_other = np.dot(other_vals_means,self.coefs.loc[other_vals,'Estimate'])
-        fixef_other_lower = np.dot(other_vals_means,self.coefs.loc[other_vals,'2.5_ci'])
-        fixef_other_upper = np.dot(other_vals_means,self.coefs.loc[other_vals,'97.5_ci'])
+        #fixef_other = np.dot(other_vals_means,self.coefs.loc[other_vals,'Estimate'])
+        #fixef_other_lower = np.dot(other_vals_means,self.coefs.loc[other_vals,'2.5_ci'])
+        #fixef_other_upper = np.dot(other_vals_means,self.coefs.loc[other_vals,'97.5_ci'])
 
         #Add them together for conditional prediction
-        fixef_pred = fixef_desired + fixef_other
-        fixef_pred_upper = fixef_desired_upper + fixef_other_upper
-        fixef_pred_lower = fixef_desired_lower + fixef_other_lower
+        fixef_pred = fixef_desired #+ fixef_other
+        fixef_pred_upper = fixef_desired_upper #+ fixef_other_upper
+        fixef_pred_lower = fixef_desired_lower #+ fixef_other_lower
 
         if grps:
-            ran_dat = self.fixef.loc[grps,:]
+            if all(isinstance(x, int) for x in grps):
+                ran_dat = self.fixef.iloc[grps,:]
+            elif all(isinstance(x, str) for x in grps):
+                ran_dat = self.fixef.loc[grps,:]
+            else:
+                raise TypeError('grps must be integer list for integer-indexing (.iloc) of fixed effects, or label list for label-indexing (.loc) of fixed effects')
         else:
             ran_dat = self.fixef
 
@@ -489,8 +498,8 @@ class Lmer(object):
         for i, row in ran_dat.iterrows():
 
             ranef_desired = row['(Intercept)'] + row[param]*x_vals
-            ranef_other = np.dot(other_vals_means, row.loc[other_vals])
-            pred = ranef_desired + ranef_other
+            #ranef_other = np.dot(other_vals_means, row.loc[other_vals])
+            pred = ranef_desired #+ ranef_other
 
             ax.plot(x_vals[idx],pred[idx],'-',linewidth=2);
 
