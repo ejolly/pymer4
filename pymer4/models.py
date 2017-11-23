@@ -154,7 +154,7 @@ class Lmer(object):
         return self.anova
 
 
-    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True):
+    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True,verbose=False):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
@@ -176,11 +176,13 @@ class Lmer(object):
             dat = self.data
 
         if self.family == 'gaussian':
-            print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
+            if verbose:
+                print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lmerTest')
             self.model_obj = lmer.lmer(self.formula,data=dat)
         else:
-            print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
+            if verbose:
+                print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lme4')
             self.model_obj = lmer.lmer(self.formula,data=dat,family=self.family)
 
