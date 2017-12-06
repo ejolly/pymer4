@@ -163,6 +163,7 @@ class Lmer(object):
             factors (dict): col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
+            verbose (bool): whether to print when and which model and confidence interval are being fitted
 
         Returns:
             dataframe: R style summary() table
