@@ -6,9 +6,13 @@ import rpy2
 from copy import copy
 import pandas as pd
 import numpy as np
+from scipy.stats import t as t_dist
 import matplotlib.pyplot as plt
+from patsy import dmatrices
 import seaborn as sns
 import warnings
+from joblib import Parallel, delayed
+from pymer4.utils import _sig_stars, _robust_estimator
 warnings.simplefilter('always',UserWarning)
 pandas2ri.activate()
 
@@ -72,19 +76,6 @@ class Lmer(object):
         self.family)
         return out
 
-    def _sig_stars(self,val):
-        """Adds sig stars to coef table prettier output."""
-        star = ''
-        if 0 <= val < .001:
-            star = '***'
-        elif .001 <= val < 0.01:
-            star = '**'
-        elif .01 <= val < .05:
-            star = '*'
-        elif .05 <= val < .1:
-            star = '.'
-        return star
-
     def _make_factors(self,factor_dict, ordered=False):
         """
         Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts
@@ -146,7 +137,7 @@ class Lmer(object):
         self.anova = pandas2ri.ri2py(anova)
         if self.anova.shape[1] == 6:
                 self.anova.columns = ['SS','MS','NumDF','DenomDF','F-stat','P-val']
-                self.anova['Sig'] = self.anova['P-val'].apply(lambda x: self._sig_stars(x))
+                self.anova['Sig'] = self.anova['P-val'].apply(lambda x: _sig_stars(x))
         elif self.anova.shape[1] == 4:
             warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
             self.anova.columns = ['DF','SS','MS','F-stat']
@@ -275,7 +266,7 @@ class Lmer(object):
             df = df[['Estimate','2.5_ci','97.5_ci','SE','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','Z-stat','P-val']]
 
         if 'P-val' in df.columns:
-            df['Sig'] = df['P-val'].apply(lambda x: self._sig_stars(x))
+            df['Sig'] = df['P-val'].apply(lambda x: _sig_stars(x))
         self.coefs = df
         self.fitted = True
 
@@ -520,3 +511,154 @@ class Lmer(object):
         if ylabel:
             ax.set_ylabel(ylabel);
         return f,ax
+
+class Lm(object):
+
+    """
+    Model class to perform OLS regression. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specifiy columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
+
+    Args:
+        formula (str): Complete lm-style model formula
+        data (pandas.core.frame.DataFrame): input data
+        family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)
+
+    Attributes:
+        fitted (bool): whether model has been fit
+        formula (str): model formula
+        data (pandas.core.frame.DataFrame): model copy of input data
+        grps (dict): groups and number of observations per groups recognized by lmer
+        AIC (float): model akaike information criterion
+        logLike (float): model Log-likelihood
+        family (string): model family
+        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
+        resid (numpy.ndarray): model residuals
+        fits (numpy.ndarray): model fits/predictions
+        model_obj(lmer model): rpy2 lmer model object
+        factors (dict): factors used to fit the model if any
+
+    """
+
+    def __init__(self,formula,data,family='gaussian'):
+
+        self.family = family
+        implemented_fams = ['gaussian','binomial']
+        if self.family not in implemented_fams:
+            raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
+        self.fitted = False
+        self.formula = formula
+        self.data = copy(data)
+        self.grps = None
+        self.AIC = None
+        self.logLike = None
+        self.warnings = None
+        self.fixef = None
+        self.resid = None
+        self.coefs = None
+        self.model_obj = None
+        self.factors = None
+
+    def __repr__(self):
+        out = "{}.{}(fitted={}, formula={}, family={})".format(
+        self.__class__.__module__,
+        self.__class__.__name__,
+        self.fitted,
+        self.formula,
+        self.family)
+        return out
+
+    def fit(self,robust=False,conf_int='standard',permute=None,summarize=True,verbose=False,n_boot=500):
+        """
+        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
+
+        Args:
+            robust (str): whether to perform OLS using heteroscedasticity robust ('hc0' or 'hc3') and auto-correlation ('hac') robust standard-errors
+            permute (int): how many permutation samples to use to determine significance through permutation testing
+            conf_int (str): which method to compute confidence intervals; 'standard' (default) assuming a t-distribtuion or 'boot' bootstrapped resampling
+            summarize (bool): whether to print a model summary after fitting; default is True
+            verbose (bool): whether to print when and which model and confidence interval are being fitted
+            n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
+
+        Returns:
+            dataframe: R style summary() table
+
+        """
+        if self.family == 'gaussian':
+            if verbose:
+                if not robust:
+                    print_robust = 'non-robust'
+                else:
+                    print_robust = 'robust ' + robust
+
+                print("Fitting linear model with "+print_robust+ " standard errors and " +conf_int+" confidence intervals...\n")
+                if permute:
+                    print("Using permutation to determine significances...")
+
+        # Parse formula using patsy to make design matrix
+        y,x = dmatrices(self.formula,self.data,1,return_type='dataframe')
+        self.design_matrix = x
+        Y,X = y.values, x.values
+
+        # Maybe wrap from here to below in func to make bootstrapping easier
+        # Add code to parallelize bootstrapping or permutation testing
+        b = np.dot(np.linalg.pinv(X),Y)
+        res = Y - np.dot(X,b)
+        b = b.squeeze()
+        res = res.squeeze()
+
+        if robust:
+            se = _robust_estimator(res,X,robust_estimator=robust,nlags=1)
+        else:
+            sigma = np.std(res,axis=0,ddof=X.shape[1])
+            se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T,X))))[:,np.newaxis] * sigma[np.newaxis,:]
+
+        t = b / se
+        df = X.shape[0] - X.shape[1]
+        p = 2*(1-t_dist.cdf(np.abs(t), df))
+        df = np.array([df]*len(t))
+
+        # Patsy returns column vector so just squeeze out extra dim
+        ci_u = b + t_dist.ppf(.975,df)*se
+        ci_l = b + t_dist.ppf(.025,df)*se
+        sig = np.array([_sig_stars(elem) for elem in p])
+
+        #Make output df
+        results = np.column_stack([b,ci_l,ci_u,se,df,t,p,sig])
+        results = pd.DataFrame(results)
+        results.index = x.columns
+        results.columns = ['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val','Sig']
+        results[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']] = results[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']].apply(pd.to_numeric)
+
+        self.coefs = results
+        self.fitted = True
+        self.resid = res
+        self.data['fits'] = Y.squeeze() - res
+
+        #Fit statistics
+        self.rsquared = np.corrcoef(np.dot(X,b),Y.squeeze())**2
+        self.rsquared = self.rsquared[0,1]
+        self.rsquared_adj = 1.-(len(res)-1.)/(len(res)-X.shape[1]) * (1.- self.rsquared)
+        half_obs = len(res)/2.0
+        ssr = np.dot(res,res.T)
+        self.logLike = (-np.log(ssr)* half_obs) - ((1+np.log(np.pi/half_obs))*half_obs)
+        self.AIC = 2*X.shape[1] - 2*self.logLike
+        self.BIC = np.log((len(res)))*X.shape[1] - 2*self.logLike
+
+        if summarize:
+            return self.summary()
+
+
+    def summary(self):
+        """
+        Summarize the output of a fitted model.
+
+        """
+
+        assert self.fitted == True, "Model must be fitted to generate summary!"
+
+        print("Formula: {}\n".format(self.formula))
+        print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" % (self.data.shape[0],self.rsquared,self.rsquared_adj))
+        print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" % (self.logLike,self.AIC,self.BIC))
+        print("Fixed effects:\n")
+        return self.coefs.round(3)
