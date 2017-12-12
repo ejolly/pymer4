@@ -654,8 +654,9 @@ class Lm(object):
 )(dat=self.data,formula=self.formula,seed=seeds[i]) for i in range(n_boot))
 
             boot_betas = np.array(boot_betas)
-            ci_u = np.percentile(boot_betas,97.5,axis=1)
-            ci_l = np.percentile(boot_betas,2.5,axis=1)
+            ci_u = np.percentile(boot_betas,97.5,axis=0)
+            print(ci_u)
+            ci_l = np.percentile(boot_betas,2.5,axis=0)
 
         else:
             # Otherwise we're doing parametric CIs
