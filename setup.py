@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
 extra_setuptools_args = dict(
-    tests_require['pytest']
+    tests_require=['pytest']
 )
 
 setup(
@@ -20,11 +20,7 @@ setup(
     packages = find_packages(exclude=['pymer4/tests']),
     license = 'LICENSE.txt',
     description='pymer4: all the convenience of lme4 in python',
-    long_description= 'pymer4 is a Python package to make it simple to ',
-                      'perform multi-level modeling by interfacing with ',
-                      'the popular R package lme4. pymer4 is also capable ',
-                      'of fitting a variety of standard regression models ',
-                      'with robust, bootstrapped, and permuted estimators',
+    long_description= "pymer4 is a Python package to make it simple to perform multi-level modeling by interfacing with the popular R package lme4. pymer4 is also capable of fitting a variety of standard regression models with robust, bootstrapped, and permuted estimators",
     keywords = ['statistics','multi-level-modeling','regression','analysis'],
     classifers = [
         "Programming Language :: Python",
