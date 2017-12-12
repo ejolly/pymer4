@@ -1,3 +1,5 @@
+from __future__ import division
+
 __all__  = ['get_resource_path',
             '_sig_stars',
             '_robust_estimator',

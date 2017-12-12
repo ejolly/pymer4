@@ -1,3 +1,4 @@
+from __future__ import division
 from pymer4.models import Lmer, Lm
 from pymer4.utils import get_resource_path
 import pandas as pd
