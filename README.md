@@ -30,3 +30,14 @@ rpy2==2.8.5
 lme4>=1.1.12
 lmerTest>=2.0.33
 ```
+
+#### Change-log
+**0.2.1**
+- Support for standard linear regression models
+- Models include support for robust standard errors, boot-strapped CIs, and permuted inference
+
+**0.2.0**
+- Support for categorical predictors, model predictions, and plotting
+
+**0.1.0**
+- Linear and Logit multi-level models
