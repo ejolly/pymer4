@@ -28,8 +28,29 @@ And two different kinds of independent variables:
 - Continuous (IV1, IV2)
 - Categorical (IV3)
 
-Estimate a simple linear model
-------------------------------
+We also have a grouping variable for multi-level modeling:
+
+- Group
+
+Estimate a standard regression model
+------------------------------------
+Fitting a standard regression model like using :code:`lm()` in R, simply entails initializing it with a model formula and pandas data-frame, and subsequently calling its :code:`fit` method.
+
+.. code-block:: python
+
+    # Initialize model instance
+    model = Lm('DV ~ IV1 + IV3',data=df)
+
+    # Fit it
+    model.fit()
+
+.. image:: ../misc/simple_summary_ols.png
+
+:code:`Lm()` models can also be fit with robust standard errors, bootstrapped confidence intervals, or permutation-tests using the :code:`robust`, :code:`conf_int`, and :code:`permute` flags during fitting. See the API docs for more information on their usage.
+
+
+Estimate a multi-level model
+----------------------------
 Fitting a model simply entails initializing it with a model formula and pandas data-frame, and subsequently calling its :code:`fit` method.
 
 .. code-block:: python
@@ -40,7 +61,7 @@ Fitting a model simply entails initializing it with a model formula and pandas d
     # Fit it
     model.fit()
 
-.. image:: ../misc/simple_summary.png
+.. image:: ../misc/simple_summary_lmm.png
 
 Inspect random effects
 ----------------------

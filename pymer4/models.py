@@ -12,7 +12,13 @@ from patsy import dmatrices
 import seaborn as sns
 import warnings
 from joblib import Parallel, delayed
-from pymer4.utils import _sig_stars, _robust_estimator
+from pymer4.utils import (_sig_stars,
+                          _robust_estimator,
+                          _chunk_boot_ols_coefs,
+                          _chunk_perm_ols,
+                          _ols,
+                          _perm_find
+                          )
 warnings.simplefilter('always',UserWarning)
 pandas2ri.activate()
 
@@ -552,12 +558,15 @@ class Lm(object):
         self.grps = None
         self.AIC = None
         self.logLike = None
-        self.warnings = None
+        self.warnings = []
         self.fixef = None
         self.resid = None
         self.coefs = None
         self.model_obj = None
         self.factors = None
+        self.ci_type = None
+        self.se_type = None
+        self.sig_type = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -568,22 +577,41 @@ class Lm(object):
         self.family)
         return out
 
-    def fit(self,robust=False,conf_int='standard',permute=None,summarize=True,verbose=False,n_boot=500):
+    def fit(self,robust=False,conf_int='standard',permute=None,summarize=True,verbose=False,n_boot=500,n_jobs=-1,n_lags=1):
         """
-        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
+        Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
+
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine. Robust estimators include:
+        'hc0': Huber (1980) original sandwich estimator
+        'hc3': MacKinnon and White (1985) HC3 sandwich estimator. Provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+        'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
 
         Args:
-            robust (str): whether to perform OLS using heteroscedasticity robust ('hc0' or 'hc3') and auto-correlation ('hac') robust standard-errors
-            permute (int): how many permutation samples to use to determine significance through permutation testing
-            conf_int (str): which method to compute confidence intervals; 'standard' (default) assuming a t-distribtuion or 'boot' bootstrapped resampling
-            summarize (bool): whether to print a model summary after fitting; default is True
-            verbose (bool): whether to print when and which model and confidence interval are being fitted
+
+            robust (bool/str): whether heteroscedasticity robust s.e.'s' and optionally which estimator type to use ('hc0','hc3','hac'). If robust = True, default robust estimator is 'hc0'; default False
+            conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
+            permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
+            summarize (bool): whether to print a model summary after fitting; default True
+            verbose (bool): whether to print which model and confidence interval type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
+            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
+            n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
 
         Returns:
             dataframe: R style summary() table
 
         """
+        if permute and permute < 500:
+            w = 'Permutation testing < 500 permutations is not recommended'
+            warnings.warn(w)
+            self.warnings.append(w)
+        if robust:
+            if isinstance(robust,bool):
+                robust = 'hc0'
+            self.se_type = 'robust' + ' (' + robust + ')'
+        else:
+            self.se_type = 'non-robust'
+
         if self.family == 'gaussian':
             if verbose:
                 if not robust:
@@ -591,37 +619,69 @@ class Lm(object):
                 else:
                     print_robust = 'robust ' + robust
 
-                print("Fitting linear model with "+print_robust+ " standard errors and " +conf_int+" confidence intervals...\n")
+                if conf_int == 'boot':
+                    print("Fitting linear model with "+print_robust+ " standard errors and \n" + str(n_boot) + " bootstrapped 95% confidence intervals...\n")
+                else:
+                    print("Fitting linear model with "+print_robust+ " standard errors\nand 95% confidence intervals...\n")
+
                 if permute:
-                    print("Using permutation to determine significances...")
+                    print("Using " +str(permute)+ " permutations to determine significance...")
+
+        self.ci_type = conf_int + ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
+        self.sig_type = 'parametric' if not permute else 'permute' + ' (' + str(permute) + ')'
 
         # Parse formula using patsy to make design matrix
         y,x = dmatrices(self.formula,self.data,1,return_type='dataframe')
         self.design_matrix = x
-        Y,X = y.values, x.values
 
-        # Maybe wrap from here to below in func to make bootstrapping easier
-        # Add code to parallelize bootstrapping or permutation testing
-        b = np.dot(np.linalg.pinv(X),Y)
-        res = Y - np.dot(X,b)
-        b = b.squeeze()
-        res = res.squeeze()
-
-        if robust:
-            se = _robust_estimator(res,X,robust_estimator=robust,nlags=1)
-        else:
-            sigma = np.std(res,axis=0,ddof=X.shape[1])
-            se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T,X))))[:,np.newaxis] * sigma[np.newaxis,:]
-
-        t = b / se
-        df = X.shape[0] - X.shape[1]
+        # Compute standard estimates
+        b, se, t, res = _ols(x,y,robust,all_stats=True,n_lags=n_lags)
+        df = x.shape[0] - x.shape[1]
         p = 2*(1-t_dist.cdf(np.abs(t), df))
         df = np.array([df]*len(t))
-
-        # Patsy returns column vector so just squeeze out extra dim
-        ci_u = b + t_dist.ppf(.975,df)*se
-        ci_l = b + t_dist.ppf(.025,df)*se
         sig = np.array([_sig_stars(elem) for elem in p])
+
+        if conf_int == 'boot':
+
+            # Parallelize bootstrap computation for CIs
+            par_for = Parallel(n_jobs=n_jobs,backend='multiprocessing')
+
+            # To make sure that parallel processes don't use the same random-number generator pass in seed (sklearn trick)
+            seeds = np.random.randint(np.iinfo(np.int32).max,size=n_boot)
+
+            # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
+            boot_betas = par_for(delayed(                          _chunk_boot_ols_coefs
+)(dat=self.data,formula=self.formula,seed=seeds[i]) for i in range(n_boot))
+
+            boot_betas = np.array(boot_betas)
+            ci_u = np.apply_along_axis(np.percentile,0,boot_betas,97.5)
+            ci_l = np.apply_along_axis(np.percentile,0,boot_betas,2.5)
+
+        else:
+            # Otherwise we're doing parametric CIs
+            ci_u = b + t_dist.ppf(.975,df)*se
+            ci_l = b + t_dist.ppf(.025,df)*se
+
+        if permute:
+            # Permuting will change degrees of freedom to num_iter and p-values
+            # Parallelize computation
+            # Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??
+            # _chunk_perm_ols -> _ols -> _robust_estimator
+            if robust:
+                n_jobs = 1
+            par_for = Parallel(n_jobs=n_jobs,backend='multiprocessing')
+            seeds = np.random.randint(np.iinfo(np.int32).max,size=permute)
+            perm_ts = par_for(delayed(                          _chunk_perm_ols
+            )(x=x,y=y,robust=robust,n_lags=n_lags,seed=seeds[i]) for i in range(permute))
+            perm_ts = np.array(perm_ts)
+
+            p = []
+            for col, fit_t in zip(range(perm_ts.shape[1]),t):
+                p.append(_perm_find(perm_ts[:,col],fit_t))
+            p = np.array(p)
+            df = np.array([permute]*len(p))
+            sig = np.array([_sig_stars(elem) for elem in p])
+
 
         #Make output df
         results = np.column_stack([b,ci_l,ci_u,se,df,t,p,sig])
@@ -630,20 +690,23 @@ class Lm(object):
         results.columns = ['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val','Sig']
         results[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']] = results[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']].apply(pd.to_numeric)
 
+        if permute:
+            results = results.rename(columns={'DF':'Num_perm','P-val':'Perm-P-val'})
+
         self.coefs = results
         self.fitted = True
         self.resid = res
-        self.data['fits'] = Y.squeeze() - res
+        self.data['fits'] = y.squeeze() - res
 
         #Fit statistics
-        self.rsquared = np.corrcoef(np.dot(X,b),Y.squeeze())**2
+        self.rsquared = np.corrcoef(np.dot(x,b),y.squeeze())**2
         self.rsquared = self.rsquared[0,1]
-        self.rsquared_adj = 1.-(len(res)-1.)/(len(res)-X.shape[1]) * (1.- self.rsquared)
+        self.rsquared_adj = 1.-(len(res)-1.)/(len(res)-x.shape[1]) * (1.- self.rsquared)
         half_obs = len(res)/2.0
         ssr = np.dot(res,res.T)
         self.logLike = (-np.log(ssr)* half_obs) - ((1+np.log(np.pi/half_obs))*half_obs)
-        self.AIC = 2*X.shape[1] - 2*self.logLike
-        self.BIC = np.log((len(res)))*X.shape[1] - 2*self.logLike
+        self.AIC = 2*x.shape[1] - 2*self.logLike
+        self.BIC = np.log((len(res)))*x.shape[1] - 2*self.logLike
 
         if summarize:
             return self.summary()
@@ -658,6 +721,7 @@ class Lm(object):
         assert self.fitted == True, "Model must be fitted to generate summary!"
 
         print("Formula: {}\n".format(self.formula))
+        print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,self.ci_type,self.sig_type))
         print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" % (self.data.shape[0],self.rsquared,self.rsquared_adj))
         print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" % (self.logLike,self.AIC,self.BIC))
         print("Fixed effects:\n")

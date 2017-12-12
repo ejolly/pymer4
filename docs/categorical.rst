@@ -1,6 +1,15 @@
 Categorical Predictors
-======================
-:code:`pymer4` currently has support for handling categorical predictors in one of two ways based on how R's :code:`factor()` works:
+=======================
+
+Standard Regression Models
+--------------------------
+:code:`Lm()` models uses `patsy  <https://patsy.readthedocs.io/en/latest/>`_ to parse model formulae for *standard regression analyses*. Patsy is very powerful and has built-in support for handling categorical coding schemes (e.g. wrapping predictors in the :code:`C()` syntax). Patsy can also perform some pre-processing such as scaling and standardization.
+
+Please refer to the `patsy documentation <https://patsy.readthedocs.io/en/latest/categorical-coding.html>`_ when working with standard regression models that have categorical predictors.
+
+Multi-level Models
+------------------
+:code:`Lmer()` models currently have support for handling categorical predictors in one of two ways based on how R's :code:`factor()` works:
 
 1. Dummy-coded factor levels in which each model term is the difference between a factor levels and a selected reference level
 2. Orthogonal polynomial contrasts in which each model term is a polynomial contrast across factor levels (e.g. linear, quadratic, cubic, etc)
@@ -44,7 +53,7 @@ This will treat the order of list items as the order of factor levels for the *l
 
 Custom parameterizations
 ------------------------
-Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses.
+Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. *Note: this is also useful method if you don't want to use patsy's formula langauge with standard regression models as suggested above*.
 
 This is trivial using pandas map and assign methods. Here we'll only build a linear contrast across factor levels (0.5 < 1.0 < 1.5), without all exhaustive higher level polynomial terms:
 
