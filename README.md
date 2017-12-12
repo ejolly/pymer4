@@ -36,6 +36,10 @@ lmerTest>=2.0.33
 ```
 
 #### Change-log
+**0.2.2**
+- **Pypi release**
+- Better versioning system
+
 **0.2.1**
 - Support for standard linear regression models
 - Models include support for robust standard errors, boot-strapped CIs, and permuted inference
