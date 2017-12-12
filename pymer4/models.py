@@ -581,18 +581,19 @@ class Lm(object):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
-        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine. Robust estimators include:
-        'hc0': Huber (1980) original sandwich estimator
-        'hc3': MacKinnon and White (1985) HC3 sandwich estimator. Provides more robustness in smaller samples than hc0, Long & Ervin (2000)
-        'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
+        Robust estimators include:
+            - 'hc0': Huber (1980) original sandwich estimator
+            - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+            - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
 
         Args:
 
-            robust (bool/str): whether heteroscedasticity robust s.e.'s' and optionally which estimator type to use ('hc0','hc3','hac'). If robust = True, default robust estimator is 'hc0'; default False
+            robust (bool/str): whether to use heteroscedasticity robust s.e.and optionally which estimator type to use ('hc0','hc3','hac'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             summarize (bool): whether to print a model summary after fitting; default True
-            verbose (bool): whether to print which model and confidence interval type are being fitted
+            verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
             n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1

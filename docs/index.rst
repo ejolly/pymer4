@@ -9,7 +9,7 @@ Love multi-level-modeling using `lme4  <https://cran.r-project.org/web/packages/
 
 This package's main purpose is to provide a clean interface that hides the back-and-forth code required when moving between R and Python. In other words a user can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. Behind the scenes this package simply uses `rpy2 <https://rpy2.readthedocs.io/en/version_2.8.x/>`_ to pass objects between languages, compute what's needed, parse everything, and convert to Python types (e.g. numpy arrays, pandas dataframes, etc).
 
-This package can also fit standard regression models with a few extra bells and whistles compared to R's `lm()<https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/lm>`_.  (*Currently this only includes linear models*)
+This package can also fit standard regression models with a few extra bells and whistles compared to R's :code:`lm()` (*Currently this only includes linear models*)
 
 TL;DR This package is your new *simple* Pythonic drop-in replacement for :code:`lm()` or :code:`glmer()` in R.
 
@@ -51,20 +51,12 @@ Installation requires a working installation of *both* Python (currently not com
 
     pip install pymer4
 
-Basic Usage Guide For Standard Regression Models
-------------------------------------------------
+Basic Usage Guide
+-----------------
 .. toctree::
     :maxdepth: 2
 
-    usage_ols
-
-
-Basic Usage Guide For Multi-level Models
-----------------------------------------
-.. toctree::
-    :maxdepth: 2
-
-    usage_lmm
+    usage
 
 Categorical Predictors
 ----------------------

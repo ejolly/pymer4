@@ -7,6 +7,9 @@ API Reference
 .. autoclass:: pymer4.models.Lmer
     :members:
 
+.. autoclass:: pymer4.models.Lm
+    :members:
+
 :mod:`pymer4.utils`: Utilities
 ==============================
 
