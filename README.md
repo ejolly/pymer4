@@ -1,8 +1,11 @@
 [![Build Status](https://travis-ci.org/ejolly/pymer4.svg?branch=master)](https://travis-ci.org/ejolly/pymer4)
 # pymer4
 
-Love mixed-modeling using lme4 in R but prefer to work in the scientific Python ecosystem? Then this package has got you covered! It's a small convenience package wrapping the basic functionality of [lme4](https://github.com/lme4/lme4)\*.  
+Love multi-level-modeling using lme4 in R but prefer to work in the scientific Python ecosystem? Then this package has got you covered! It's a small convenience package wrapping the basic functionality of [lme4](https://github.com/lme4/lme4)\*.  
 \* *Currently this only includes linear and logit models*
+
+This package can also estimate standard, robust, and permuted regression models\*  
+\* *Currently this only includes linear models*
 
 #### Documentation
 Current documentation and usage examples can be found [here](http://eshinjolly.com/pymer4/).
