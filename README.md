@@ -22,9 +22,13 @@ You need *both* Python and R on your system to use this package. In addition to 
 # Python
 pandas>=0.19.1
 numpy>=1.12.0
+rpy2==2.8.5
 seaborn>=0.8.0
 matplotlib>=2.0
-rpy2==2.8.5
+patsy>=0.4.1
+joblib>=0.11
+scipy>=1.0.0
+
 
 # R
 lme4>=1.1.12

@@ -13,7 +13,6 @@ import seaborn as sns
 import warnings
 from joblib import Parallel, delayed
 from pymer4.utils import (_sig_stars,
-                          _robust_estimator,
                           _chunk_boot_ols_coefs,
                           _chunk_perm_ols,
                           _ols,
@@ -655,8 +654,8 @@ class Lm(object):
 )(dat=self.data,formula=self.formula,seed=seeds[i]) for i in range(n_boot))
 
             boot_betas = np.array(boot_betas)
-            ci_u = np.apply_along_axis(np.percentile,0,boot_betas,97.5)
-            ci_l = np.apply_along_axis(np.percentile,0,boot_betas,2.5)
+            ci_u = np.percentile(boot_betas,97.5,axis=1)
+            ci_l = np.percentile(boot_betas,2.5,axis=1)
 
         else:
             # Otherwise we're doing parametric CIs
