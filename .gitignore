@@ -10,3 +10,4 @@ docs/modules/
 .imdone/*
 dist/*
 *.egg*
+.tox/*

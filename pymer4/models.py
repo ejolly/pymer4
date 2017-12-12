@@ -389,7 +389,7 @@ class Lmer(object):
         assert all([col in data.columns for col in required_cols]), "Column names do not match all fixed effects model terms!"
 
         if use_rfx:
-            required_cols = set(list(required_cols) + self.grps.keys())
+            required_cols = set(list(required_cols) + list(self.grps.keys()))
             assert all([col in data.columns for col in required_cols]), "Column names are missing random effects model grouping terms!"
 
             re_form = 'NULL'
