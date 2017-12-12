@@ -4,3 +4,5 @@ rpy2==2.8.5
 seaborn>=0.8.0
 matplotlib>=2.0
 patsy>=0.4.1
+joblib>=0.11
+scipy>=1.0.0
