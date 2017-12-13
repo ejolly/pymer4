@@ -19,10 +19,3 @@ before_install:
 - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
   library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
 - sudo pip install pytest
-deploy:
-  provider: pypi
-  user: ejolly
-  password:
-    secure: BcH7uqGBfqUkLl5MsbxX2aNr5huTLIbYpaxaQJGMOdrClhCr5uH65JAWL5v7DOSNycJkBhrwqwFZPnZrnTXMg+7OGTa73pd7dsGVPHyTjMTIHIYA0oTRYc4mVYosgdPni/nWhShnI8QKv4yvVc6sFBVBuOS0ITrHpEUZsP3G4dRHFM4CTncMvg0T6eaaJ4tdm83lic5mBMhfWzkB60gK6KvrAttKKyB4ODvfVhllNB/0dDK4ReSK6jYMxTXlKiArZNdOhAm2PhZ7zCv1FwzW1Oyo4mYXZx7B4W2jfISDv01hPgylcIN9/ys5x4tNRA7QwUc86tPTiduBeJxKRQkTjx05PylR2ktKjgQguDxsyM5DZi4OOUezZYgkfbq3BHWSpEX2s9beBawdjgEY0vg9aGSd9n5BCI8zK4tI1fWXUU7SXG0fveZgpxBnCstuVKEqnO/Op/7bn/fziI0Gds2tiLx+L95wA/6cdISC4Cgw5qW+zVXPkH9LBtDjz0SN4fRp44fdPUEuXx3VTBNGMfLMNTHU9bQQopZT+cWKkFRJTHwuRZYt8O9CIiNGrA9QhAGNXLl0g6dBZbn8UwT3GnAcX7QORm0q+BlAVO5DWQ7Vsidg1LN7BTv8pWaeQs9X6b6d4mjN8Sf2FInBI97WfanYoSaR5YlgF/WkhO3E7uDaPxo=
-  on:
-    branch: master

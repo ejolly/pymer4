@@ -51,7 +51,7 @@ Fitting a standard regression model like using :code:`lm()` in R, simply entails
 
 Estimate a multi-level model
 ----------------------------
-Fitting a model simply entails initializing it with a model formula and pandas data-frame, and subsequently calling its :code:`fit` method.
+Fitting a multi-level model works similarily.
 
 .. code-block:: python
 

@@ -1,4 +1,7 @@
 [![Build Status](https://travis-ci.org/ejolly/pymer4.svg?branch=master)](https://travis-ci.org/ejolly/pymer4)
+[![Package versioning](https://img.shields.io/pypi/v/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.2.2&:action=display)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.2.2&:action=display)
+
 # pymer4
 
 Love multi-level-modeling using lme4 in R but prefer to work in the scientific Python ecosystem? Then this package has got you covered! It's a small convenience package wrapping the basic functionality of [lme4](https://github.com/lme4/lme4)\*.  
@@ -8,32 +11,29 @@ This package can also estimate standard, robust, and permuted regression models\
 \* *Currently this only includes linear models*
 
 #### Documentation
-Current documentation and usage examples can be found [here](http://eshinjolly.com/pymer4/).
-
-#### Installation
-
-```
-pip install git+https://github.com/ejolly/pymer4
-```
+Current documentation and usage examples can be found **[here](http://eshinjolly.com/pymer4/)**.
 
 #### Requirements <a name="requirements"></a>
-You need *both* Python and R on your system to use this package. In addition to the following Python and R packages:
+You need *both* Python (2.7 or 3.6) and R (>= 3.2.4) on your system to use this package in addition to the following R packages (*pymer4 will NOT install R or R packages for you!*):
 ```
-# Python
-pandas>=0.19.1
-numpy>=1.12.0
-rpy2==2.8.5
-seaborn>=0.8.0
-matplotlib>=2.0
-patsy>=0.4.1
-joblib>=0.11
-scipy>=1.0.0
-
-
-# R
 lme4>=1.1.12
 lmerTest>=2.0.33
 ```
+
+#### Installation  
+
+1. Method (stable)
+
+    ```
+    pip install pymer4
+    ```
+
+2. Method 2 (latest)
+
+    ```
+    pip install git+https://github.com/ejolly/pymer4
+    ```
+
 
 #### Change-log
 **0.2.2**

@@ -37,15 +37,19 @@ This package has some extra goodies to make life a bit easier, namely:
 
 Installation
 ------------
-Installation requires a working installation of *both* Python (currently not compatible with Python 3) and R installed.
+Requires a working installation of *both* Python (2.7 or 3.6) and R (>= 3.2.4).
 
-1. Method 1 - Install from github (Recommended)
+You will also need :code:`lme4` and :code:`lmerTest` R packages installed.
+
+This package will not install R or R packages for you!
+
+1. Method 1 - Install from github
 
 .. code-block:: python
 
     pip install git+https://github.com/ejolly/pymer4
 
-2. Method 2 - Install from PyPi (Not currently working)
+2. Method 2 - Install from PyPi
 
 .. code-block:: python
 

@@ -1,6 +1,8 @@
 Categorical Predictors
 =======================
 
+The syntax for handling categorical predictors is **different** between standard regression models and multi-level models in :code:`pymer4`. This is because formula parsing is passed to R for multi-level models, but handled by Python for standard regression models. Please note the differences below.
+
 Standard Regression Models
 --------------------------
 :code:`Lm()` models uses `patsy  <https://patsy.readthedocs.io/en/latest/>`_ to parse model formulae for *standard regression analyses*. Patsy is very powerful and has built-in support for handling categorical coding schemes (e.g. wrapping predictors in the :code:`C()` syntax). Patsy can also perform some pre-processing such as scaling and standardization.
@@ -24,10 +26,11 @@ The *first* term in the list will be treated as the reference level.
 
 .. code-block:: python
 
-    # Initialize a model using a categorical predictor
+    # Initialize a multi-level-model
+    # We're going to treat IV3 as categorical predictor during fitting
     model = Lmer('DV_l ~ IV3 + (IV3|Group)',data=df,family='binomial')
 
-    # Dummy code factors and set 1.0 as the reference level for IV3
+    # IV3 has 3 levels. Use dummy codes and set 1.0 as the reference level
     model.fit(factors={
         'IV3':['1.0','0.5','1.5'],
         })
@@ -53,7 +56,7 @@ This will treat the order of list items as the order of factor levels for the *l
 
 Custom parameterizations
 ------------------------
-Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. *Note: this is also useful method if you don't want to use patsy's formula langauge with standard regression models as suggested above*.
+Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. *Note: this is also a useful approach if you don't want to use patsy's formula langauge with standard regression models as noted above*.
 
 This is trivial using pandas map and assign methods. Here we'll only build a linear contrast across factor levels (0.5 < 1.0 < 1.5), without all exhaustive higher level polynomial terms:
 
