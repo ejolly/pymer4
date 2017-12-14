@@ -10,6 +10,14 @@ API Reference
 .. autoclass:: pymer4.models.Lm
     :members:
 
+:mod:`pymer4.simulate`: Simulation
+==================================
+
+.. automodule:: pymer4.simulate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`pymer4.utils`: Utilities
 ==============================
 

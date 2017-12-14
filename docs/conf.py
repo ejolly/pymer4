@@ -49,6 +49,9 @@ templates_path = ['_templates']
 # source_suffix = ['.rst', '.md']
 source_suffix = '.rst'
 
+# Sort by definition order not alphabetically
+autodoc_member_order = 'bysource'
+
 # The master toctree document.
 master_doc = 'index'
 

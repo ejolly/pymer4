@@ -18,6 +18,10 @@ from pymer4.utils import (_sig_stars,
                           _ols,
                           _perm_find
                           )
+
+__author__ = ['Eshin Jolly']
+__license__ = "MIT"
+
 warnings.simplefilter('always',UserWarning)
 pandas2ri.activate()
 
@@ -92,7 +96,6 @@ class Lmer(object):
         Returns:
             pandas.core.frame.DataFrame: copy of original data with factorized columns
         """
-
 
         if ordered:
 
@@ -582,12 +585,11 @@ class Lm(object):
 
         Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
         Robust estimators include:
-            - 'hc0': Huber (1980) original sandwich estimator
-            - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
-            - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
+        - 'hc0': Huber (1980) original sandwich estimator
+        - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+        - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
 
         Args:
-
             robust (bool/str): whether to use heteroscedasticity robust s.e.and optionally which estimator type to use ('hc0','hc3','hac'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
