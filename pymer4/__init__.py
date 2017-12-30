@@ -7,7 +7,8 @@ __all__ = ["models",
 
 from .models import Lmer, Lm
 from .simulate import (easy_multivariate_normal,
-                       simulate_lm)
+                       simulate_lm,
+                       simulate_lmm)
 
 from .utils import get_resource_path
 

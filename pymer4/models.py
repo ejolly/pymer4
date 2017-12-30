@@ -165,7 +165,7 @@ class Lmer(object):
             verbose (bool): whether to print when and which model and confidence interval are being fitted
 
         Returns:
-            dataframe: R style summary() table
+            DataFrame: R style summary() table
 
         """
 
@@ -385,7 +385,7 @@ class Lmer(object):
             pred_type (str): whether the prediction should be on the 'response' scale (default); or on the 'link' scale of the predictors passed through the link function (e.g. log-odds scale in a logit model instead of probability values)
 
         Returns:
-            numpy.ndarray of predictions
+            ndarray: prediction values
 
         """
         required_cols = self.design_matrix.columns[1:]
@@ -600,7 +600,7 @@ class Lm(object):
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
 
         Returns:
-            dataframe: R style summary() table
+            DataFrame: R style summary() table
 
         """
         if permute and permute < 500:
