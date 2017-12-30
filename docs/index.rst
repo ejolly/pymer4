@@ -69,6 +69,13 @@ Categorical Predictors
 
     categorical
 
+Simulating Data
+---------------
+.. toctree::
+    :maxdepth: 2
+
+    simulate
+
 Lme4 CheatSheet
 ---------------
 .. toctree::

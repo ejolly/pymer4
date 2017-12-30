@@ -36,6 +36,9 @@ lmerTest>=2.0.33
 
 
 #### Change-log
+**0.3.2**
+- Addition of `simulate` module
+
 **0.2.2**
 - **Pypi release**
 - Better versioning system
