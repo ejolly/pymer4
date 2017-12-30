@@ -83,7 +83,7 @@ def test_simulate_lmm():
         corr = corr[np.triu_indices(corr.shape[0],k=1)]
         return corr
 
-    assert (group_data.apply(lambda grp: (np.abs(grp_corr(grp) - corrs) < .45).all())).all()
+    assert (group_data.apply(lambda grp: (np.abs(grp_corr(grp) - corrs) < .5).all())).all()
 
     # Model simulated data
     m = Lmer('DV ~ IV1+IV2+IV3 + (IV1+IV2+IV3|Group)',data=data)
