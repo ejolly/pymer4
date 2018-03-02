@@ -90,8 +90,8 @@ def test_simulate_lmm():
     m.fit(summarize=False)
 
     # Check random effects variance
-    # True - Generated < .15
-    assert np.allclose(m.ranef_var.iloc[1:-1,-1],corrs,atol=.15)
+    # True - Generated < .25
+    assert np.allclose(m.ranef_var.iloc[1:-1,-1],corrs,atol=.25)
 
     # Check parameter recovery
     # True - Recovered < .15 for params and < 1 for intercept
