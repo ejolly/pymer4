@@ -115,11 +115,11 @@ class Lmer(object):
 
         factorize = robjects.r(rstring)
         df = copy(self.data)
-        for k in factor_dict.iterkeys():
+        for k in factor_dict.keys():
             df[k] = df[k].astype(str)
 
         r_df = pandas2ri.py2ri(df)
-        for k,v in factor_dict.iteritems():
+        for k,v in factor_dict.items():
 
             r_df = factorize(r_df,k,v)
 
