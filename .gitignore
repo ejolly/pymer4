@@ -11,3 +11,4 @@ docs/modules/
 dist/*
 *.egg*
 .tox/*
+.pytest_cache/*

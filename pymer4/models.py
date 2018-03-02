@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from patsy import dmatrices
 import seaborn as sns
 import warnings
+from six import string_types
 from joblib import Parallel, delayed
 from pymer4.utils import (_sig_stars,
                           _chunk_boot_ols_coefs,
@@ -75,6 +76,8 @@ class Lmer(object):
         self.coefs = None
         self.model_obj = None
         self.factors = None
+        self.marginal_effects = None
+        self.marginal_contrasts = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -132,7 +135,8 @@ class Lmer(object):
         #TODO Make sure factors are set with orthogonal contrasts first
         """Compute a Type III ANOVA table on a fitted model."""
 
-        assert self.fitted == True, "Model hasn't been fit! Call fit() method before computing ANOVA table."
+        if not self.fitted:
+            raise RuntimeError("Model hasn't been fit! Call fit() method before computing ANOVA table.")
 
         #See rpy2 for building contrasts or loop and construct rstring
         rstring = """
@@ -389,11 +393,13 @@ class Lmer(object):
 
         """
         required_cols = self.design_matrix.columns[1:]
-        assert all([col in data.columns for col in required_cols]), "Column names do not match all fixed effects model terms!"
+        if not all([col in data.columns for col in required_cols]):
+            raise ValueError("Column names do not match all fixed effects model terms!")
 
         if use_rfx:
             required_cols = set(list(required_cols) + list(self.grps.keys()))
-            assert all([col in data.columns for col in required_cols]), "Column names are missing random effects model grouping terms!"
+            if not all([col in data.columns for col in required_cols]):
+                raise ValueError("Column names are missing random effects model grouping terms!")
 
             re_form = 'NULL'
         else:
@@ -416,7 +422,8 @@ class Lmer(object):
 
         """
 
-        assert self.fitted == True, "Model must be fitted to generate summary!"
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
         print("Number of observations: %s\t Groups: %s\n" % (self.data.shape[0],self.grps))
@@ -429,6 +436,98 @@ class Lmer(object):
             print("No random effect correlations specified\n")
         print("Fixed effects:\n")
         return self.coefs.round(3)
+
+    def post_hoc(self,marginal_vars, grouping_vars=None,p_adjust='tukey'):
+        """
+        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the lsmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/lsmeans/lsmeans.pdf
+
+        Args:
+            marginal_var (str): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
+            grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
+            adjust
+            p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
+
+        """
+
+        if not marginal_vars:
+            raise ValueError("Must provide marginal_vars")
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to generate post-hoc comparisons")
+
+        if not isinstance(marginal_vars, list):
+            marginal_vars = [marginal_vars]
+
+        if grouping_vars and not isinstance(grouping_vars, list):
+            grouping_vars = [grouping_vars]
+            # Conditional vars can only be factor types
+            if not all([elem in self.factors.keys() for elem in grouping_vars]):
+                raise ValueError("All grouping_vars must be existing categorical variables (i.e. factors)")
+
+        # Need to figure out if marginal_vars is continuous or not to determine lstrends or lsmeans call
+        cont,factor = [],[]
+        for var in marginal_vars:
+            if var not in self.factors.keys():
+                cont.append(var)
+            else:
+                factor.append(var)
+
+        if cont:
+            if factor:
+                raise ValueError("With more than one marginal variable, all variables must be categorical factors. Mixing continuous and categorical variables is not supported. Try passing additional categorical factors to grouping_vars""")
+            else:
+                if len(cont) > 1:
+                    raise ValueError("Marginal variables can only contain one continuous variable")
+                elif len(cont) == 1:
+                    if grouping_vars:
+                        # Lstrends
+                        cont = cont[0]
+                        _conditional = '+'.join(grouping_vars)
+                        rstring = """
+                            function(model){
+                            suppressMessages(library(lsmeans))
+                            out <- lstrends(model,pairwise ~ """ + _conditional + """,var='""" + cont + """',adjust='""" + p_adjust + """')
+                            out
+                            }"""
+                    else:
+                        raise ValueError("grouping_vars are required with a continuous marginal_vars")
+        else:
+            if factor:
+                _marginal = '+'.join(factor)
+                if grouping_vars:
+                    # Lsmeans with pipe
+                    _conditional = '+'.join(grouping_vars)
+                    rstring = """
+                        function(model){
+                        suppressMessages(library(lsmeans))
+                        out <- lsmeans(model,pairwise ~ """ + _marginal + """|""" + _conditional + """, adjust=''""" + p_adjust + """')
+                        out
+                        }"""
+                else:
+                    # Lsmeans without pipe
+                    rstring = """
+                        function(model){
+                        suppressMessages(library(lsmeans))
+                        out <- lsmeans(model,pairwise ~ """ + _marginal + """,adjust='""" + p_adjust + """')
+                        out
+                        }"""
+            else:
+                raise ValueError("marginal_vars are not in model!")
+
+
+        func = robjects.r(rstring)
+        res = func(self.model_obj)
+        base = importr('base')
+
+        self.marginal_effects = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
+        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res.rx2('contrasts')))
+
+        if p_adjust == 'tukey' and self.marginal_contrasts.shape[0] >= self.marginal_effects.shape[0]:
+            print("P-values adjusted by tukey method for family of {} estimates".format(self.marginal_effects.shape[0]))
+        elif p_adjust != 'tukey':
+            print("P-values adjusted by {} method for {} comparisons".format(p_adjust,self.marginal_contrasts.shape[0]))
+
+        return self.marginal_effects.round(3), self.marginal_contrasts.round(3)
 
     def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=False,grps=[],ax=None):
         """
@@ -445,11 +544,13 @@ class Lmer(object):
             ax (matplotlib.axes.Axes): axis handle for an existing plot; if provided will ensure that random parameter plots appear *behind* all other plot objects.
 
         Returns:
-            matplotlib figure handle, matplotlib axis handle
+            matplotlib figure handle
+            matplotlib axis handle
 
         """
 
-        assert self.fitted, "Model must be fit before plotting!"
+        if not self.fitted:
+            raise RuntimeError("Model must be fit before plotting!")
         if self.factors:
             raise NotImplementedError("Plotting can currently only handle models with continuous predictors!")
         if isinstance(self.fixef, list) or isinstance(self.ranef,list):
@@ -543,7 +644,7 @@ class Lm(object):
         coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
-        model_obj(lmer model): rpy2 lmer model object
+        model_obj(lm model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
 
     """
@@ -721,7 +822,8 @@ class Lm(object):
 
         """
 
-        assert self.fitted == True, "Model must be fitted to generate summary!"
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
         print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,self.ci_type,self.sig_type))
@@ -729,3 +831,6 @@ class Lm(object):
         print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" % (self.logLike,self.AIC,self.BIC))
         print("Fixed effects:\n")
         return self.coefs.round(3)
+
+    def post_hoc(self):
+        raise NotImplementedError("Post-hoc tests are not yet implemented for linear models.")

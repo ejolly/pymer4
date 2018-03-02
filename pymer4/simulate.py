@@ -30,7 +30,6 @@ def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,no
     Returns:
 
         data
-
         ground-truth coefficient values
 
 
@@ -94,9 +93,7 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
 
     Returns:
         data
-
         group/cluster level coefficients (i.e. BLUPs)
-
         population coefficient values
 
     """
