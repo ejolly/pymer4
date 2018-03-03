@@ -13,7 +13,7 @@ This package can also fit standard regression models with a few extra bells and 
 
 TL;DR This package is your new *simple* Pythonic drop-in replacement for :code:`lm()` or :code:`glmer()` in R.
 
-
+`Github Repo Source <https://github.com/ejolly/pymer4>`_
 
 Features
 --------
