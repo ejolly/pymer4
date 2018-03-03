@@ -156,7 +156,6 @@ class Lmer(object):
         print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n")
         return self.anova
 
-
     def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True,verbose=False):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
@@ -379,9 +378,42 @@ class Lmer(object):
             return self.summary()
 
 
+    def simulate(self,num_datasets,use_rfx=True):
+        """
+        Simulate new responses based upon estimates from a fitted model. By default group/cluster means for simulated data will match those of the original data. Unlike predict, this is a non-deterministic operation because lmer will sample random-efects values for all groups/cluster and then sample data points from their respective conditional distributions.
+
+        Args:
+            num_datasets (int): number of simulated datasets to generate. Each simulation always generates a dataset that matches the size of the original data
+            use_rfx (bool): match group/cluster means in simulated data?; Default True
+
+        Returns:
+            ndarray: simulated data values
+        """
+
+        if isinstance(num_datasets,float):
+            num_datasets = int(num_datasets)
+        if not isinstance(num_datasets, int):
+            raise ValueError("num_datasets must be an integer")
+
+        if use_rfx:
+            re_form = 'NULL'
+        else:
+            re_form = 'NA'
+
+        rstring = """
+            function(model){
+            out <- simulate(model,""" + str(num_datasets) + """,allow.new.levels=TRUE,re.form="""+re_form+""")
+            out
+            }
+        """
+        simulate_func = robjects.r(rstring)
+        sims = pandas2ri.ri2py(simulate_func(self.model_obj))
+        return sims
+
+
     def predict(self,data,use_rfx=False,pred_type='response'):
         """
-        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the grouping factors that were used to fit the model random effects terms.
+        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the group identifier that were used to fit the model random effects terms. Using random effects to make predictions only makes sense if predictions are being made about the same groups/clusters.
 
         Args:
             data (pandas.core.frame.DataFrame): input data to make predictions on
@@ -444,7 +476,6 @@ class Lmer(object):
         Args:
             marginal_var (str): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
             grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
-            adjust
             p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
 
         """
@@ -529,7 +560,7 @@ class Lmer(object):
 
         return self.marginal_effects.round(3), self.marginal_contrasts.round(3)
 
-    def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=False,grps=[],ax=None):
+    def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=True,grps=[],ax=None):
         """
         Plot random and group level parameters from a fitted model
 
@@ -563,29 +594,10 @@ class Lmer(object):
         #Sort order to handle bug in matplotlib plotting
         idx = np.argsort(x_vals)
 
-        #Get all other variables, excluding intercept
-        #other_vals = [elem for elem in self.design_matrix.columns if elem not in ['(Intercept)',param]]
-        #Get mean values for other vals to make conditional predictions
-        #other_vals_means = self.design_matrix[other_vals].mean(axis=0)
-
-        #Generate group effects predictions first
-        #Prediction = Intercept + coef * desired_param_value_range + coef_2 * other_param_held_at_mean ....
-
         #Get desired parameter part of the prediction
-        fixef_desired = self.coefs.loc['(Intercept)','Estimate'] + self.coefs.loc[param,'Estimate']*x_vals
-        fixef_desired_upper = self.coefs.loc['(Intercept)','97.5_ci'] + self.coefs.loc[param,'97.5_ci']*x_vals
-        fixef_desired_lower = self.coefs.loc['(Intercept)','2.5_ci'] + self.coefs.loc[param,'2.5_ci']*x_vals
-
-
-        #Get other parameters part of the prediction, held at their mean value
-        #fixef_other = np.dot(other_vals_means,self.coefs.loc[other_vals,'Estimate'])
-        #fixef_other_lower = np.dot(other_vals_means,self.coefs.loc[other_vals,'2.5_ci'])
-        #fixef_other_upper = np.dot(other_vals_means,self.coefs.loc[other_vals,'97.5_ci'])
-
-        #Add them together for conditional prediction
-        fixef_pred = fixef_desired #+ fixef_other
-        fixef_pred_upper = fixef_desired_upper #+ fixef_other_upper
-        fixef_pred_lower = fixef_desired_lower #+ fixef_other_lower
+        fixef_pred = self.coefs.loc['(Intercept)','Estimate'] + self.coefs.loc[param,'Estimate']*x_vals
+        fixef_pred_upper = self.coefs.loc['(Intercept)','97.5_ci'] + self.coefs.loc[param,'97.5_ci']*x_vals
+        fixef_pred_lower = self.coefs.loc['(Intercept)','2.5_ci'] + self.coefs.loc[param,'2.5_ci']*x_vals
 
         if grps:
             if all(isinstance(x, int) for x in grps):
@@ -614,7 +626,8 @@ class Lmer(object):
 
         ax.set(ylim = (self.data.fits.min(), self.data.fits.max()),
                xlim = (x_vals.min(),x_vals.max()),
-               xlabel = param);
+               xlabel = param,
+               ylabel = self.formula.split('~')[0].strip());
         if xlabel:
             ax.set_xlabel(xlabel);
         if ylabel:
@@ -753,8 +766,7 @@ class Lm(object):
             seeds = np.random.randint(np.iinfo(np.int32).max,size=n_boot)
 
             # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
-            boot_betas = par_for(delayed(                          _chunk_boot_ols_coefs
-)(dat=self.data,formula=self.formula,seed=seeds[i]) for i in range(n_boot))
+            boot_betas = par_for(delayed(                          _chunk_boot_ols_coefs)(dat=self.data,formula=self.formula,seed=seeds[i]) for i in range(n_boot))
 
             boot_betas = np.array(boot_betas)
             ci_u = np.percentile(boot_betas,97.5,axis=0)

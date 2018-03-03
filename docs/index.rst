@@ -26,6 +26,9 @@ This package has some extra goodies to make life a bit easier, namely:
     - Automatic conversion and calculation of *odds-ratios* and *probabilities* for logit models
     - Easy access to model fits, residuals, and random effects as pandas dataframes
     - Random effects plotting using seaborn
+    - Easy post-hoc tests with multiple-comparisons correction via `lsmeans <https://cran.r-project.org/web/packages/lsmeans/index.html>`_
+    - Easy model predictions on new data
+    - Easy generation of new data from a fitted model
 
 - For standard linear models (i.e. :code:`lm()`)
 
@@ -33,6 +36,10 @@ This package has some extra goodies to make life a bit easier, namely:
     - Easy computation of empirically bootstrapped 95% confidence intervals
     - Easy computation of heteroscedasticity or auto-correlation robust 'sandwich estimators' for standard errors (*note: these are not the same as auto-regressive models*)
     - Permutation tests on model parameters
+
+- Data simulation
+
+    - Highly customizable functions for generating data useful for standard regression models and multi-level models
 
 
 Installation

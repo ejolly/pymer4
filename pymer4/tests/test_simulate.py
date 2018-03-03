@@ -55,7 +55,8 @@ def test_simulate_lmm():
                           num_grps,
                           coef_vals = coef_vals,
                           mus = mus,
-                          corrs = corrs)
+                          corrs = corrs,
+                          noise_params=(0,.25))
 
     # Check data shape (add 2 for DV and group columns)
     assert data.shape == (num_obs*num_grps, num_coef+2)
@@ -72,12 +73,12 @@ def test_simulate_lmm():
     # True - Generated < .25
     np.allclose(coef_vals,blups.mean(axis=0),atol=.25)
 
-    # Check column means within groups
-    # True - Generate < .5
-    assert (group_data.apply(lambda grp: np.allclose(grp.iloc[:,1:-1].mean(axis=0),mus,atol=.5))).all()
+    # Check column means within groups, i.e. random intercepts
+    # True - Generated < 1.1
+    assert (group_data.apply(lambda grp: np.allclose(grp.iloc[:,1:-1].mean(axis=0),mus,atol=1.1))).all()
 
     # Check correlations within group
-    # True - Generated < .45
+    # True - Generated < .5
     def grp_corr(grp):
         corr = grp.iloc[:,1:-1].corr().values
         corr = corr[np.triu_indices(corr.shape[0],k=1)]
@@ -99,5 +100,5 @@ def test_simulate_lmm():
     assert (np.abs(m.coefs.iloc[0,0] - b[0]) < 1).all()
 
     # Check BLUP recovery
-    # mean(True - Generated) < .25 (sigma)
-    assert np.abs((m.fixef.values - blups.values).ravel()).mean() < .3
+    # mean(True - Generated) < .5 (sigma)
+    assert np.abs((m.fixef.values - blups.values).ravel()).mean() < .5

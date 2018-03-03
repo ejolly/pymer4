@@ -1,4 +1,4 @@
 """Specifies current version of pymer4 to be used by setup.py and __init__.py
 """
 
-__version__ = '0.3.2'
+__version__ = '0.4.0'

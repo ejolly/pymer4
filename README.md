@@ -18,6 +18,7 @@ You need *both* Python (2.7 or 3.6) and R (>= 3.2.4) on your system to use this 
 ```
 lme4>=1.1.12
 lmerTest>=2.0.33
+lsmeans>=2.25
 ```
 
 #### Installation  
@@ -36,6 +37,11 @@ lmerTest>=2.0.33
 
 
 #### Change-log
+**0.4.0**  
+- Added `post_hoc` tests to `Lmer` models
+- Added `simulate` data from fitted `Lmer` models
+- Numerous bug fixes for python 3 compatibility
+
 **0.3.2**
 - Addition of `simulate` module
 
