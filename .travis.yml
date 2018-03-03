@@ -17,5 +17,5 @@ before_install:
 - sudo apt-get update
 - sudo apt-get -y install r-base r-base-dev python-tk
 - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
-  library(versions); install.versions(c('lme4','lmerTest'),c('1.1-12','2.0-33'))"
+  library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-12','2.0-33','2.25'))"
 - sudo pip install pytest
