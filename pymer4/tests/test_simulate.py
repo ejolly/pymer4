@@ -56,7 +56,8 @@ def test_simulate_lmm():
                           coef_vals = coef_vals,
                           mus = mus,
                           corrs = corrs,
-                          noise_params=(0,.25))
+                          noise_params=(0,.25),
+                          seed=4)
 
     # Check data shape (add 2 for DV and group columns)
     assert data.shape == (num_obs*num_grps, num_coef+2)
