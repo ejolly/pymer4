@@ -5,7 +5,7 @@
 
 Pymer4
 ======
-Love multi-level-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This this package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python. (*Currently this only include linear and logistic multi-level models*)
+Love multi-level-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python. (*Currently this only include linear and logistic multi-level models*)
 
 This package's main purpose is to provide a clean interface that hides the back-and-forth code required when moving between R and Python. In other words a user can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. Behind the scenes this package simply uses `rpy2 <https://rpy2.readthedocs.io/en/version_2.8.x/>`_ to pass objects between languages, compute what's needed, parse everything, and convert to Python types (e.g. numpy arrays, pandas dataframes, etc).
 
@@ -48,7 +48,7 @@ Requires a working installation of *both* Python (2.7 or 3.6) and R (>= 3.2.4).
 
 You will also need the :code:`lme4`, :code:`lmerTest`, and :code:`lsmeans` R packages installed.
 
-This package will not install R or R packages for you!
+*This package will not install R or R packages for you!*
 
 1. Method 1 - Install from PyPi (stable)
 
@@ -62,7 +62,30 @@ This package will not install R or R packages for you!
 
     pip install git+https://github.com/ejolly/pymer4
 
+Install issues
+^^^^^^^^^^^^^^
+Some users have issues installing ``pymer4`` on recent versions of macOS. This is due to compiler issues that give ``rpy2`` (a package dependency of ``pymer4``) some issues during install. Here's a fix that should work for that:
 
+1. Install `homebrew <https://brew.sh/>`_ if you don't have it already by running the command at the link (it's a great pacakage manager for macOS). To check if you already have it, do ``which brew`` in your Terminal. If nothing pops up you don't have it.
+2. Fix brew permissions: ``sudo chown -R $(whoami) $(brew --prefix)/*`` (this is **necessary** on macOS Sierra or higher (>= macOS 10.12))
+3. Update homebrew ``brew update``
+4. Install an updated compiler: ``brew install gcc``, or if you have homebrew already, ``brew upgrade gcc``
+5. Enable the new compiler for use:
+
+    .. code-block:: bash
+
+        export CC="$(find `brew info gcc | grep usr | sed 's/(.*//' | awk '{printf $1"/bin"}'` -name 'x86*gcc-7')"
+        export CFLAGS="-W"
+
+6. If the above results in any error output (it should return nothing) you might need to manually find out where the new compiler is installed. To do so use ``brew info gcc`` and ``cd`` into the directory that begins with ``/usr`` in the output of that command. From there ``cd`` into ``bin`` and look for a file that begins with ``x86`` and ends with ``gcc-7``. Copy the *full path* to that file and run the following:
+
+    .. code-block:: bash
+
+        export CC= pathYouCopiedInQuotes
+        export CFLAGS="-W"
+
+7. Finally install ``rpy2`` using the new compiler you just installed: ``pip install rpy2==2.8.6``
+8. Now you should be able to ``pip install pymer4``:)
 
 Basic Usage Guide
 -----------------

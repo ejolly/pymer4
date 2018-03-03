@@ -85,7 +85,11 @@ We can also plot these values with respect to the population parameters above.
 
 .. image:: ../misc/ranef_plot.png
 
-If the model contains more than one predictor variable (unlike above) this plot will visualize a single predictor conditioned on the *mean* value of every other model term.
+If the model contains more than one predictor variable (unlike above) this plot will visualize a single predictor while other predictors are held constant.
+
+Inspect other attributes
+------------------------
+Other model attributes are also conveniently accessible after fitting a model. For example, ``model.data`` contains a copy of the original dataframe used to fit the model, *plus* columns for model predictions and residuals and ``model.coefs`` contains fitted parameters. Generally you can see what other model properties are available by typing ``model.`` and pressing ``tab`` to see the list of attributes (and methods). This works for both ``Lm()`` and ``Lmer()`` models.
 
 Inspect overall fit
 -------------------
