@@ -15,7 +15,7 @@ before_install:
 - gpg -a --export E084DAB9 | sudo apt-key add -
 - sudo rm -vf /etc/apt/sources.list.d/*riak*
 - sudo apt-get update
-- sudo apt-get -y install r-base r-base-dev python-tk
+- sudo apt-get -y install r-base r-base-dev python-tk libnlopt-dev
 - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
   library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-12','2.0-33','2.25'))"
 - sudo pip install pytest
