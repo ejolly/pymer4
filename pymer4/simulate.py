@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
+from pymer4.utils import discrete_inverse_logit
 
 __all__  = ['easy_multivariate_normal',
             'simulate_lm',
@@ -10,10 +11,10 @@ __all__  = ['easy_multivariate_normal',
 __author__ = ['Eshin Jolly']
 __license__ = "MIT"
 
-def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,noise_params=(0,1),seed=None):
+def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,noise_params=(0,1),family='gaussian',seed=None):
     """
     Function to quickly simulate a regression model dataset, with continuous predictors.
-    Provided a number of observations, number of coefficients, and optionally correlations between predictors, means, and standard deviations of predictors, returns a pandas dataframe with simulated data that can be used to estimate a linear regression using Lm().
+    Provided a number of observations, number of coefficients, and optionally correlations between predictors, means, and standard deviations of predictors, returns a pandas dataframe with simulated data that can be used to estimate a linear regression using Lm(). Using the family='binomial' argument can generate discrete dependent variable values for use with logistic regression.
 
     Defaults to returning standard normal (mu = 0; sigma = 1) predictors with no explicit correlations.
 
@@ -25,6 +26,7 @@ def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,no
         mus (float/list/ndarray): means of columns of predictors
         sigmas (float/list/ndarray): stds of columns of predictors
         noise_params (tup, optional): mean and std of noise added to simulated data
+        family (str): distribution family for the dependent variable. Currently only 'gaussian' (continuous DV) or 'binomial' (discrete DV) are available.
         seed (int): seed for reproducible random number generation
 
     Returns:
@@ -63,17 +65,19 @@ def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,no
     X = np.column_stack([np.ones((num_obs,1)),X])
     # Generate data
     Y = np.dot(X,b) + np.random.normal(*noise_params,size=num_obs)
-
+    # Apply transform if not linear model
+    if family == 'binomial':
+        Y = discrete_inverse_logit(Y)
     dat = pd.DataFrame(np.column_stack([Y,X[:,1:]]),columns=['DV'] + ['IV'+str(elem+1) for elem in range(X.shape[1]-1)])
 
     return dat,b
 
-def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=.25,mus=0.0,sigmas=1.0,noise_params=(0,1),seed=None):
+def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=.25,mus=0.0,sigmas=1.0,noise_params=(0,1),family='gaussian',seed=None):
     """
     Function to quickly simulate a multi-level regression model dataset, with continuous predictors.
     Provided a number of observations, number of coefficients, number of groups/clusters,
     and optionally correlations between predictors, means, and standard deviations of predictors,
-    returns a pandas dataframe with simulated data that can be used to estimate a multi-level model using Lmer().
+    returns a pandas dataframe with simulated data that can be used to estimate a multi-level model using Lmer(). Using the family='binomial' argument can generate discrete dependent variable values for use with logistic multi-level models.
 
     Defaults to returning standard normal (mu = 0; sigma = 1) predictors with no explicit correlations and low variance between
     groups (sigma = .25).
@@ -89,6 +93,7 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
         mus (float/list/ndarray): means of columns of predictors
         sigmas (float/list/ndarray): stds of columns of predictors
         noise_params (tup, optional): mean and std of noise added to each group's simulated data
+        family (str): distribution family for the dependent variable. Currently only 'gaussian' (continuous DV) or 'binomial' (discrete DV) are available.
         seed (int): seed for reproducible random number generation
 
     Returns:
@@ -136,6 +141,8 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
         x = np.column_stack([np.ones((num_obs,1)),x])
         # Use blups to generate group data
         y = np.dot(x,blups[grp,:]) + np.random.normal(*noise_params,size=num_obs)
+        if family == 'binomial':
+            y = discrete_inverse_logit(y)
         if grp ==0:
             x_all,y_all = x,y
         else:

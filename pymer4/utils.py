@@ -1,6 +1,7 @@
 from __future__ import division
 
 __all__  = ['get_resource_path',
+            'discrete_inverse_logit',
             '_sig_stars',
             '_robust_estimator',
             '_chunk_boot_ols_coefs',
@@ -14,11 +15,18 @@ __license__ = "MIT"
 from os.path import dirname,join, sep
 import numpy as np
 from patsy import dmatrices
+from scipy.special import expit
 
 
 def get_resource_path():
     """ Get path sample data directory. """
     return join(dirname(__file__), 'resources') + sep
+
+def discrete_inverse_logit(arr):
+    """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes"""
+    probabilities = expit(arr)
+    out = np.random.binomial(1, probabilities)
+    return out
 
 def _sig_stars(val):
     """Adds sig stars to coef table prettier output."""

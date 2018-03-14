@@ -665,9 +665,9 @@ class Lm(object):
     def __init__(self,formula,data,family='gaussian'):
 
         self.family = family
-        implemented_fams = ['gaussian','binomial']
-        if self.family not in implemented_fams:
-            raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
+        #implemented_fams = ['gaussian','binomial']
+        if self.family != 'gaussian':
+            raise NotImplementedError("Currently only linear (family ='gaussian') models supported! ")
         self.fitted = False
         self.formula = formula
         self.data = copy(data)
