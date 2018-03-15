@@ -156,7 +156,7 @@ class Lmer(object):
         print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n")
         return self.anova
 
-    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True,verbose=False):
+    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True,verbose=False,REML=True):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
@@ -182,12 +182,12 @@ class Lmer(object):
             if verbose:
                 print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lmerTest')
-            self.model_obj = lmer.lmer(self.formula,data=dat)
+            self.model_obj = lmer.lmer(self.formula,data=dat,REML=REML)
         else:
             if verbose:
                 print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lme4')
-            self.model_obj = lmer.lmer(self.formula,data=dat,family=self.family)
+            self.model_obj = lmer.lmer(self.formula,data=dat,family=self.family,REML=REML)
 
         base = importr('base')
 
@@ -693,18 +693,23 @@ class Lm(object):
         self.family)
         return out
 
-    def fit(self,robust=False,conf_int='standard',permute=None,summarize=True,verbose=False,n_boot=500,n_jobs=-1,n_lags=1):
+    def fit(self,robust=False,conf_int='standard',permute=None,summarize=True,verbose=False,n_boot=500,n_jobs=-1,n_lags=1,cluster=None):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
         Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
         Robust estimators include:
+
         - 'hc0': Huber (1980) original sandwich estimator
+
         - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+
         - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
 
+        - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
+
         Args:
-            robust (bool/str): whether to use heteroscedasticity robust s.e.and optionally which estimator type to use ('hc0','hc3','hac'). If robust = True, default robust estimator is 'hc0'; default False
+            robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             summarize (bool): whether to print a model summary after fitting; default True
@@ -712,6 +717,7 @@ class Lm(object):
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
             n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
+            cluster (str): column name identifying clusters/groups for robust estimator type 'cluster' (ignored unless robust='cluster')
 
         Returns:
             DataFrame: R style summary() table
@@ -725,6 +731,11 @@ class Lm(object):
             if isinstance(robust,bool):
                 robust = 'hc0'
             self.se_type = 'robust' + ' (' + robust + ')'
+            if cluster:
+                if cluster not in self.data.columns:
+                    raise ValueError("cluster identifier must be an existing column in data")
+                else:
+                    cluster = self.data[cluster]
         else:
             self.se_type = 'non-robust'
 
@@ -751,8 +762,14 @@ class Lm(object):
         self.design_matrix = x
 
         # Compute standard estimates
-        b, se, t, res = _ols(x,y,robust,all_stats=True,n_lags=n_lags)
-        df = x.shape[0] - x.shape[1]
+        b, se, t, res = _ols(x,y,robust,all_stats=True,n_lags=n_lags,cluster=cluster)
+        if cluster is not None:
+            # Cluster corrected dof (num clusters - num coef)
+            # Differs from stats and statsmodels which do num cluster - 1
+            # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
+            df = cluster.nunique() - x.shape[1]
+        else:
+            df = x.shape[0] - x.shape[1]
         p = 2*(1-t_dist.cdf(np.abs(t), df))
         df = np.array([df]*len(t))
         sig = np.array([_sig_stars(elem) for elem in p])
@@ -788,7 +805,7 @@ class Lm(object):
             par_for = Parallel(n_jobs=n_jobs,backend='multiprocessing')
             seeds = np.random.randint(np.iinfo(np.int32).max,size=permute)
             perm_ts = par_for(delayed(                          _chunk_perm_ols
-            )(x=x,y=y,robust=robust,n_lags=n_lags,seed=seeds[i]) for i in range(permute))
+            )(x=x,y=y,robust=robust,n_lags=n_lags,cluster=cluster,seed=seeds[i]) for i in range(permute))
             perm_ts = np.array(perm_ts)
 
             p = []
@@ -813,6 +830,7 @@ class Lm(object):
         self.fitted = True
         self.resid = res
         self.data['fits'] = y.squeeze() - res
+        self.data['residuals'] = res
 
         #Fit statistics
         self.rsquared = np.corrcoef(np.dot(x,b),y.squeeze())**2

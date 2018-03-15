@@ -34,7 +34,7 @@ This package has some extra goodies to make life a bit easier, namely:
 
     - Automatic inclusion of confidence intervals in model output
     - Easy computation of empirically bootstrapped 95% confidence intervals
-    - Easy computation of heteroscedasticity or auto-correlation robust 'sandwich estimators' for standard errors (*note: these are not the same as auto-regressive models*)
+    - Easy computation of cluster-robust, heteroscedasticity-robust or auto-correlation-robust,'sandwich estimators' for standard errors (*note: these are not the same as auto-regressive models*)
     - Permutation tests on model parameters
 
 - Data simulation

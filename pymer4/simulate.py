@@ -89,7 +89,7 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
         coef_vals (list,optional): "true" values of coefficients to generate data. If not provided will be randomly generated. Must include a coefficient for the intercept as well (i.e. mean of data)
         corrs (ndarray,list,float): correlations between coefficients provided as 2d num_coef x num_coef, 1d flattend numpy array/list of length (num_features * (num_features-1)) / 2, or a float to be treated
         as the same correlation between all coefficients
-        grp_sigmas (int or list): grp level std around population coefficient values; can be a single value in which case same std is applied around all coefficients or a list for different std; default 0
+        grp_sigmas (int or list): grp level std around population coefficient values; can be a single value in which case same std is applied around all coefficients or a list for different std; default .25
         mus (float/list/ndarray): means of columns of predictors
         sigmas (float/list/ndarray): stds of columns of predictors
         noise_params (tup, optional): mean and std of noise added to each group's simulated data
@@ -153,7 +153,6 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
 
     data = pd.DataFrame(np.column_stack([y_all,x_all[:,1:],grp_ids]),columns=['DV'] + ['IV'+str(elem+1) for elem in range(x_all.shape[1]-1)] + ['Group'])
     blups = pd.DataFrame(blups,columns= ['Intercept'] + ['IV'+str(elem+1) for elem in range(x_all.shape[1]-1)],index=['Grp'+str(elem+1) for elem in range(num_grps)])
-
     return data, blups, b
 
 def easy_multivariate_normal(num_obs, num_features, corrs, mu = 0.0, sigma = 1.0, seed = None):
