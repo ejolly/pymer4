@@ -671,11 +671,9 @@ class Lm(object):
         self.fitted = False
         self.formula = formula
         self.data = copy(data)
-        self.grps = None
         self.AIC = None
         self.logLike = None
         self.warnings = []
-        self.fixef = None
         self.resid = None
         self.coefs = None
         self.model_obj = None
