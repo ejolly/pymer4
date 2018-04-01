@@ -560,6 +560,61 @@ class Lmer(object):
 
         return self.marginal_effects.round(3), self.marginal_contrasts.round(3)
 
+    def plot_summary(self,figsize=(12,6),error_bars= 'ci',ranef=True,xlim=None,intercept=True,ranef_alpha=.5,coef_fmt='o',**kwargs):
+        """
+        Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). Be default display the 95% confidence intervals computed during fitting.
+
+        Args:
+            error_bars (str): one of 'ci' or 'se' to change which error bars are plotted
+            ranef (bool): overlay BLUP estimates on figure; default True
+            xlim (tuple): lower and upper xlimit of plot; default min and max of BLUPs
+            intercept (bool): plot the intercept estimate; default True
+            ranef_alpha (float): opacity of random effect points; default 5
+            coef_fmt (str): matplotlib marker style for population coefficients
+
+        Returns:
+            matplotlib axis handle
+        """
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fit before plotting!")
+
+        if not intercept:
+            m_ranef = self.fixef.drop('(Intercept)',axis=1)
+            m_fixef = self.coefs.drop('(Intercept)',axis=0)
+        else:
+            m_ranef = self.fixef
+            m_fixef = self.coefs
+
+        if error_bars == 'ci':
+            col_lb = m_fixef['Estimate'] - m_fixef['2.5_ci']
+            col_ub = m_fixef['97.5_ci'] - m_fixef['Estimate']
+        elif error_bars == 'se':
+            col_lb,col_ub = m_fixef['SE'], m_fixef['SE']
+
+        # For seaborn
+        m = pd.melt(m_ranef)
+
+        if not xlim:
+            xlim = (m['value'].min()-1, m['value'].max()+1)
+
+        f,ax = plt.subplots(1,1,figsize=figsize)
+
+        if ranef:
+            alpha_plot=ranef_alpha
+        else:
+            alpha_plot=0
+
+        ax.errorbar(x=m_fixef['Estimate'],y=range(m_fixef.shape[0]),xerr=[col_lb,col_ub],fmt=coef_fmt,capsize=0,elinewidth=3,color='black',ms=14);
+
+        sns.stripplot(x='value',y='variable',data=m,ax=ax,size=8,alpha=alpha_plot,color='grey');
+
+        ax.vlines(x=0,ymin=-1,ymax=self.coefs.shape[0],linestyles='--',color='grey')
+
+        ax.set(ylabel='',xlabel='Estimate',xlim=xlim);
+        sns.despine(top=True,right=True,left=True);
+        return ax
+
     def plot(self,param,figsize=(8,6),xlabel='',ylabel='',plot_fixef=True,plot_ci=True,grps=[],ax=None):
         """
         Plot random and group level parameters from a fitted model
@@ -575,7 +630,6 @@ class Lmer(object):
             ax (matplotlib.axes.Axes): axis handle for an existing plot; if provided will ensure that random parameter plots appear *behind* all other plot objects.
 
         Returns:
-            matplotlib figure handle
             matplotlib axis handle
 
         """
@@ -632,7 +686,7 @@ class Lmer(object):
             ax.set_xlabel(xlabel);
         if ylabel:
             ax.set_ylabel(ylabel);
-        return f,ax
+        return ax
 
 class Lm(object):
 
