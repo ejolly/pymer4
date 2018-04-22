@@ -562,14 +562,14 @@ class Lmer(object):
 
     def plot_summary(self,figsize=(12,6),error_bars= 'ci',ranef=True,xlim=None,intercept=True,ranef_alpha=.5,coef_fmt='o',**kwargs):
         """
-        Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). Be default display the 95% confidence intervals computed during fitting.
+        Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). By default display the 95% confidence intervals computed during fitting.
 
         Args:
-            error_bars (str): one of 'ci' or 'se' to change which error bars are plotted
+            error_bars (str): one of 'ci' or 'se' to change which error bars are plotted; default 'ci'
             ranef (bool): overlay BLUP estimates on figure; default True
             xlim (tuple): lower and upper xlimit of plot; default min and max of BLUPs
             intercept (bool): plot the intercept estimate; default True
-            ranef_alpha (float): opacity of random effect points; default 5
+            ranef_alpha (float): opacity of random effect points; default .5
             coef_fmt (str): matplotlib marker style for population coefficients
 
         Returns:
@@ -605,9 +605,9 @@ class Lmer(object):
         else:
             alpha_plot=0
 
-        ax.errorbar(x=m_fixef['Estimate'],y=range(m_fixef.shape[0]),xerr=[col_lb,col_ub],fmt=coef_fmt,capsize=0,elinewidth=3,color='black',ms=14);
+        sns.stripplot(x='value',y='variable',data=m,ax=ax,size=6,alpha=alpha_plot,color='grey');
 
-        sns.stripplot(x='value',y='variable',data=m,ax=ax,size=8,alpha=alpha_plot,color='grey');
+        ax.errorbar(x=m_fixef['Estimate'],y=range(m_fixef.shape[0]),xerr=[col_lb,col_ub],fmt=coef_fmt,capsize=0,elinewidth=4,color='black',ms=12,zorder=9999999999);
 
         ax.vlines(x=0,ymin=-1,ymax=self.coefs.shape[0],linestyles='--',color='grey')
 
@@ -916,3 +916,4 @@ class Lm(object):
 
     def post_hoc(self):
         raise NotImplementedError("Post-hoc tests are not yet implemented for linear models.")
+    

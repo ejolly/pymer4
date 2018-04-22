@@ -210,3 +210,8 @@ def _nearestPD(A, nit=100):
         deltaS = Xk - Rk
         Yk = _getPu(Xk, W=W)
     return Yk
+
+def upper(mat):
+    '''Return upper triangle of matrix'''
+    idx = np.triu_indices_from(mat,k=1)
+    return mat[idx]
