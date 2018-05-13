@@ -17,7 +17,10 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrices
 from scipy.special import expit
+from rpy2.robjects.packages import importr
+from rpy2.robjects import pandas2ri
 
+base = importr('base')
 
 def get_resource_path():
     """ Get path sample data directory. """
@@ -215,3 +218,9 @@ def upper(mat):
     '''Return upper triangle of matrix'''
     idx = np.triu_indices_from(mat,k=1)
     return mat[idx]
+
+def _return_t(model):
+    '''Return t or z stat from R model summary.'''
+    summary = base.summary(model)
+    unsum = base.unclass(summary)
+    return pandas2ri.ri2py(unsum.rx2('coefficients'))[:,-1]

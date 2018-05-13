@@ -17,7 +17,8 @@ from pymer4.utils import (_sig_stars,
                           _chunk_boot_ols_coefs,
                           _chunk_perm_ols,
                           _ols,
-                          _perm_find
+                          _perm_find,
+                          _return_t
                           )
 
 __author__ = ['Eshin Jolly']
@@ -156,7 +157,7 @@ class Lmer(object):
         print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n")
         return self.anova
 
-    def fit(self,conf_int='Wald',factors=None,ordered=False,summarize=True,verbose=False,REML=True):
+    def fit(self,conf_int='Wald',factors=None,permute=None,ordered=False,summarize=True,verbose=False,REML=True):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
@@ -181,14 +182,17 @@ class Lmer(object):
         if self.family == 'gaussian':
             if verbose:
                 print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
+
             lmer = importr('lmerTest')
             self.model_obj = lmer.lmer(self.formula,data=dat,REML=REML)
         else:
             if verbose:
                 print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
             lmer = importr('lme4')
-            self.model_obj = lmer.lmer(self.formula,data=dat,family=self.family,REML=REML)
+            self.model_obj = lmer.glmer(self.formula,data=dat,family=self.family,REML=REML)
 
+        if permute:
+            print("Using {} permutations to determine significance...".format(permute))
         base = importr('base')
 
         summary = base.summary(self.model_obj)
@@ -242,8 +246,9 @@ class Lmer(object):
                 df = df[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']]
 
             elif df.shape[1] == 5:
-                #Incase lmerTest chokes it won't return p-values
-                warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
+                if not permute:
+                    #Incase lmerTest chokes it won't return p-values
+                    warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
                 df.columns =['Estimate','SE','T-stat','2.5_ci','97.5_ci']
                 df = df[['Estimate','2.5_ci','97.5_ci','SE','T-stat']]
 
@@ -276,8 +281,34 @@ class Lmer(object):
             df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci']
             df = df[['Estimate','2.5_ci','97.5_ci','SE','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','Z-stat','P-val']]
 
+        if permute:
+            perm_dat = dat.copy()
+            dv_var = self.formula.split('~')[0].strip()
+            grp_vars = list(self.grps.keys())
+            perms = []
+            for i in range(permute):
+                perm_dat[dv_var] = perm_dat.groupby(grp_vars)[dv_var].transform(lambda x: x.sample(frac=1))
+                if self.family == 'gaussian':
+                    perm_obj = lmer.lmer(self.formula,data=perm_dat,REML=REML)
+                else:
+                    perm_obj = lmer.glmer(self.formula,data=perm_dat,family=self.family,REML=REML)
+                perms.append(_return_t(perm_obj))
+            perms = np.array(perms)
+            pvals = []
+            for c in range(df.shape[0]):
+                if self.family == 'gaussian':
+                    pvals.append(_perm_find(perms[:,c], df['T-stat'][c]))
+                else:
+                    pvals.append(_perm_find(perms[:,c], df['Z-stat'][c]))
+            df['P-val'] = pvals
+            df['DF'] = [permute] * df.shape[0]
+
+            df = df.rename(columns={'DF':'Num_perm','P-val':'Perm-P-val'})
+
         if 'P-val' in df.columns:
             df['Sig'] = df['P-val'].apply(lambda x: _sig_stars(x))
+        elif 'Perm-P-val' in df.columns:
+            df['Sig'] = df['Perm-P-val'].apply(lambda x: _sig_stars(x))
         self.coefs = df
         self.fitted = True
 
@@ -804,7 +835,7 @@ class Lm(object):
                     print("Fitting linear model with "+print_robust+ " standard errors\nand 95% confidence intervals...\n")
 
                 if permute:
-                    print("Using " +str(permute)+ " permutations to determine significance...")
+                    print("Using {} permutations to determine significance...".format(permute))
 
         self.ci_type = conf_int + ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
         self.sig_type = 'parametric' if not permute else 'permute' + ' (' + str(permute) + ')'
@@ -916,4 +947,3 @@ class Lm(object):
 
     def post_hoc(self):
         raise NotImplementedError("Post-hoc tests are not yet implemented for linear models.")
-    
