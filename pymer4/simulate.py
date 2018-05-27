@@ -40,7 +40,7 @@ def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,no
     if seed is not None:
         np.random.seed(seed)
 
-    if coef_vals:
+    if coef_vals is not None:
         if len(coef_vals) - num_coef == 0:
             raise ValueError("Missing one coefficient value. Did you provide a value for the intercept term?")
         else:
@@ -57,7 +57,7 @@ def simulate_lm(num_obs,num_coef,coef_vals=None,corrs=None,mus=0.0,sigmas=1.0,no
     assert isinstance(noise_params,tuple) and len(noise_params) == 2, "noise_params should be a tuple of (mean,std)"
 
     # Generate random design matrix
-    if corrs:
+    if corrs is not None:
         X = easy_multivariate_normal(num_obs,num_coef,corrs,mus,sigmas,seed)
     else:
         X = np.random.normal(mus,sigmas,size=(num_obs,num_coef))

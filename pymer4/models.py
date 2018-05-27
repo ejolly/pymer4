@@ -164,6 +164,7 @@ class Lmer(object):
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
             factors (dict): col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
+            permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
@@ -332,8 +333,6 @@ class Lmer(object):
 
         self.ranef_var = ran_vars
         self.ranef_corr = ran_corrs
-
-        # TODO Parse and store fixed effects correlation matrix +enhancement id:2 gh:11
 
         #Cluster (e.g subject) level coefficients
         rstring = """
@@ -947,3 +946,26 @@ class Lm(object):
 
     def post_hoc(self):
         raise NotImplementedError("Post-hoc tests are not yet implemented for linear models.")
+
+    def predict(self,data):
+        """
+        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). Will automatically use/ignore intercept to make a prediction if it was/was not part of the original fitted model.
+
+        Args:
+            data (pandas.core.frame.DataFrame): input data to make predictions on
+
+        Returns:
+            ndarray: prediction values
+
+        """
+
+        required_cols = self.design_matrix.columns[1:]
+        if not all([col in data.columns for col in required_cols]):
+            raise ValueError("Column names do not match all fixed effects model terms!")
+        X = data[required_cols]
+        coefs = self.coefs.loc[:,'Estimate'].values
+        if self.coefs.index[0] == 'Intercept':
+            preds = np.dot(np.column_stack([np.ones(X.shape[0]),X]),coefs)
+        else:
+            preds = np.dot(X,coefs[1:])
+        return preds

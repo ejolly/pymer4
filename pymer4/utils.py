@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrices
 from scipy.special import expit
+from scipy.stats import chi2
+from itertools import product
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 
@@ -224,3 +226,58 @@ def _return_t(model):
     summary = base.summary(model)
     unsum = base.unclass(summary)
     return pandas2ri.ri2py(unsum.rx2('coefficients'))[:,-1]
+
+def _get_params(model):
+    '''Get number of params in a model.'''
+    return model.coefs.shape[0]
+
+def _lrt(tup):
+    '''Likelihood ratio test between 2 models.'''
+    d = np.abs(2 * (tup[0].logLike - tup[1].logLike))
+    return chi2.sf(d, np.abs(tup[0].coefs.shape[0] - tup[1].coefs.shape[0]))
+
+def lrt(models):
+    """
+    WARNING EXPERIMENTAL!
+    Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters. 
+
+    Improvements:
+    1) Generalize function to perform LRT, or vuong test
+    2) Offer nested and non-nest vuong test, as well as AIC/BIC correction
+    """
+
+    if not isinstance(models,list):
+        models = [models]
+    if len(models) < 2:
+        raise ValueError("Must have at least 2 models to perform comparison")
+
+    # Get number of coefs for each model
+    all_params = []
+    for m in models:
+        all_params.append(_get_params(m))
+
+    # Sort from fewest params to most
+    all_params = np.array(all_params)
+    idx = np.argsort(all_params)
+    all_params = all_params[idx]
+    models = np.array(models)[idx]
+
+    model_pairs = list(product(models,repeat=2))
+
+    model_pairs = model_pairs[1:len(models)]
+    s = []
+    for p in model_pairs:
+        s.append(_lrt(p))
+    out = pd.DataFrame()
+    for i,m in enumerate(models):
+        pval = s[i-1] if i > 0 else np.nan
+        out = out.append(pd.DataFrame({
+            'model': m.formula,
+            'DF': m.coefs.loc['Intercept','DF'],
+            'AIC': m.AIC,
+            'BIC': m.BIC,
+            'log-likelihood': m.logLike,
+            'P-val':pval},index=[0]),ignore_index=True)
+    out['Sig'] = out['P-val'].apply(lambda x: _sig_stars(x))
+    out = out[['model','log-likelihood','AIC','BIC','DF','P-val','Sig']]
+    return out
