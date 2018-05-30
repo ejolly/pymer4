@@ -100,33 +100,43 @@ class Lmer(object):
         Returns:
             pandas.core.frame.DataFrame: copy of original data with factorized columns
         """
-
         if ordered:
-
             rstring = """
                 function(df,f,lv){
                 df[,f] <- factor(df[,f],lv,ordered=T)
                 df
                 }
             """
+        else:
+            rstring = """
+                function(df,f,lv){
+                df[,f] <- factor(df[,f],lv,ordered=F)
+                df
+                }
+            """
 
-        rstring = """
-            function(df,f,lv){
-            df[,f] <- factor(df[,f],lv,ordered=F)
+        c_rstring = """
+            function(df,f,c){
+            contrasts(df[,f]) <- c(c)
             df
             }
-        """
+            """
 
         factorize = robjects.r(rstring)
+        contrastize = robjects.r(c_rstring)
         df = copy(self.data)
         for k in factor_dict.keys():
             df[k] = df[k].astype(str)
 
         r_df = pandas2ri.py2ri(df)
         for k,v in factor_dict.items():
-
-            r_df = factorize(r_df,k,v)
-
+            if isinstance(v, list):
+                r_df = factorize(r_df,k,v)
+            elif isinstance(v, dict):
+                levels = list(v.keys())
+                contrasts = np.array(list(v.values()))
+                r_df = factorize(r_df,k,levels)
+                r_df = contrastize(r_df,k,contrasts)
         return r_df
 
     def anova(self):
@@ -163,7 +173,7 @@ class Lmer(object):
 
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
-            factors (dict): col names (keys) to treat as dummy-coded factors with levels specified by unique values (vals). First level is always reference, e.g. {'Col1':['A','B','C']}
+            factors (dict): col names (keys) and contrast codes (vals) for factor variables. To use dummy coding or simply poylnomial coding provide the variable name as key and a list of its unique values as values e.g. {'Col1':['A','B','C']}. First level is always treated as reference in this scheme. For custom contrasts use nested dictionary with custom values, e.g. {'Col1':{'A': -1,'B':-1,'C':2}}
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
@@ -440,7 +450,6 @@ class Lmer(object):
         sims = pandas2ri.ri2py(simulate_func(self.model_obj))
         return sims
 
-
     def predict(self,data,use_rfx=False,pred_type='response'):
         """
         Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the group identifier that were used to fit the model random effects terms. Using random effects to make predictions only makes sense if predictions are being made about the same groups/clusters.
@@ -528,7 +537,7 @@ class Lmer(object):
         # Need to figure out if marginal_vars is continuous or not to determine lstrends or lsmeans call
         cont,factor = [],[]
         for var in marginal_vars:
-            if var not in self.factors.keys():
+            if not self.factors or var not in self.factors.keys():
                 cont.append(var)
             else:
                 factor.append(var)
