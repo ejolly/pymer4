@@ -618,12 +618,17 @@ class Lmer(object):
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
 
-        if not intercept:
-            m_ranef = self.fixef.drop('(Intercept)',axis=1)
-            m_fixef = self.coefs.drop('(Intercept)',axis=0)
+        if isinstance(self.fixef,list):
+            ranef_idx = kwargs.pop("ranef_idx",0)
+            print("Multiple random effects clusters specified in model. Plotting the {} one. This can be changed by passing 'ranef_idx = number'".format(ranef_idx+1))
+            m_ranef = self.fixef[ranef_idx]
         else:
             m_ranef = self.fixef
-            m_fixef = self.coefs
+        m_fixef = self.coefs
+
+        if not intercept:
+            m_ranef = m_ranef.drop('(Intercept)',axis=1)
+            m_fixef = m_fixef.drop('(Intercept)',axis=0)
 
         if error_bars == 'ci':
             col_lb = m_fixef['Estimate'] - m_fixef['2.5_ci']
