@@ -58,9 +58,9 @@ class Lmer(object):
     def __init__(self,formula,data,family='gaussian'):
 
         self.family = family
-        implemented_fams = ['gaussian','binomial']
+        implemented_fams = ['gaussian','binomial','gamma','inverse_gaussian','poisson']
         if self.family not in implemented_fams:
-            raise NotImplementedError("Currently only linear (family ='gaussian') and logisitic (family='binomial') models supported! ")
+            raise ValueError("Family must be one of: gaussian, binomial, gamma, inverse_gaussian or poisson!")
         self.fitted = False
         self.formula = formula
         self.data = copy(data)
@@ -178,6 +178,7 @@ class Lmer(object):
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
+            REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
 
         Returns:
             DataFrame: R style summary() table
@@ -198,9 +199,15 @@ class Lmer(object):
             self.model_obj = lmer.lmer(self.formula,data=dat,REML=REML)
         else:
             if verbose:
-                print("Fitting generalized linear model using glmer with "+conf_int+" confidence intervals...\n")
+                print("Fitting generalized linear model using glmer (family {}) with "+conf_int+" confidence intervals...\n".format(self.family))
             lmer = importr('lme4')
-            self.model_obj = lmer.glmer(self.formula,data=dat,family=self.family,REML=REML)
+            if self.family == 'inverse_gaussian':
+                _fam = 'inverse.gaussian'
+            elif self.family == 'gamma':
+                _fam = 'Gamma'
+            else:
+                _fam = self.family
+            self.model_obj = lmer.glmer(self.formula,data=dat,family=_fam,REML=REML)
 
         if permute:
             print("Using {} permutations to determine significance...".format(permute))
@@ -236,7 +243,7 @@ class Lmer(object):
             self.warnings = None
 
         #Coefficients, and inference statistics
-        if self.family == 'gaussian':
+        if self.family in ['gaussian','gamma','inverse_gaussian','poisson']:
 
             rstring = """
                 function(model){
@@ -252,16 +259,26 @@ class Lmer(object):
             estimates_func = robjects.r(rstring)
             df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
+            # gaussian
             if df.shape[1] == 7:
                 df.columns = ['Estimate','SE','DF','T-stat','P-val','2.5_ci','97.5_ci']
                 df = df[['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']]
 
-            elif df.shape[1] == 5:
+            # gamma, inverse_gaussian
+            elif df.shape[1] == 6:
+                if self.family in ['gamma','inverse_gaussian']:
+                    df.columns = ['Estimate','SE','T-stat','P-val','2.5_ci','97.5_ci']
+                    df = df[['Estimate','2.5_ci','97.5_ci','SE','T-stat','P-val']]
+                else:
+                    df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci']
+                    df = df[['Estimate','2.5_ci','97.5_ci','SE','Z-stat','P-val']]
+
+            # Incase lmerTest chokes it won't return p-values
+            elif df.shape[1] == 5 and self.family == 'gaussian':
                 if not permute:
-                    #Incase lmerTest chokes it won't return p-values
                     warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
-                df.columns =['Estimate','SE','T-stat','2.5_ci','97.5_ci']
-                df = df[['Estimate','2.5_ci','97.5_ci','SE','T-stat']]
+                    df.columns =['Estimate','SE','T-stat','2.5_ci','97.5_ci']
+                    df = df[['Estimate','2.5_ci','97.5_ci','SE','T-stat']]
 
         elif self.family == 'binomial':
 
@@ -307,7 +324,7 @@ class Lmer(object):
             perms = np.array(perms)
             pvals = []
             for c in range(df.shape[0]):
-                if self.family == 'gaussian':
+                if self.family in  ['gaussian','gamma','inverse_gaussian']:
                     pvals.append(_perm_find(perms[:,c], df['T-stat'][c]))
                 else:
                     pvals.append(_perm_find(perms[:,c], df['Z-stat'][c]))
@@ -497,6 +514,7 @@ class Lmer(object):
             raise RuntimeError("Model must be fitted to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
+        print("Family: {}\n".format(self.family))
         print("Number of observations: %s\t Groups: %s\n" % (self.data.shape[0],self.grps))
         print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
         print("Random effects:\n")
@@ -952,6 +970,7 @@ class Lm(object):
             raise RuntimeError("Model must be fitted to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
+        print("Family: {}\n".format(self.family))
         print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,self.ci_type,self.sig_type))
         print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" % (self.data.shape[0],self.rsquared,self.rsquared_adj))
         print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" % (self.logLike,self.AIC,self.BIC))
