@@ -79,6 +79,7 @@ class Lmer(object):
         self.factors = None
         self.marginal_effects = None
         self.marginal_contrasts = None
+        self.sig_type = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -190,8 +191,9 @@ class Lmer(object):
             self.factors = factors
         else:
             dat = self.data
-
+        self.sig_type = 'parametric' if not permute else 'permutation' + ' (' + str(permute) + ')'
         if self.family == 'gaussian':
+            _fam = 'gaussian'
             if verbose:
                 print("Fitting linear model using lmer with "+conf_int+" confidence intervals...\n")
 
@@ -209,7 +211,7 @@ class Lmer(object):
                 _fam = self.family
             self.model_obj = lmer.glmer(self.formula,data=dat,family=_fam,REML=REML)
 
-        if permute:
+        if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
         base = importr('base')
 
@@ -319,7 +321,7 @@ class Lmer(object):
                 if self.family == 'gaussian':
                     perm_obj = lmer.lmer(self.formula,data=perm_dat,REML=REML)
                 else:
-                    perm_obj = lmer.glmer(self.formula,data=perm_dat,family=self.family,REML=REML)
+                    perm_obj = lmer.glmer(self.formula,data=perm_dat,family=_fam,REML=REML)
                 perms.append(_return_t(perm_obj))
             perms = np.array(perms)
             pvals = []
@@ -330,13 +332,17 @@ class Lmer(object):
                     pvals.append(_perm_find(perms[:,c], df['Z-stat'][c]))
             df['P-val'] = pvals
             df['DF'] = [permute] * df.shape[0]
-
             df = df.rename(columns={'DF':'Num_perm','P-val':'Perm-P-val'})
 
         if 'P-val' in df.columns:
             df['Sig'] = df['P-val'].apply(lambda x: _sig_stars(x))
         elif 'Perm-P-val' in df.columns:
             df['Sig'] = df['Perm-P-val'].apply(lambda x: _sig_stars(x))
+        if permute:
+            # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
+            cols = list(df.columns)
+            col_order = cols[:-4] + ['Num_perm'] + cols[-4:-2] +[cols[-1]]
+            df = df[col_order]
         self.coefs = df
         self.fitted = True
 
@@ -514,7 +520,7 @@ class Lmer(object):
             raise RuntimeError("Model must be fitted to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
-        print("Family: {}\n".format(self.family))
+        print("Family: {}\t Inference: {}\n".format(self.family,self.sig_type))
         print("Number of observations: %s\t Groups: %s\n" % (self.data.shape[0],self.grps))
         print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike,self.AIC))
         print("Random effects:\n")
@@ -869,7 +875,7 @@ class Lm(object):
                     print("Using {} permutations to determine significance...".format(permute))
 
         self.ci_type = conf_int + ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
-        self.sig_type = 'parametric' if not permute else 'permute' + ' (' + str(permute) + ')'
+        self.sig_type = 'parametric' if not permute else 'permutation' + ' (' + str(permute) + ')'
 
         # Parse formula using patsy to make design matrix
         y,x = dmatrices(self.formula,self.data,1,return_type='dataframe')
