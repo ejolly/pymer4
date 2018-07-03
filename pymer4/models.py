@@ -77,7 +77,7 @@ class Lmer(object):
         self.coefs = None
         self.model_obj = None
         self.factors = None
-        self.marginal_effects = None
+        self.marginal_estimates = None
         self.marginal_contrasts = None
         self.sig_type = None
 
@@ -536,14 +536,19 @@ class Lmer(object):
         print("Fixed effects:\n")
         return self.coefs.round(3)
 
-    def post_hoc(self,marginal_vars, grouping_vars=None,p_adjust='tukey'):
+    def post_hoc(self,marginal_vars, grouping_vars=None,p_adjust='tukey',summarize=True):
         """
         Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the lsmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/lsmeans/lsmeans.pdf
 
         Args:
-            marginal_var (str): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
+            marginal_var (str/list): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
             grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
             p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
+            summarize (bool): output effects and contrasts or don't (always stored in model object as model.marginal_estimates and model.marginal_contrasts); default True
+
+        Returns:
+            marginal_estimates (pd.Dataframe): unique factor level effects (e.g. means/coefs)
+            marginal_contrasts (pd.DataFrame): contrasts between factor levels
 
         """
 
@@ -598,7 +603,7 @@ class Lmer(object):
                     rstring = """
                         function(model){
                         suppressMessages(library(lsmeans))
-                        out <- lsmeans(model,pairwise ~ """ + _marginal + """|""" + _conditional + """, adjust=''""" + p_adjust + """')
+                        out <- lsmeans(model,pairwise ~ """ + _marginal + """|""" + _conditional + """, adjust='""" + p_adjust + """')
                         out
                         }"""
                 else:
@@ -616,16 +621,33 @@ class Lmer(object):
         func = robjects.r(rstring)
         res = func(self.model_obj)
         base = importr('base')
+        lsmeans = importr('lsmeans')
 
-        self.marginal_effects = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
-        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res.rx2('contrasts')))
+        # Marginal estimates
+        self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
+        # Resort columns
+        effect_names = list(self.marginal_estimates.columns[:-5])
+        sorted = effect_names + ['Estimate','2.5_ci','97.5_ci','SE','DF']
+        self.marginal_estimates = self.marginal_estimates.rename(columns={'lsmean':'Estimate','df':'DF','lower.CL':'2.5_ci','upper.CL':'97.5_ci'})[sorted]
 
-        if p_adjust == 'tukey' and self.marginal_contrasts.shape[0] >= self.marginal_effects.shape[0]:
-            print("P-values adjusted by tukey method for family of {} estimates".format(self.marginal_effects.shape[0]))
+        # Marginal Contrasts
+        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res.rx2('contrasts'))).rename(columns={'t.ratio':'T-stat','p.value':'P-val','estimate':'Estimate','df':'DF','contrast':'Contrast'})
+        # Need to make another call to lsmeans to get confidence intervals on contrasts
+        confs = pandas2ri.ri2py(base.unclass(lsmeans.confint_ref_grid(res))[1]).iloc[:,-2:].rename(columns={'lower.CL':'2.5_ci','upper.CL':'97.5_ci'})
+        self.marginal_contrasts = pd.concat([self.marginal_contrasts,confs],axis=1)
+        # Resort columns
+        effect_names = list(self.marginal_contrasts.columns[:-7])
+        sorted = effect_names + ['Estimate','2.5_ci','97.5_ci','SE','DF','T-stat','P-val']
+        self.marginal_contrasts = self.marginal_contrasts[sorted]
+        self.marginal_contrasts['Sig'] = self.marginal_contrasts['P-val'].apply(_sig_stars)
+
+
+        if p_adjust == 'tukey' and self.marginal_contrasts.shape[0] >= self.marginal_estimates.shape[0]:
+            print("P-values adjusted by tukey method for family of {} estimates".format(self.marginal_contrasts['Contrast'].nunique()))
         elif p_adjust != 'tukey':
-            print("P-values adjusted by {} method for {} comparisons".format(p_adjust,self.marginal_contrasts.shape[0]))
-
-        return self.marginal_effects.round(3), self.marginal_contrasts.round(3)
+            print("P-values adjusted by {} method for {} comparisons".format(p_adjust,self.marginal_contrasts['Contrast'].nunique()))
+        if summarize:
+            return self.marginal_estimates.round(3), self.marginal_contrasts.round(3)
 
     def plot_summary(self,figsize=(12,6),error_bars= 'ci',ranef=True,xlim=None,intercept=True,ranef_alpha=.5,coef_fmt='o',**kwargs):
         """

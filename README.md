@@ -61,8 +61,9 @@ Some users have issues installing `pymer4` on recent versions of macOS. This is 
 #### Change-log
 **0.5.0**
 - `Lmer` models now support all generalized linear model family types supported by lme4 (e.g. poisson, gamma, etc)
+- `Lmer` models now support ANOVA tables with support for auto-orthogonalizing factors <- TODO
 - Test statistic inference for `Lmer` models can now be performed via non-parametric permutation tests that shuffle observations within clusters
-- `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts that avoid a user having to deal with R's contrast matrix inversion trickiness
+- `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts that avoid a user having to deal with R's contrast matrix inversion trickiness <- TODO
 - New forest plots for visualizing model estimates and confidence intervals
 - New likelihood ratio test function for comparing nested and non-nested models
 
