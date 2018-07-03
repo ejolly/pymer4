@@ -550,6 +550,20 @@ class Lmer(object):
             marginal_estimates (pd.Dataframe): unique factor level effects (e.g. means/coefs)
             marginal_contrasts (pd.DataFrame): contrasts between factor levels
 
+        Examples:
+
+            Pairwise comparison of means of A at each level of B
+
+            >>> model.post_hoc(marginal_vars='A',grouping_vars='B')
+
+            Pairwise differences of slopes of C between levels of A at each level of B
+
+            >>> model.post_hoc(marginal_vars='C',grouping_vars=['A','B'])
+
+            Pairwise differences of each unique A,B cell
+
+            >>> model.post_hoc(marginal_vars=['A','B'])
+
         """
 
         if not marginal_vars:
@@ -585,13 +599,24 @@ class Lmer(object):
                     if grouping_vars:
                         # Lstrends
                         cont = cont[0]
-                        _conditional = '+'.join(grouping_vars)
-                        rstring = """
-                            function(model){
-                            suppressMessages(library(lsmeans))
-                            out <- lstrends(model,pairwise ~ """ + _conditional + """,var='""" + cont + """',adjust='""" + p_adjust + """')
-                            out
-                            }"""
+                        if len(grouping_vars) > 1:
+                            g1 = grouping_vars[0]
+                            _conditional = '+'.join(grouping_vars[1:])
+
+                            rstring = """
+                                function(model){
+                                suppressMessages(library(lsmeans))
+                                out <- lstrends(model,pairwise ~ """ + g1 + """|""" + _conditional + """,var='""" + cont + """',adjust='""" + p_adjust + """')
+                                out
+                                }"""
+                        else:
+                            rstring = """
+                                function(model){
+                                suppressMessages(library(lsmeans))
+                                out <- lstrends(model,pairwise ~ """ + grouping_vars[0] + """,var='""" + cont + """',adjust='""" + p_adjust + """')
+                                out
+                                }"""
+
                     else:
                         raise ValueError("grouping_vars are required with a continuous marginal_vars")
         else:
@@ -626,9 +651,10 @@ class Lmer(object):
         # Marginal estimates
         self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
         # Resort columns
-        effect_names = list(self.marginal_estimates.columns[:-5])
-        sorted = effect_names + ['Estimate','2.5_ci','97.5_ci','SE','DF']
-        self.marginal_estimates = self.marginal_estimates.rename(columns={'lsmean':'Estimate','df':'DF','lower.CL':'2.5_ci','upper.CL':'97.5_ci'})[sorted]
+        effect_names = list(self.marginal_estimates.columns[:-4])
+        effname = effect_names[-1] # this column name changes depending on whether we're doing post-hoc trends or means
+        sorted = effect_names[:-1] + ['Estimate','2.5_ci','97.5_ci','SE','DF']
+        self.marginal_estimates = self.marginal_estimates.rename(columns={effname:'Estimate','df':'DF','lower.CL':'2.5_ci','upper.CL':'97.5_ci'})[sorted]
 
         # Marginal Contrasts
         self.marginal_contrasts = pandas2ri.ri2py(base.summary(res.rx2('contrasts'))).rename(columns={'t.ratio':'T-stat','p.value':'P-val','estimate':'Estimate','df':'DF','contrast':'Contrast'})
