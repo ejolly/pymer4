@@ -82,7 +82,7 @@ class Lmer(object):
         self.sig_type = None
 
     def __repr__(self):
-        out = "{}.{}(fitted={}, formula={}, family={})".format(
+        out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
         self.__class__.__module__,
         self.__class__.__name__,
         self.fitted,
@@ -92,7 +92,10 @@ class Lmer(object):
 
     def _make_factors(self,factor_dict, ordered=False):
         """
-        Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts
+        Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts. User can also specific custom contrasts.
+
+        Todo:
+        1) Automatically convert user's desired contrast -> R's contrast matrix format for them: https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md
 
         Args:
             factor_dict: (dict) dictionary with column names specified as keys, and lists of unique values to treat as factor levels
@@ -141,16 +144,17 @@ class Lmer(object):
         return r_df
 
     def anova(self):
+        """
+        Return a type-3 ANOVA table from a fitted model. Like R, this method does not ensure that contrasts are orthogonal to ensure correct type-3 SS computation. When in doubt, refit model factors using the ordered=True, flag to ensure orthogonal polynomial contrasts.
 
-        raise NotImplementedError(" ANOVA tables coming soon!")
-
-        #TODO Make sure factors are set with orthogonal contrasts first
-        """Compute a Type III ANOVA table on a fitted model."""
+        Todo:
+        1) Perform orthogonality check
+        2) Auto-orthogonalize factors
+        """
 
         if not self.fitted:
             raise RuntimeError("Model hasn't been fit! Call fit() method before computing ANOVA table.")
 
-        #See rpy2 for building contrasts or loop and construct rstring
         rstring = """
             function(model){
             df<- anova(model)
@@ -158,14 +162,14 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova = pandas2ri.ri2py(anova)
+        self.anova = pandas2ri.ri2py(anova(self.model_obj))
         if self.anova.shape[1] == 6:
                 self.anova.columns = ['SS','MS','NumDF','DenomDF','F-stat','P-val']
                 self.anova['Sig'] = self.anova['P-val'].apply(lambda x: _sig_stars(x))
         elif self.anova.shape[1] == 4:
             warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
             self.anova.columns = ['DF','SS','MS','F-stat']
-        print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n")
+        print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n(NOTE: No orthogonality check performed)")
         return self.anova
 
     def fit(self,conf_int='Wald',factors=None,permute=None,ordered=False,summarize=True,verbose=False,REML=True):

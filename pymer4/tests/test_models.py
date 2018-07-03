@@ -34,7 +34,7 @@ def test_gaussian_lm():
 
     # Test permutation
     model.fit(summarize=False,permute=500)
-    assert model.sig_type == 'permute (500)'
+    assert model.sig_type == 'permutation (500)'
 
 def test_gaussian_lmm():
 

@@ -239,11 +239,12 @@ def _lrt(tup):
 def lrt(models):
     """
     WARNING EXPERIMENTAL!
-    Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters. 
+    Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
 
-    Improvements:
+    Todo:
     1) Generalize function to perform LRT, or vuong test
-    2) Offer nested and non-nest vuong test, as well as AIC/BIC correction
+    2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
+    3) Given a single model expand out to all separate term tests 
     """
 
     if not isinstance(models,list):

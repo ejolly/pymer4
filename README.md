@@ -59,6 +59,13 @@ Some users have issues installing `pymer4` on recent versions of macOS. This is 
 8. Now you should be able to `pip install pymer4`:)
 
 #### Change-log
+**0.5.0**
+- `Lmer` models now support all generalized linear model family types supported by lme4 (e.g. poisson, gamma, etc)
+- Test statistic inference for `Lmer` models can now be performed via non-parametric permutation tests that shuffle observations within clusters
+- `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts that avoid a user having to deal with R's contrast matrix inversion trickiness
+- New forest plots for visualizing model estimates and confidence intervals
+- New likelihood ratio test function for comparing nested and non-nested models
+
 **0.4.0**  
 - Added `post_hoc` tests to `Lmer` models
 - Added `simulate` data from fitted `Lmer` models
