@@ -80,6 +80,7 @@ class Lmer(object):
         self.marginal_estimates = None
         self.marginal_contrasts = None
         self.sig_type = None
+        self.factors_prev_ = None
 
     def __repr__(self):
         out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
@@ -153,7 +154,7 @@ class Lmer(object):
         new_factors = {}
         for k in self.factors.keys():
             new_factors[k] = sorted(list(map(str, self.data[k].unique())))
-        self.fit(factors = new_factors,ordered=True,summarize=False)
+        self.fit(factors = new_factors,ordered=True,summarize=False,permute=self._permute,conf_int=self._conf_int,REML=self._REML)
 
     def anova(self,force_orthogonal=False):
         """
@@ -211,6 +212,10 @@ class Lmer(object):
 
         """
 
+        # Save params for future calls
+        self._permute = permute
+        self._conf_int = conf_int
+        self._REML = REML
         if factors:
             dat = self._make_factors(factors,ordered)
             self.factors = factors
