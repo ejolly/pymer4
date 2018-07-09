@@ -143,17 +143,35 @@ class Lmer(object):
                 r_df = contrastize(r_df,k,contrasts)
         return r_df
 
-    def anova(self):
+    def _refit_orthogonal(self):
         """
-        Return a type-3 ANOVA table from a fitted model. Like R, this method does not ensure that contrasts are orthogonal to ensure correct type-3 SS computation. When in doubt, refit model factors using the ordered=True, flag to ensure orthogonal polynomial contrasts.
-
-        Todo:
-        1) Perform orthogonality check
-        2) Auto-orthogonalize factors
+        Refit a model with factors organized as polynomial contrasts to ensure valid type-3 SS calculations with using `.anova()`. Previous factor specifications are stored in `model.factors_prev_`.
         """
 
-        if not self.fitted:
-            raise RuntimeError("Model hasn't been fit! Call fit() method before computing ANOVA table.")
+        self.factors_prev_ = copy(self.factors)
+        # Create orthogonal polynomial contrasts by just sorted factor levels alphabetically and letting R enumerate the required polynomial contrasts
+        new_factors = {}
+        for k in self.factors.keys():
+            new_factors[k] = sorted(list(map(str, self.data[k].unique())))
+        self.fit(factors = new_factors,ordered=True,summarize=False)
+
+    def anova(self,force_orthogonal=False):
+        """
+        Return a type-3 ANOVA table from a fitted model. Like R, this method does not ensure that contrasts are orthogonal to ensure correct type-3 SS computation. However, the force_orthogonal flag can refit the regression model with orthogonal polynomial contrasts automatically guaranteeing valid SS type 3 inferences. Note that this will overwrite factors specified in the last call to `.fit()`
+
+        Args:
+            force_orthogonal (bool): whether factors in the model should be recoded using polynomial contrasts to ensure valid type-3 SS calculations. If set to True, previous factor specifications will be saved in `model.factors_prev_`; default False
+
+        Returns:
+            anova_results (pd.DataFrame): Type 3 ANOVA results
+        """
+
+        if self.factors:
+            # Model can only have factors if it's been fit
+            if force_orthogonal:
+                self._refit_orthogonal()
+        elif not self.fitted:
+            raise ValueError("Model must be fit before ANOVA table can be generated!")
 
         rstring = """
             function(model){
@@ -162,15 +180,18 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova = pandas2ri.ri2py(anova(self.model_obj))
-        if self.anova.shape[1] == 6:
-                self.anova.columns = ['SS','MS','NumDF','DenomDF','F-stat','P-val']
-                self.anova['Sig'] = self.anova['P-val'].apply(lambda x: _sig_stars(x))
-        elif self.anova.shape[1] == 4:
+        self.anova_results = pandas2ri.ri2py(anova(self.model_obj))
+        if self.anova_results.shape[1] == 6:
+                self.anova_results.columns = ['SS','MS','NumDF','DenomDF','F-stat','P-val']
+                self.anova_results['Sig'] = self.anova_results['P-val'].apply(lambda x: _sig_stars(x))
+        elif self.anova_results.shape[1] == 4:
             warnings.warn("MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance...")
-            self.anova.columns = ['DF','SS','MS','F-stat']
-        print("Analysis of variance Table of type III with Satterthwaite approximated degrees of freedom:\n(NOTE: No orthogonality check performed)")
-        return self.anova
+            self.anova_results.columns = ['DF','SS','MS','F-stat']
+        if force_orthogonal:
+            print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Model refit with orthogonal polynomial contrasts)")
+        else:
+            print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Using original model contrasts, orthogonality not guaranteed)")
+        return self.anova_results
 
     def fit(self,conf_int='Wald',factors=None,permute=None,ordered=False,summarize=True,verbose=False,REML=True):
         """
