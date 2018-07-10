@@ -179,9 +179,7 @@ def _isPD(mat):
 
 def _nearestPD(A, nit=100):
     """
-    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm.
-    Pretty sure this is what statsmodels uses, in corr_nearest.
-    Reference: https://goo.gl/Eut7UU
+    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Pretty sure this is what statsmodels uses, in corr_nearest. Reference: https://goo.gl/Eut7UU
 
     Args:
         nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
@@ -242,10 +240,13 @@ def lrt(models):
     Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
 
     Todo:
+    0) Figure out discrepancy with R result
     1) Generalize function to perform LRT, or vuong test
     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
-    3) Given a single model expand out to all separate term tests 
+    3) Given a single model expand out to all separate term tests
     """
+
+    raise NotImplementedError("This function is not yet implemented")
 
     if not isinstance(models,list):
         models = [models]
@@ -282,3 +283,23 @@ def lrt(models):
     out['Sig'] = out['P-val'].apply(lambda x: _sig_stars(x))
     out = out[['model','log-likelihood','AIC','BIC','DF','P-val','Sig']]
     return out
+
+def mat2R(arr):
+    """
+    Convert user desired contrasts to R-flavored contrast matrix that can be passed directly to lm().
+    """
+
+    intercept = np.repeat(1./arr.shape[1],arr.shape[1])
+    mat = np.vstack([intercept,arr])
+    inv = np.linalg.inv(mat)[:,1:]
+    return inv
+
+def R2mat(arr):
+    """
+    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user.
+    """
+
+    intercept = np.ones((arr.shape[0],1))
+    mat = np.column_stack([intercept,arr])
+    inv = np.linalg.inv(mat)
+    return inv

@@ -5,10 +5,9 @@
 # pymer4
 
 Love multi-level-modeling using lme4 in R but prefer to work in the scientific Python ecosystem? Then this package has got you covered! It's a small convenience package wrapping the basic functionality of [lme4](https://github.com/lme4/lme4)\*.  
-\* *Currently this only includes linear and logit models*
 
 This package can also estimate standard, robust, and permuted regression models\*  
-\* *Currently this only includes linear models*
+\* *Currently this only includes linear regression models*
 
 ## Documentation
 Current documentation and usage examples can be found **[here](http://eshinjolly.com/pymer4/)**.
@@ -61,11 +60,10 @@ Some users have issues installing `pymer4` on recent versions of macOS. This is 
 #### Change-log
 **0.5.0**
 - `Lmer` models now support all generalized linear model family types supported by lme4 (e.g. poisson, gamma, etc)
-- `Lmer` models now support ANOVA tables with support for auto-orthogonalizing factors <- TODO
+- `Lmer` models now support ANOVA tables with support for auto-orthogonalizing factors
 - Test statistic inference for `Lmer` models can now be performed via non-parametric permutation tests that shuffle observations within clusters
-- `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts that avoid a user having to deal with R's contrast matrix inversion trickiness <- TODO
-- New forest plots for visualizing model estimates and confidence intervals
-- New likelihood ratio test function for comparing nested and non-nested models
+- `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts
+- New forest plots for visualizing model estimates and confidence intervals via the `Lmer.plot_summary()` method
 
 **0.4.0**  
 - Added `post_hoc` tests to `Lmer` models

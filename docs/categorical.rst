@@ -29,10 +29,11 @@ Please refer to the `patsy documentation <https://patsy.readthedocs.io/en/latest
 
 Multi-level Models
 ------------------
-:code:`Lmer()` models currently have support for handling categorical predictors in one of two ways based on how R's :code:`factor()` works:
+:code:`Lmer()` models currently have support for handling categorical predictors in one of three ways based on how R's :code:`factor()` works:
 
 1. Dummy-coded factor levels (treatment contrasts) in which each model term is the difference between a factor level and a selected reference level
 2. Orthogonal polynomial contrasts in which each model term is a polynomial contrast across factor levels (e.g. linear, quadratic, cubic, etc)
+3. Custom contrasts for each level of a factor, which should be provide in the manner by R.
 
 To make re-parameterizing models easier, factor codings are passed as an argument to a model's :code:`fit` method. This obviates the need for adjusting data-frame properties as in R.
 
@@ -72,8 +73,12 @@ This will treat the order of list items as the order of factor levels for the *l
         ordered = True
         })
 
-Custom parameterizations
-------------------------
+R-flavored custom contrasts
+---------------------------
+:code:`Lmer()` models can also take custom factor settings based on how they are expected by R. This *differs* from typical user intuition because the :code:`contrasts()` command in R doesn't actually expect contrast weights (i.e. a design matrix) is one would intuit. Rather, it is made for generating contrast coding schemes which are the inverse of the contrast weight matrix. For more on this specification see `this reference <https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html>`_ and `this reference <https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md>`_. If this is confusing see below for an alternate method.
+
+(Simpler) Custom contrasts
+--------------------------
 Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. *Note: this is also a useful approach if you don't want to use patsy's formula langauge with standard regression models as noted above*.
 
 This is trivial using pandas map and assign methods. Here we'll only build a linear contrast across factor levels (0.5 < 1.0 < 1.5), without all exhaustive higher level polynomial terms:

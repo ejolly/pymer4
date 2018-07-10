@@ -16,7 +16,8 @@ def test_simulate_lm():
                           num_coef,
                           coef_vals,
                           mus = mus,
-                          corrs = corrs)
+                          corrs = corrs,
+                          seed=4)
 
     # Check predictors are correlated
     # True - Generated < .1
