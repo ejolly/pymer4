@@ -7,7 +7,9 @@ __all__  = ['get_resource_path',
             '_chunk_boot_ols_coefs',
             '_chunk_perm_ols',
             '_ols',
-            '_perm_find']
+            '_perm_find',
+            '_isPSD',
+            '_nearestPSD']
 
 __author__ = ['Eshin Jolly']
 __license__ = "MIT"
@@ -169,17 +171,19 @@ def _perm_find(arr,x):
     """
     return np.sum(np.abs(arr) >= np.abs(x))/float(len(arr))
 
-def _isPD(mat):
-    '''check if matrix is positive semi definite by virtue of whether numpy can perform cholesky decomposition on it.'''
-    try:
-        _ = np.linalg.cholesky(mat)
-        return True
-    except np.linalg.LinAlgError:
-        return False
-
-def _nearestPD(A, nit=100):
+def _isPSD(mat,tol=1e-8):
     """
-    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Pretty sure this is what statsmodels uses, in corr_nearest. Reference: https://goo.gl/Eut7UU
+    Check if matrix is positive-semi-definite by virtue of all its eigenvalues being >= 0. The cholesky decomposition does not work for edge cases because np.linalg.cholesky fails on matrices with exactly 0 valued eigenvalues, whereas in Matlab this is not true, so that method appropriate. Ref: https://goo.gl/qKWWzJ
+    """
+
+    # We dont assume matrix is Hermitian, i.e. real-valued and symmetric
+    # Could swap this out with np.linalg.eigvalsh(), which is faster but less general
+    e = np.linalg.eigvals(mat)
+    return np.all(e > -tol)
+
+def _nearestPSD(A, nit=100):
+    """
+    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Sstatsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
 
     Args:
         nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
@@ -212,7 +216,11 @@ def _nearestPD(A, nit=100):
         Xk = _getPs(Rk, W=W)
         deltaS = Xk - Rk
         Yk = _getPu(Xk, W=W)
-    return Yk
+    # Double check returned matrix is PSD
+    if _isPSD(Yk):
+        return Yk
+    else:
+        _nearestPSD(Yk)
 
 def upper(mat):
     '''Return upper triangle of matrix'''

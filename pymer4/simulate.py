@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
-from pymer4.utils import discrete_inverse_logit, _isPD, _nearestPD
+from pymer4.utils import discrete_inverse_logit, _isPSD, _nearestPSD
 
 __all__  = ['easy_multivariate_normal',
             'simulate_lm',
@@ -155,18 +155,19 @@ def simulate_lmm(num_obs,num_coef,num_grps,coef_vals=None,corrs=None,grp_sigmas=
     blups = pd.DataFrame(blups,columns= ['Intercept'] + ['IV'+str(elem+1) for elem in range(x_all.shape[1]-1)],index=['Grp'+str(elem+1) for elem in range(num_grps)])
     return data, blups, b
 
-def easy_multivariate_normal(num_obs, num_features, corrs, mu = 0.0, sigma = 1.0, seed = None,forcePD=True,return_new_corrs=False):
+def easy_multivariate_normal(num_obs, num_features, corrs, mu = 0.0, sigma = 1.0, seed = None,forcePSD=True,return_new_corrs=False,nit=100):
     """
-    Function to more easily generate multivariate normal samples provided a correlation matrix or list of correlations (upper triangle of correlation matrix) instead of a covariance matrix. Defaults to returning approximately standard normal (mu = 0; sigma = 1) variates. Unlike numpy, if the desired correlation matrix is not positive semi-definite, will by default issue a warning and find the nearest correlation matrix that is by default. This new matrix can optionally be returned used the return_new_corrs argument.
+    Function to more easily generate multivariate normal samples provided a correlation matrix or list of correlations (upper triangle of correlation matrix) instead of a covariance matrix. Defaults to returning approximately standard normal (mu = 0; sigma = 1) variates. Unlike numpy, if the desired correlation matrix is not positive-semi-definite, will by default issue a warning and find the nearest PSD correlation matrix and generate data with this matrix. This new matrix can optionally be returned used the return_new_corrs argument.
 
     Args:
         num_obs (int): number of observations/samples to generate (rows)
-        corrs (ndarray): num_features x num_features or flattend numpy array of length (num_features * (num_features-1)) / 2
+        corrs (ndarray/list/float): num_features x num_features 2d array, flattend numpy array of length (num_features * (num_features-1)) / 2, or scalar for same correlation on all off-diagonals
         num_features (int): number of features/variables/dimensions to generate (columns)
         mu (float/list): mean of each feature across observations; default 0.0
         sigma (float/list): sd of each feature across observations; default 1.0
         forcePD (bool): whether to find and use a new correlation matrix if the requested one is not positive semi-definite; default False
         return_new_corrs (bool): return the nearest correlation matrix that is positive semi-definite used to generate data; default False
+        nit (int): number of iterations to search for the nearest positive-semi-definite correlation matrix is the requested correlation matrix is not PSD; default 100
 
     Returns:
         ndarray: correlated data as num_obs x num_features array
@@ -197,12 +198,12 @@ def easy_multivariate_normal(num_obs, num_features, corrs, mu = 0.0, sigma = 1.0
     else:
         raise ValueError("Correlations must be num_features x num_feature, flattend numpy array/list or scalar")
 
-    if not _isPD(corrs):
-        if forcePD:
+    if not _isPSD(corrs):
+        if forcePSD:
             # Tell user their correlations are being recomputed if they didnt ask to save them as they might not realize
             if not return_new_corrs:
                 print("Correlation matrix is not positive semi-definite. Solved for new correlation matrix.")
-            _corrs = np.array(_nearestPD(corrs))
+            _corrs = np.array(_nearestPSD(corrs, nit))
 
         else:
             raise ValueError("Correlation matrix is not positive semi-definite. Pymer4 will not generate inaccurate multivariate data. Use the forcePD argument to automatically solve for the closest desired correlation matrix.")
