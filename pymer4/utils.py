@@ -8,8 +8,8 @@ __all__  = ['get_resource_path',
             '_chunk_perm_ols',
             '_ols',
             '_perm_find',
-            '_isPSD',
-            '_nearestPSD']
+            'isPSD',
+            'nearestPSD']
 
 __author__ = ['Eshin Jolly']
 __license__ = "MIT"
@@ -171,7 +171,7 @@ def _perm_find(arr,x):
     """
     return np.sum(np.abs(arr) >= np.abs(x))/float(len(arr))
 
-def _isPSD(mat,tol=1e-8):
+def isPSD(mat,tol=1e-8):
     """
     Check if matrix is positive-semi-definite by virtue of all its eigenvalues being >= 0. The cholesky decomposition does not work for edge cases because np.linalg.cholesky fails on matrices with exactly 0 valued eigenvalues, whereas in Matlab this is not true, so that method appropriate. Ref: https://goo.gl/qKWWzJ
     """
@@ -181,7 +181,7 @@ def _isPSD(mat,tol=1e-8):
     e = np.linalg.eigvals(mat)
     return np.all(e > -tol)
 
-def _nearestPSD(A, nit=100):
+def nearestPSD(A, nit=100):
     """
     Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Sstatsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
 
@@ -217,10 +217,10 @@ def _nearestPSD(A, nit=100):
         deltaS = Xk - Rk
         Yk = _getPu(Xk, W=W)
     # Double check returned matrix is PSD
-    if _isPSD(Yk):
+    if isPSD(Yk):
         return Yk
     else:
-        _nearestPSD(Yk)
+        nearestPSD(Yk)
 
 def upper(mat):
     '''Return upper triangle of matrix'''
@@ -292,9 +292,15 @@ def lrt(models):
     out = out[['model','log-likelihood','AIC','BIC','DF','P-val','Sig']]
     return out
 
-def mat2R(arr):
+def con2R(arr):
     """
-    Convert user desired contrasts to R-flavored contrast matrix that can be passed directly to lm().
+    Convert user desired contrasts to R-flavored contrast matrix that can be passed directly to lm(). Reference: https://goo.gl/E4Mms2
+
+    Args:
+        arr (np.ndarry): 2d numpy array arranged as contrasts X factor levels
+
+    Returns:
+        out (np.ndarray): 2d contrast matrix as expected by R's contrasts() function
     """
 
     intercept = np.repeat(1./arr.shape[1],arr.shape[1])
@@ -302,9 +308,15 @@ def mat2R(arr):
     inv = np.linalg.inv(mat)[:,1:]
     return inv
 
-def R2mat(arr):
+def R2con(arr):
     """
-    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user.
+    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user. Reference: https://goo.gl/E4Mms2
+
+        Args:
+            arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
+
+        Returns:
+            out (np.ndarray): 2d array organized as contrasts X factor levels
     """
 
     intercept = np.ones((arr.shape[0],1))

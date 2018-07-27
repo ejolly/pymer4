@@ -1,6 +1,5 @@
 Categorical Predictors
 =======================
-
 The syntax for handling categorical predictors is **different** between standard regression models and multi-level models in :code:`pymer4`. This is because formula parsing is passed to R for multi-level models, but handled by Python for standard regression models. Please note the differences below.
 
 Standard Regression Models
@@ -33,7 +32,7 @@ Multi-level Models
 
 1. Dummy-coded factor levels (treatment contrasts) in which each model term is the difference between a factor level and a selected reference level
 2. Orthogonal polynomial contrasts in which each model term is a polynomial contrast across factor levels (e.g. linear, quadratic, cubic, etc)
-3. Custom contrasts for each level of a factor, which should be provide in the manner by R.
+3. Custom contrasts for each level of a factor, which should be provide in the manner expected by R.
 
 To make re-parameterizing models easier, factor codings are passed as an argument to a model's :code:`fit` method. This obviates the need for adjusting data-frame properties as in R.
 
@@ -73,13 +72,26 @@ This will treat the order of list items as the order of factor levels for the *l
         ordered = True
         })
 
-R-flavored custom contrasts
+Custom contrasts
 ---------------------------
-:code:`Lmer()` models can also take custom factor settings based on how they are expected by R. This *differs* from typical user intuition because the :code:`contrasts()` command in R doesn't actually expect contrast weights (i.e. a design matrix) is one would intuit. Rather, it is made for generating contrast coding schemes which are the inverse of the contrast weight matrix. For more on this specification see `this reference <https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html>`_ and `this reference <https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md>`_. If this is confusing see below for an alternate method.
+:code:`Lmer()` models can also take custom factor contrasts based on how they are expected by R. Remember that there can be at most k-1 model terms representing any k level factor without over-parameterizing a model. If all that's desired is a specific contrast between factor levels (e.g. rather than all possible k-1 contrasts) you have 2 options:
+
+1) Specify a custom contrast using the syntax below (also available in the :code:`model.fit()` method help). This will guarantee that one of your model terms reflects your desired contrast, and R will generate set of orthogonal contrasts for the rest of your model terms.
+
+**Example**
+Compare level '1.0' in 'IV3' to the mean of levels '0.5' and '1.5'
+
+.. code-block:: python
+
+    model.fit(factors={
+        'IV3': {'1.0': 1, '0.5': -.5, '1.5': -.5}
+    })
+
+2) Fit a model with *only* the desired contrast rather than a full set of k-1 contrasts. Contrary to how statistics is usually taught, you don't ever *have to* include a full set of k-1 contrasts for a k level factor! Follow the directions below to do this (section: "simpler" custom contrasts). The upside is you won't need to rely on R to compute anything for you (aside from the model fit), and you will have a model with exactly the number of terms as contrasts you desire giving you complete control. The downside is that :code:`model.post_hoc()` methods will not be able to do pairwise comparisons as they rely on R's internal representation of factor levels.
 
 (Simpler) Custom contrasts
 --------------------------
-Unlike the methods above, testing specific parameterizations without relying on factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. *Note: this is also a useful approach if you don't want to use patsy's formula langauge with standard regression models as noted above*.
+Testing specific parameterizations without relying on R's factor coding is often easier done by creating new columns in a dataframe with specific coding schemes. These new columns can be utilized within models to test specific hypotheses. However, the downside of this approach is that the :code:`model.post_hoc()` method will no longer be able estimate simple-effects because it will not be able to group factor levels automatically.  *Note: this is also a useful approach if you don't want to use patsy's formula langauge with standard regression models as noted above*.
 
 This is trivial using pandas map and assign methods. Here we'll only build a linear contrast across factor levels (0.5 < 1.0 < 1.5), without all exhaustive higher level polynomial terms:
 
@@ -101,3 +113,8 @@ Now we can estimate this model without the need to use the :code:`factor` argume
 
     model = Lmer('DV ~ IV3_custom_lin + (IV3_custom_lin|Group)', data=df)
     model.fit()
+
+How contrasts in R work
+-----------------------
+*This is just for folks curious about how contrasts in R work*.
+Specifying multiple custom contrasts in R has always been a point of confusion amongst users. This because the :code:`contrasts()` command in R doesn't actually expect contrast weights (i.e. a design matrix) as one would intuit. Rather, it is made for generating contrast coding schemes which are the inverse of the contrast weight matrix. For a longer explanation with examples see `this reference <https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html>`_ and `this reference <https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md>`_. For these situations pymer4 offers a few utility functions to convert between these matrix types if desired in :code:`pymer4.utils`: :code:`R2con` and :code:`con2R`.

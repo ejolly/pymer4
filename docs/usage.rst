@@ -51,7 +51,7 @@ Fitting a standard regression model like using :code:`lm()` in R, simply entails
 
 Estimate a multi-level model
 ----------------------------
-Fitting a multi-level model works similarily.
+Fitting a multi-level model works similarly.
 
 .. code-block:: python
 
@@ -62,6 +62,16 @@ Fitting a multi-level model works similarily.
     model.fit()
 
 .. image:: ../misc/simple_summary_lmm.png
+
+Visualize model summary
+-----------------------
+We can visualize the coefficients with 95% confidence intervals, and cluster level estimates overlaid.
+
+.. code-block:: python
+
+    model.plot_summary()
+
+.. image:: ../misc/plot_summary_lmm.png
 
 Inspect random effects
 ----------------------
@@ -75,7 +85,7 @@ We can look at the cluster level parameters easily as they are stored within the
 
 Each row here is a unique intercept and slope, which vary because we parameterized our random effects that way above.
 
-We can also plot these values with respect to the population parameters above.
+We can also plot these values with respect to the population parameters above in a slightly different way than the forest plot above. 
 
 .. code-block:: python
 

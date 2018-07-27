@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
-from pymer4.utils import discrete_inverse_logit, _isPSD, _nearestPSD
+from pymer4.utils import discrete_inverse_logit, isPSD, nearestPSD
 
 __all__  = ['easy_multivariate_normal',
             'simulate_lm',
@@ -198,12 +198,12 @@ def easy_multivariate_normal(num_obs, num_features, corrs, mu = 0.0, sigma = 1.0
     else:
         raise ValueError("Correlations must be num_features x num_feature, flattend numpy array/list or scalar")
 
-    if not _isPSD(corrs):
+    if not isPSD(corrs):
         if forcePSD:
             # Tell user their correlations are being recomputed if they didnt ask to save them as they might not realize
             if not return_new_corrs:
                 print("Correlation matrix is not positive semi-definite. Solved for new correlation matrix.")
-            _corrs = np.array(_nearestPSD(corrs, nit))
+            _corrs = np.array(nearestPSD(corrs, nit))
 
         else:
             raise ValueError("Correlation matrix is not positive semi-definite. Pymer4 will not generate inaccurate multivariate data. Use the forcePD argument to automatically solve for the closest desired correlation matrix.")

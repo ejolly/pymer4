@@ -5,7 +5,7 @@
 
 Pymer4
 ======
-Love multi-level-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python. (*Currently this only include linear and logistic multi-level models*)
+Love multi-level-modeling using `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This package has got you covered! It's a small convenience package wrapping the basic functionality of lme4 for compatibility with python.
 
 This package's main purpose is to provide a clean interface that hides the back-and-forth code required when moving between R and Python. In other words a user can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. Behind the scenes this package simply uses `rpy2 <https://rpy2.readthedocs.io/en/version_2.8.x/>`_ to pass objects between languages, compute what's needed, parse everything, and convert to Python types (e.g. numpy arrays, pandas dataframes, etc).
 
@@ -29,18 +29,22 @@ This package has some extra goodies to make life a bit easier, namely:
     - Easy post-hoc tests with multiple-comparisons correction via `lsmeans <https://cran.r-project.org/web/packages/lsmeans/index.html>`_
     - Easy model predictions on new data
     - Easy generation of new data from a fitted model
+    - Optional p-value computation via within cluster permutation testing (experimental)
 
 - For standard linear models (i.e. :code:`lm()`)
 
     - Automatic inclusion of confidence intervals in model output
     - Easy computation of empirically bootstrapped 95% confidence intervals
-    - Easy computation of cluster-robust, heteroscedasticity-robust or auto-correlation-robust,'sandwich estimators' for standard errors (*note: these are not the same as auto-regressive models*)
+    - Easy computation of cluster-robust, heteroscedasticity-robust or auto-correlation-robust, 'sandwich estimators' for standard errors (*note: these are not the same as auto-regressive models*)
     - Permutation tests on model parameters
 
 - Data simulation
 
     - Highly customizable functions for generating data useful for standard regression models and multi-level models
 
+- Data visualization
+
+    - Convenience methods for plotting model estimates, including random-effects terms
 
 Installation
 ------------
@@ -84,7 +88,7 @@ Some users have issues installing ``pymer4`` on recent versions of macOS. This i
         export CC= pathYouCopiedInQuotes
         export CFLAGS="-W"
 
-7. Finally install ``rpy2`` using the new compiler you just installed: ``pip install rpy2==2.8.6``
+7. Finally install ``rpy2`` using the new compiler you just installed: ``pip install rpy2==2.8.5``
 8. Now you should be able to ``pip install pymer4``:)
 
 Basic Usage Guide
@@ -100,6 +104,13 @@ Categorical Predictors
     :maxdepth: 2
 
     categorical
+
+Post-hoc Comparisons
+--------------------
+.. toctree::
+    :maxdepth: 2
+
+    post_hoc
 
 Simulating Data
 ---------------

@@ -109,6 +109,9 @@ def test_anova():
     data = pd.read_csv(os.path.join(get_resource_path(),'sample_data.csv'))
     data['DV_l2'] = np.random.randint(0,4,data.shape[0])
     model = Lmer('DV ~ IV3*DV_l2 + (IV3|Group)',data=data)
+    model.fit(summarize=False)
+    out = model.anova()
+    assert out.shape == (3,7)
 
 def test_poisson_lmm():
     np.random.seed(1)

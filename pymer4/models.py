@@ -95,9 +95,6 @@ class Lmer(object):
         """
         Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts. User can also specific custom contrasts.
 
-        Todo:
-        1) Automatically convert user's desired contrast -> R's contrast matrix format for them: https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md
-
         Args:
             factor_dict: (dict) dictionary with column names specified as keys, and lists of unique values to treat as factor levels
             ordered: (bool) whether to interpret factor_dict values as dummy-coded (1st list item is reference level) or as polynomial contrasts (linear contrast specified by ordered of list items)
@@ -200,7 +197,7 @@ class Lmer(object):
 
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
-            factors (dict): col names (keys) and contrast codes (vals) for factor variables. To use dummy coding or simply poylnomial coding provide the variable name as key and a list of its unique values as values e.g. {'Col1':['A','B','C']}. First level is always treated as reference in this scheme. For custom contrasts use nested dictionary with custom values, e.g. {'Col1':{'A': -1,'B':-1,'C':2}}
+            factors (dict): Keys should be column names in data to treat as factors. Values should either be a list containing unique variable levels if dummy-coding or polynomial coding is desired. Otherwise values should be another dictionary with unique variable levels as keys and desired contrast values (as specified in R!) as keys. See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
@@ -209,6 +206,21 @@ class Lmer(object):
 
         Returns:
             DataFrame: R style summary() table
+
+        Examples:
+            The following examples demonstrate how to treat variables as categorical factors.
+
+            Dummy-Coding: Treat Col1 as a factor which 3 levels: A, B, C. Use dummy-coding with A as the reference level. Model intercept will be mean of A, and parameters will be B-A, and C-A.
+
+            >>> model.fit(factors = {"Col1": ['A','B','C']})
+
+            Orthogonal Polynomials: Treat Col1 as a factor which 3 levels: A, B, C. Estimate a linear contrast of C > B > A. Model intercept will be grand-mean of all levels, and parameters will be linear contrast, and orthogonal polynomial contrast (auto-computed).
+
+            >>> model.fit(factors = {"Col1": ['A','B','C']}, ordered=True)
+
+            Custom-contrast: Treat Col1 as a factor which 3 levels: A, B, C. Compare A to the mean of B and C. Model intercept will be the grand-mean of all levels, and parameters will be the desired contrast, a well as an automatically determined orthogonal contrast.
+
+            >>> model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))
 
         """
 

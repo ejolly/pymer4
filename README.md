@@ -54,7 +54,7 @@ Some users have issues installing `pymer4` on recent versions of macOS. This is 
     export CC= pathYouCopiedInQuotes
     export CFLAGS="-W"
     ```
-7. Finally install `rpy2` using the new compiler you just installed: `pip install rpy2==2.8.6`
+7. Finally install `rpy2` using the new compiler you just installed: `pip install rpy2==2.8.5`
 8. Now you should be able to `pip install pymer4`:)
 
 #### Change-log
@@ -64,6 +64,7 @@ Some users have issues installing `pymer4` on recent versions of macOS. This is 
 - Test statistic inference for `Lmer` models can now be performed via non-parametric permutation tests that shuffle observations within clusters
 - `Lmer.fit(factors={})` arguments now support custom arbitrary contrasts
 - New forest plots for visualizing model estimates and confidence intervals via the `Lmer.plot_summary()` method
+- More comprehensive documentation with examples of new features
 
 **0.4.0**  
 - Added `post_hoc` tests to `Lmer` models
