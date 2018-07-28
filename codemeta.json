@@ -1,0 +1,23 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    {
+      "@id": "",
+      "@type": "Person",
+      "email": "eshin.jolly@gmail.com",
+      "name": "ejolly",
+      "affiliation": "Dartmouth College"
+    }
+  ],
+  "identifier": "",
+  "codeRepository": "https://github.com/ejolly/pymer4",
+  "datePublished": "2018-07-27",
+  "dateModified": "2018-07-27",
+  "dateCreated": "2018-07-27",
+  "description": "A package for estimating multi-level models in Python.",
+  "keywords": "multi-level modeling, statistics, python, lme4, rpy2, data analysis",
+  "license": "MIT",
+  "title": "Pymer4",
+  "version": "0.5.0"
+}
