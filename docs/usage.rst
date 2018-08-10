@@ -10,7 +10,7 @@ Let's take a quick look at the sample data:
     import os
     import pandas as pd
     import seaborn as sns
-    from pymer4.models import Lmer
+    from pymer4.models import Lm, Lmer
     from pymer4.utils import get_resource_path
 
     df = pd.read_csv(os.path.join(get_resource_path(),'sample_data.csv'))
@@ -85,7 +85,7 @@ We can look at the cluster level parameters easily as they are stored within the
 
 Each row here is a unique intercept and slope, which vary because we parameterized our random effects that way above.
 
-We can also plot these values with respect to the population parameters above in a slightly different way than the forest plot above. 
+We can also plot these values with respect to the population parameters above in a slightly different way than the forest plot above.
 
 .. code-block:: python
 
