@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from patsy import dmatrices
 import seaborn as sns
 import warnings
+import pdb
 from six import string_types
 from joblib import Parallel, delayed
 from pymer4.utils import (_sig_stars,
@@ -297,11 +298,14 @@ class Lmer(object):
                 idx <- max(grep('sig',n))
                 out.ci <- out.ci[-seq(1:idx),]
                 out <- cbind(out.coef,out.ci)
-                out
+                list(out,rownames(out))
                 }
             """
             estimates_func = robjects.r(rstring)
-            df = pandas2ri.ri2py(estimates_func(self.model_obj))
+            out_summary, out_rownames = estimates_func(self.model_obj)
+            df = pandas2ri.ri2py(out_summary)
+            df.index = out_rownames
+            #df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             # gaussian
             if df.shape[1] == 7:
@@ -343,12 +347,15 @@ class Lmer(object):
                 probs.ci <- data.frame(sapply(out.ci,plogis))
                 colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
                 out <- cbind(out,odds,odds.ci,probs,probs.ci)
-                out
+                list(out,rownames(out))
                 }
             """
 
             estimates_func = robjects.r(rstring)
-            df = pandas2ri.ri2py(estimates_func(self.model_obj))
+            out_summary, out_rownames = estimates_func(self.model_obj)
+            df = pandas2ri.ri2py(out_summary)
+            df.index = out_rownames
+            #df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             df.columns = ['Estimate','SE','Z-stat','P-val','2.5_ci','97.5_ci','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci']
             df = df[['Estimate','2.5_ci','97.5_ci','SE','OR','OR_2.5_ci','OR_97.5_ci','Prob','Prob_2.5_ci','Prob_97.5_ci','Z-stat','P-val']]
@@ -387,6 +394,7 @@ class Lmer(object):
             df = df[col_order]
         self.coefs = df
         self.fitted = True
+        #pdb.set_trace()
 
         #Random effect variances and correlations
         df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
