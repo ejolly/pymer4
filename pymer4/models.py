@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from patsy import dmatrices
 import seaborn as sns
 import warnings
-import pdb
 from six import string_types
 from joblib import Parallel, delayed
 from pymer4.utils import (_sig_stars,
@@ -262,8 +261,13 @@ class Lmer(object):
         unsum = base.unclass(summary)
 
         #Do scalars first cause they're easier
-        grps = pandas2ri.ri2py(base.data_frame(unsum.rx2('ngrps')))
-        self.grps = dict(grps.T.iloc[0])
+
+        r_grps = base.data_frame(unsum.rx2('ngrps'))
+        grps = pandas2ri.ri2py(r_grps)
+        # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
+        grp_names = pandas2ri.ri2py(base.rownames(r_grps))
+        self.grps = dict(zip(grp_names,grps.values.flatten()))
+
         self.AIC = unsum.rx2('AICtab')[0]
         self.logLike = unsum.rx2('logLik')[0]
 
@@ -394,7 +398,6 @@ class Lmer(object):
             df = df[col_order]
         self.coefs = df
         self.fitted = True
-        #pdb.set_trace()
 
         #Random effect variances and correlations
         df = pandas2ri.ri2py(base.data_frame(unsum.rx2('varcor')))
@@ -695,7 +698,8 @@ class Lmer(object):
         lsmeans = importr('lsmeans')
 
         # Marginal estimates
-        self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
+        #self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
+        self.marginal_estimates = pandas2ri.ri2py(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         effname = effect_names[-1] # this column name changes depending on whether we're doing post-hoc trends or means
@@ -703,7 +707,7 @@ class Lmer(object):
         self.marginal_estimates = self.marginal_estimates.rename(columns={effname:'Estimate','df':'DF','lower.CL':'2.5_ci','upper.CL':'97.5_ci'})[sorted]
 
         # Marginal Contrasts
-        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res.rx2('contrasts'))).rename(columns={'t.ratio':'T-stat','p.value':'P-val','estimate':'Estimate','df':'DF','contrast':'Contrast'})
+        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res)[1]).rename(columns={'t.ratio':'T-stat','p.value':'P-val','estimate':'Estimate','df':'DF','contrast':'Contrast'})
         # Need to make another call to lsmeans to get confidence intervals on contrasts
         confs = pandas2ri.ri2py(base.unclass(lsmeans.confint_ref_grid(res))[1]).iloc[:,-2:].rename(columns={'lower.CL':'2.5_ci','upper.CL':'97.5_ci'})
         self.marginal_contrasts = pd.concat([self.marginal_contrasts,confs],axis=1)
