@@ -2,7 +2,6 @@ sudo: true
 dist: trusty
 langauge: python
 python:
-- '2.7'
 - '3.6'
 install:
 - sudo pip install -r requirements.txt
@@ -17,5 +16,5 @@ before_install:
 - sudo apt-get update
 - sudo apt-get -y install r-base r-base-dev python-tk libnlopt-dev
 - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
-  library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-12','2.0-33','2.25'))"
+  library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-17','3.0-1','2.27-62'))"
 - sudo pip install pytest
