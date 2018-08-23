@@ -2,14 +2,13 @@ sudo: true
 dist: trusty
 langauge: python
 python:
-- 3.6
+  - "3.6"
 install:
 - sudo pip install -r requirements.txt
 - sudo python setup.py install
 script:
 - sudo py.test
 before_install:
-- python --version
 - sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
 - gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
 - gpg -a --export E084DAB9 | sudo apt-key add -
@@ -17,5 +16,5 @@ before_install:
 - sudo apt-get update
 - sudo apt-get -y install r-base r-base-dev python-tk libnlopt-dev
 - sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
-  library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-17','3.0-1','2.27-62'))"
+library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-17','3.0-1','2.27-62'))"
 - sudo pip install pytest
