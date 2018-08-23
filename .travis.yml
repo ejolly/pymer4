@@ -4,8 +4,8 @@ langauge: python
 python:
   - "3.6"
 install:
-  - sudo pip install -r requirements.txt
-  - sudo python setup.py install
+- sudo pip install -r requirements.txt
+- sudo python setup.py install
 script:
   - sudo py.test
 before_install:
