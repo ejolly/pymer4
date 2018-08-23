@@ -2,7 +2,7 @@ sudo: true
 dist: trusty
 langauge: python
 python:
-  - "3.6"
+- "3.6"
 install:
 - sudo pip install -r requirements.txt
 - sudo python setup.py install
