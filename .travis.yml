@@ -2,7 +2,6 @@ sudo: true
 dist: trusty
 langauge: python
 python:
-- "2.7"
 - "3.6"
 install:
 - sudo pip install -r requirements.txt
@@ -10,7 +9,6 @@ install:
 script:
 - sudo py.test
 before_install:
-- python --version
 - sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
 - gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
 - gpg -a --export E084DAB9 | sudo apt-key add -
