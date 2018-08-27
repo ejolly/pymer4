@@ -70,12 +70,10 @@ def test_gaussian_lmm():
 def test_post_hoc():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
-    df['DV_l2'] = np.random.randint(2, size=df.shape[0])
-    model = Lmer('DV ~ IV1*IV3*DV_l*DV_l2 + (IV1|Group)',
+    model = Lmer('DV ~ IV1*IV3*DV_l + (IV1|Group)',
                  data=df, family='gaussian')
     model.fit(factors={
         'IV3': ['0.5', '1.0', '1.5'],
-        'DV_l2': ['1', '0'],
         'DV_l': ['0', '1']
     }, summarize=False)
 
@@ -85,9 +83,9 @@ def test_post_hoc():
     assert contrasts.shape[0] == 3
 
     marginal, contrasts = model.post_hoc(
-        marginal_vars=['IV3', 'DV_l', 'DV_l2'])
-    assert marginal.shape[0] == 12
-    assert contrasts.shape[0] == 66
+        marginal_vars=['IV3', 'DV_l'])
+    assert marginal.shape[0] == 6
+    assert contrasts.shape[0] == 15
 
 
 def test_logistic_lmm():

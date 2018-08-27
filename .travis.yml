@@ -1,20 +1,20 @@
-sudo: true
-dist: trusty
+sudo: false
 langauge: python
 python:
-- "3.6"
-install:
-- sudo pip install -r requirements.txt
-- sudo python setup.py install
-script:
-- sudo py.test
+  - "3.6"
+
 before_install:
-- sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
-- gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-- gpg -a --export E084DAB9 | sudo apt-key add -
-- sudo rm -vf /etc/apt/sources.list.d/*riak*
-- sudo apt-get update
-- sudo apt-get -y install r-base r-base-dev python-tk libnlopt-dev
-- sudo R -e "install.packages('versions', repos = 'http://cran.us.r-project.org');
-  library(versions); install.versions(c('lme4','lmerTest','lsmeans'),c('1.1-17','3.0-1','2.27-62'))"
-- sudo pip install pytest
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update conda
+install:
+- conda create -n testenv python=$TRAVIS_PYTHON_VERSION pip pytest
+- source activate testenv
+- conda install -c conda-forge rpy2 r-lmertest r-lsmeans
+- pip install -r requirements.txt
+- python setup.py install
+script:
+- py.test
