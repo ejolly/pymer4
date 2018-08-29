@@ -5,8 +5,8 @@ python:
 - "3.6"
 install:
 - source activate testenv
-- sudo pip install -r requirements.txt
-- sudo python setup.py install
+- pip install -r requirements.txt
+- python setup.py install
 script:
 - sudo py.test
 before_install:
