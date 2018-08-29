@@ -7,3 +7,4 @@ patsy>=0.4.1
 joblib>=0.11
 scipy>=1.0.0
 six
+tzlocal
