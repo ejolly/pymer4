@@ -1110,7 +1110,7 @@ class Lm(object):
         results.columns = ['Estimate', '2.5_ci', '97.5_ci',
                            'SE', 'DF', 'T-stat', 'P-val', 'Sig']
         results[['Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']] = results[[
-            'Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']].apply(pd.to_numeric)
+            'Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']].apply(lambda x: pd.to_numeric(x, errors='coerce'))
 
         if permute:
             results = results.rename(
