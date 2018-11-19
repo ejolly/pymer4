@@ -55,7 +55,7 @@ If you run into issues using either option above, it's likely due to compiler is
     export CC= pathYouCopiedInQuotes
     export CFLAGS="-W"
     ```
-9. Finally install `rpy2` using the new compiler you just installed: `pip install rpy2`
+9. Finally install `rpy2` using the new compiler you just installed: `conda install -c conda-forge rpy2` if you followed Option 1 above or `pip install rpy2` if you followed Option 2
 10. Now you should be able to `pip install pymer4` :)
 
 #### Change-log  
