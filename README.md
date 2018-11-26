@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/ejolly/pymer4.svg?branch=master)](https://travis-ci.org/ejolly/pymer4)
-[![Package versioning](https://img.shields.io/pypi/v/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.2.2&:action=display)
+[![Package versioning](https://img.shields.io/pypi/v/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.6.0&:action=display)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.2.2&:action=display)
-[![DOI](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/badge/latestdoi/90598701)
+[![DOI](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205)
 
 # pymer4
 
