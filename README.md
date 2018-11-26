@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/ejolly/pymer4.svg?branch=master)](https://travis-ci.org/ejolly/pymer4)
 [![Package versioning](https://img.shields.io/pypi/v/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.6.0&:action=display)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pymer4.svg)](https://pypi.python.org/pypi?name=pymer4&version=0.2.2&:action=display)
+[![DOI](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862)
 [![DOI](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205)
 
 # pymer4
@@ -10,8 +11,11 @@ Love multi-level-modeling using lme4 in R but prefer to work in the scientific P
 This package can also estimate standard, robust, and permuted regression models\*  
 \* *Currently this only includes linear regression models*
 
-## Documentation
-Current documentation and usage examples can be found **[here](http://eshinjolly.com/pymer4/)**.
+## Documentation and Citing
+Current documentation and usage examples can be found **[here](http://eshinjolly.com/pymer4/)**.  
+
+If you use this software please cite as:  
+Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. *Journal of Open Source Software*, *3*(31), 862, https://doi.org/10.21105/joss.00862
 
 ## Installation  
 

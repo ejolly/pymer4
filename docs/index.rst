@@ -15,6 +15,9 @@ TL;DR This package is your new *simple* Pythonic drop-in replacement for :code:`
 
 `Github Repo Source <https://github.com/ejolly/pymer4>`_
 
+If you use this software please cite as:
+Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. *Journal of Open Source Software*, 3(31), 862, https://doi.org/10.21105/joss.00862
+
 Features
 --------
 This package has some extra goodies to make life a bit easier, namely:
