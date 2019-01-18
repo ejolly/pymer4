@@ -19,6 +19,7 @@ from pymer4.utils import (_sig_stars,
                           _perm_find,
                           _return_t
                           )
+from time import sleep
 
 __author__ = ['Eshin Jolly']
 __license__ = "MIT"
@@ -83,6 +84,7 @@ class Lmer(object):
         self.marginal_contrasts = None
         self.sig_type = None
         self.factors_prev_ = None
+        self.message = None # R's optinfo$conv$lme4$messages
 
     def __repr__(self):
         out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
@@ -196,6 +198,129 @@ class Lmer(object):
         else:
             print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Using original model contrasts, orthogonality not guaranteed)")
         return self.anova_results
+
+    # This help function streams R (call_str) requests for a R object (robj)  
+    def get_value_R_f(robj, call_str):         
+        rstring =     """
+                        function(robj){
+                        val = robj""" + call_str + """
+                        val
+                                       }                    
+                      """                  
+        r_model_obj_f = robjects.r(rstring)
+        val = pandas2ri.ri2py(r_model_obj_f(robj))
+        return val
+    
+    def save(self, fname, save_d):
+        # Saves the model's files to fname.[pkl/robj/csv] in the directory load_d 
+        # To split the model in three files is necessary. Simply using pickle would 
+        # lead to models with big training data, because pickle cannot efficently save 
+        # self.model_obj or panda DataFrames. This leads to the problem, that after saving
+        # the model cannot be loaded anymore, because the unpacking needs too much RAM.
+        #
+        # Therefore the save files is split into three components.
+        #   1. A .robj file that contains self.model_obj and is efficiently saved using via R's saveRDS routine
+        #   2. A .csv file that contains self.data and is saved by using pandas
+        #   3. A .pkl file that contains the remaining model attributes and is saved via pickel
+        
+        print('Start saving the model in:')
+        print(save_d + fname +'.[pkl/robj/csv]')        
+        print('Save essentials ...')
+        sleep(0.1) # sleep is used to show the massages after a step is finished
+        df = pd.DataFrame([self.formula, self.grps, self.coefs, self.fixef, self.variables, 
+                           self.fitted, self.AIC, self.logLike, self.warnings, self.ranef_var,
+                           self.ranef_corr, self.ranef, self.design_matrix, self.resid, 
+                           self.factors, self.marginal_estimates, self.marginal_contrasts,
+                           self.sig_type, self.factors_prev_], 
+                          index = ['formula','grps','coefs','fixef','variables', 
+                                   'fitted', 'AIC', 'logLike', 'warnings', 'ranef_var',
+                                   'ranef_corr', 'ranef', 'design_matrix', 'resid',
+                                   'factors', 'marginal_estimates', 'marginal_contrasts',
+                                   'sig_type', 'factors_prev_'])
+        df.to_pickle(save_d + fname + '.pkl')         
+        print('Save essentials - done')        
+        print('Save model_obj ...')
+        sleep(0.1)
+        rstring =  """
+                function(model_obj, fname, save_d){
+                file <- paste(c(save_d, fname,'.robj'), collapse = '')                
+                saveRDS(model_obj, file = file)
+                                    }
+                """
+        r_model_obj_f = robjects.r(rstring)
+        r_model_obj_f(self.model_obj, fname, save_d)
+        print('Save model_obj - done')
+        print('Save model.data ...')
+        sleep(0.1)
+        self.data.to_csv(save_d + fname + '.csv')
+        print('Save model.data - done')
+        
+    
+    def load(self, fname, load_d):
+        # loads the model's files in fname.[pkl/robj/csv] from load_d         
+        print('Start loading the model from:')
+        print(load_d + fname +'.[pkl/robj/csv]')        
+        print('Load essentials ...')
+        sleep(0.1)
+        
+#        [self.formula, self.grps, self.coefs, self.fixef, self.variables, 
+#                           self.fitted, self.AIC, self.logLike, self.warnings, self.ranef_var,
+#                           self.ranef_corr, self.ranef, self.design_matrix, self.resid, 
+#                           self.factors, self.marginal_estimates, self.marginal_estimates,
+#                           self.sig_type, self.factors_prev_]
+        
+        
+        df = pd.read_pickle(load_d + fname + '.pkl').iloc[:,0]
+        self.formula   = df.formula
+        self.grps      = df.grps
+        self.coefs     = df.coefs
+        self.fixef     = df.fixef
+        self.variables = df.variables
+        self.fitted    = df.fitted
+        self.AIC       = df.AIC
+        self.logLike   = df.logLike
+        self.warnings  = df.warnings
+        self.ranef_var = df.ranef_var
+        self.ranef_corr= df.ranef_corr
+        self.ranef     = df.ranef
+        self.design_matrix = df.design_matrix
+        self.resid     = df.resid
+        self.factors   = df.factors
+        self.marginal_estimates = df.marginal_estimates
+        self.marginal_contrasts = df.marginal_contrasts
+        self.sig_type  = df.sig_type
+        self.factors_prev_ = df.factors_prev_
+        
+        print('Load essentials - done')        
+        print('Load model_obj ...')
+        sleep(0.1)
+        rstring = """
+                function(load_d,fname){
+                file <- paste(c(load_d,fname,'.robj'), collapse = '')                
+                model_obj <- readRDS(file)
+                model_obj
+                                    }
+              """
+        r_model_obj_f  = robjects.r(rstring)
+        self.model_obj = r_model_obj_f(load_d, fname)
+        print('Load model_obj - done') 
+        print('Load model.data ...')
+        sleep(0.1)
+        self.data = pd.read_csv(load_d + fname + '.csv', index_col = 0)
+        print('Load model.data - done')
+        try:
+            rstring =     """
+                        function(robj){
+                        val = robj@optinfo$conv$lme4$messages
+                        val
+                                       }                    
+                      """                  
+            r_model_obj_f = robjects.r(rstring)
+            val = pandas2ri.ri2py(r_model_obj_f(self.model_obj))         
+           
+            self.message = val[0]
+        except:
+            self.message = None
 
     def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True):
         """
@@ -468,6 +593,35 @@ class Lmer(object):
             self.fixef = pandas2ri.ri2py(fixefs[0])
             self.fixef = self.fixef[list(
                 self.coefs.index) + [elem for elem in self.fixef.columns if elem not in self.coefs.index]]
+
+        # Add add index to fixef which indicates which fixed effect belongs to which variable. Just as in R.
+        def add_index_to_fixef(self):    
+            rstring = """
+                    function(model){
+                    out <- names(coef(model))           
+                    out
+                    }
+                """
+            fixef_func  = robjects.r(rstring)
+            fixefsnames = fixef_func(self.model_obj)
+            index_df = pd.DataFrame([], columns = ['rownames'], index = fixefsnames)
+            for n in fixefsnames:
+                rstring = """
+                            function(model){
+                            out <- rownames(coef(model)$'""" + n + """')           
+                            out
+                            }
+                        """
+                fixef_func  = robjects.r(rstring)
+                index_df.loc[n,:] = [[n +':' + i for i in list(fixef_func(self.model_obj))]] 
+            
+        
+            for k, n in enumerate(index_df.index):
+                self.fixef[k].index = index_df.loc[n,:].values[0]
+            return self.fixef
+
+        self.fixef = add_index_to_fixef(self)
+
 
         # Sort column order to match population coefs
         # This also handles cases in which random slope terms exist in the model without corresponding fixed effects terms, which generates extra columns in this dataframe. By default put those columns *after* the fixed effect columns of interest (i.e. population coefs)
