@@ -7,6 +7,7 @@ __all__ = ['get_resource_path',
            '_chunk_boot_ols_coefs',
            '_chunk_perm_ols',
            '_ols',
+           '_ols_group',
            '_perm_find',
            'isPSD',
            'nearestPSD']
@@ -128,7 +129,7 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
 
 def _ols(x, y, robust, n_lags, cluster, all_stats=True):
     """
-    Compute OLS on data given formula. Useful for single computation and within permutation schemes.
+    Compute OLS on data. Useful for single computation and within permutation schemes.
     """
 
     # Expects as input pandas series and dataframe
@@ -173,6 +174,14 @@ def _chunk_boot_ols_coefs(dat, formula, seed):
     """
     # Random sample with replacement from all data
     dat = dat.sample(frac=1, replace=True, random_state=seed)
+    y, x = dmatrices(formula, dat, 1, return_type='dataframe')
+    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
+    return list(b)
+
+
+def _ols_group(dat, formula, group_col, group):
+    """Compute OLS on data given a formula."""
+    dat = dat[dat[group_col] == group].reset_index(drop=True)
     y, x = dmatrices(formula, dat, 1, return_type='dataframe')
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
     return list(b)

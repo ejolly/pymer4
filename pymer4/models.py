@@ -16,6 +16,7 @@ from pymer4.utils import (_sig_stars,
                           _chunk_boot_ols_coefs,
                           _chunk_perm_ols,
                           _ols,
+                          _ols_group,
                           _perm_find,
                           _return_t
                           )
@@ -1184,3 +1185,155 @@ class Lm(object):
         else:
             preds = np.dot(X, coefs[1:])
         return preds
+
+class Lm2(object):
+
+    """
+    Model class to perform two-stage OLS regression. In other words, a separate regression model is fit to each group in the data and then the coefficients from these regressions are entered into a second-level regression. The results from this second level regression are reported. This is an alternative to using Lmer, which implicitly allows intercept and slopes to vary by group. See https://bit.ly/2SwHhQU and Gelman (2005). Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specifiy columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
+
+    Args:
+        formula (str): Complete lm-style model formula
+        data (pandas.core.frame.DataFrame): input data
+        family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)
+        group (list/string): the grouping variable to use to run the 1st-level regression; if a list is provided will run multiple levels feeding the coefficients from the previous level into the subsequent level
+
+    Attributes:
+        fitted (bool): whether model has been fit
+        formula (str): model formula
+        data (pandas.core.frame.DataFrame): model copy of input data
+        grps (dict): groups and number of observations per groups recognized by lmer
+        AIC (float): model akaike information criterion
+        logLike (float): model Log-likelihood
+        family (string): model family
+        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
+        resid (numpy.ndarray): model residuals
+        fits (numpy.ndarray): model fits/predictions
+        model_obj(lm model): rpy2 lmer model object
+        factors (dict): factors used to fit the model if any
+
+    """
+
+    def __init__(self, formula, data, group, family='gaussian'):
+
+        self.family = family
+        # implemented_fams = ['gaussian','binomial']
+        if self.family != 'gaussian':
+            raise NotImplementedError(
+                "Currently only linear (family ='gaussian') models supported! ")
+        if isinstance(group, str):
+            self.group = group
+        else:
+            raise TypeError("group must be a string or list")
+        self.fitted = False
+        self.formula = formula
+        self.data = copy(data)
+        self.AIC = None
+        self.logLike = None
+        self.warnings = []
+        self.resid = None
+        self.coefs = None
+        self.model_obj = None
+        self.factors = None
+        self.ci_type = None
+        self.se_type = None
+        self.sig_type = None
+
+    def __repr__(self):
+        out = "{}.{}(fitted={}, formula={}, family={}, group={})".format(
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.fitted,
+            self.formula,
+            self.family,
+            self.group)
+        return out
+
+    def fit(self, robust=False, conf_int='standard', permute=None, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
+        """
+        Fit a variety of second-level OLS models; all lower level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
+
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
+        Robust estimators include:
+
+        - 'hc0': Huber (1980) original sandwich estimator
+
+        - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+
+        - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
+
+        - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
+
+        Args:
+            robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
+            conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
+            permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
+            summarize (bool): whether to print a model summary after fitting; default True
+            verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
+            n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
+            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
+            n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
+            cluster (str): column name identifying clusters/groups for robust estimator type 'cluster' (ignored unless robust='cluster')
+
+        Returns:
+            DataFrame: R style summary() table
+
+        """
+
+        # Parallelize regression computation for 1st-level models
+        par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
+
+        # Loop over each group and fit a separate regression
+        betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i]) for i in range(self.data[self.group].nunique()))
+
+        # Perform an intercept only regression for each beta
+        betas = np.array(betas)
+        results = []
+        for i in range(betas.shape[1]):
+            df = pd.DataFrame({'X': np.ones_like(betas[:, i]), 'Y': betas[:, i]})
+            lm = Lm('Y ~ 1', data=df)
+            lm.fit(robust=robust, conf_int=conf_int, permute=permute, summarize=False, n_boot=n_boot, n_jobs=n_jobs, n_lags=n_lags)
+            results.append(lm.coefs)
+
+        results = pd.concat(results, axis=0)
+        ivs = self.formula.split('~')[-1].strip().split('+')
+        ivs = [e.strip() for e in ivs]
+        results.index = ['Intercept'] + ivs
+        self.coefs = results
+        self.fitted = True
+        self.resid = []
+        # self.resid = res
+        # self.data['fits'] = y.squeeze() - res
+        # self.data['residuals'] = res
+
+        # Fit statistics
+        self.rsquared = np.nan
+        self.rsquared = np.nan
+        self.rsquared_adj = np.nan
+        self.logLike = np.nan
+        self.AIC = np.nan
+        self.BIC = np.nan
+
+        if summarize:
+            return self.summary()
+
+    def summary(self):
+        """
+        Summarize the output of a fitted model.
+
+        """
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to generate summary!")
+
+        print("Formula: {}\n".format(self.formula))
+        print("Family: {}\n".format(self.family))
+        print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,
+                                                                     self.ci_type, self.sig_type))
+        print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" %
+              (self.data.shape[0], self.rsquared, self.rsquared_adj))
+        print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" %
+              (self.logLike, self.AIC, self.BIC))
+        print("Fixed effects:\n")
+        return self.coefs.round(3)
