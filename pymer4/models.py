@@ -1276,6 +1276,7 @@ class Lm2(object):
         self.logLike = None
         self.warnings = []
         self.resid = None
+        self.fixef = None
         self.coefs = None
         self.model_obj = None
         self.factors = None
@@ -1327,6 +1328,22 @@ class Lm2(object):
             DataFrame: R style summary() table
 
         """
+        if robust:
+            if isinstance(robust, bool):
+                robust = 'hc0'
+            self.se_type = 'robust' + ' (' + robust + ')'
+            if cluster:
+                if cluster not in self.data.columns:
+                    raise ValueError(
+                        "cluster identifier must be an existing column in data")
+                else:
+                    cluster = self.data[cluster]
+        else:
+            self.se_type = 'non-robust'
+        self.ci_type = conf_int + \
+            ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
+        self.sig_type = 'parametric' if not permute else 'permutation' + \
+            ' (' + str(permute) + ')'
 
         # Parallelize regression computation for 1st-level models
         par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
@@ -1367,6 +1384,9 @@ class Lm2(object):
             results = pd.concat([intercept_pd, results], ignore_index=True)
         results.index = ['(Intercept)'] + ivs
         self.coefs = results
+        self.fixef = pd.DataFrame(betas, columns=['(Intercept)'] + ivs)
+        self.fixef.index = self.data[self.group].unique()
+        self.fixef.index.name = self.group
         self.fitted = True
 
         # Need to figure out how best to compute predictions and residuals. Should test how Lmer does it, i.e. BLUPs or fixed effects?
