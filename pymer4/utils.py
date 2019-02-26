@@ -8,6 +8,7 @@ __all__ = ['get_resource_path',
            '_chunk_perm_ols',
            '_ols',
            '_ols_group',
+           '_partial_corr_group',
            '_perm_find',
            'isPSD',
            'nearestPSD']
@@ -191,6 +192,25 @@ def _ols_group(dat, formula, group_col, group, rank):
     y, x = dmatrices(formula, dat, 1, return_type='dataframe')
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
     return list(b)
+
+
+def _partial_corr_group(dat, formula, group_col, group, rank):
+    """Compute partial correlations via OLS."""
+
+    from scipy.stats import pearsonr
+    dat = dat[dat[group_col] == group].reset_index(drop=True)
+    if rank:
+        dat = dat.rank()
+    y, x = dmatrices(formula, dat, 1, return_type='dataframe')
+    corrs = []
+    for c in x.columns[1:]:
+        other_preds = [e for e in x.columns[1:] if e != c]
+        other_preds = x[other_preds]
+        cc = x[c]
+        pred_m_resid = _ols(other_preds, cc, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        dv_m_resid = _ols(other_preds, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
+    return corrs
 
 
 def _perm_find(arr, x):

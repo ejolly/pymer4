@@ -17,6 +17,7 @@ from pymer4.utils import (_sig_stars,
                           _chunk_perm_ols,
                           _ols,
                           _ols_group,
+                          _partial_corr_group,
                           _perm_find,
                           _return_t
                           )
@@ -1288,7 +1289,7 @@ class Lm2(object):
             self.group)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, partial_corrs=False, cluster=None):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
@@ -1308,6 +1309,7 @@ class Lm2(object):
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
+            partial_corrs (bool): for each first level model estimate partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
@@ -1328,23 +1330,12 @@ class Lm2(object):
         else:
             self.ranked = False
 
-        # Loop over each group and fit a separate regression
-        betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
-
-        from scipy.stats import pearsonr
-        corrs = []
-        corrs.append(np.nan)  # don't compute for intercept
-        for c in self.design_matrix.columns[1:]:
-            dv = self.formula.split('~')[0]
-            other_preds = [e for e in self.design_matrix.columns[1:] if e != c]
-            right_side = '+'.join(other_preds)
-            y, x = dmatrices(c + '~' + right_side, self.data, 1, return_type='dataframe')
-            pred_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
-            y, x = dmatrices(dv + '~' + right_side, self.data, 1, return_type='dataframe')
-            dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
-            corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
-        return pd.Series(corrs, index=self.coefs.index)
-
+        if partial_corrs:
+            # Loop over each group and get partial correlation estimates
+            betas = par_for(delayed(_partial_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
+        else:
+            # Loop over each group and fit a separate regression
+            betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
 
         # Perform an intercept only regression for each beta
         betas = np.array(betas)
@@ -1358,6 +1349,12 @@ class Lm2(object):
         results = pd.concat(results, axis=0)
         ivs = self.formula.split('~')[-1].strip().split('+')
         ivs = [e.strip() for e in ivs]
+        if partial_corrs:
+            intercept_pd = dict()
+            for c in results.columns:
+                intercept_pd[c] = np.nan
+            intercept_pd = pd.DataFrame(intercept_pd, index=[0])
+            results = pd.concat([intercept_pd, results], ignore_index=True)
         results.index = ['(Intercept)'] + ivs
         self.coefs = results
         self.fitted = True
