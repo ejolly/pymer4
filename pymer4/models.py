@@ -1177,9 +1177,12 @@ class Lm(object):
         raise NotImplementedError(
             "Post-hoc tests are not yet implemented for linear models.")
 
-    def partial_corrs(self):
+    def partial_corrs(self, ztrans_partial_corrs=True):
         """
         For each predictor (except the intercept), compute the partial correlation of the of the predictor with the dependent variable for perhaps easier interpretability. This does *not* change how inferences are performed, as they are always performed on the betas, not the partial correlation coefficients. Returns a pandas Series.
+
+        Args:
+            ztrans_partial_corrs (bool): whether to fisher z-transform (arctan) partial correlations before reporting them; default True
 
         """
 
@@ -1197,6 +1200,8 @@ class Lm(object):
             y, x = dmatrices(dv + '~' + right_side, self.data, 1, return_type='dataframe')
             dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
             corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
+        if ztrans_partial_corrs:
+            corrs = np.arctanh(corrs)
         return pd.Series(corrs, index=self.coefs.index)
 
     def predict(self, data):
@@ -1289,7 +1294,7 @@ class Lm2(object):
             self.group)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, partial_corrs=False, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, partial_corrs=False, ztrans_partial_corrs=True, cluster=None):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
@@ -1310,6 +1315,7 @@ class Lm2(object):
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
             partial_corrs (bool): for each first level model estimate partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
+            ztrans_partial_corrs (bool): whether to fisher-z transform (arcsin) first-level partial correlations before running second-level model; default True
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
@@ -1333,12 +1339,16 @@ class Lm2(object):
         if partial_corrs:
             # Loop over each group and get partial correlation estimates
             betas = par_for(delayed(_partial_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
+            if ztrans_partial_corrs:
+                betas = np.arctanh(betas)
+            else:
+                betas = np.array(betas)
         else:
             # Loop over each group and fit a separate regression
             betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
+            betas = np.array(betas)
 
         # Perform an intercept only regression for each beta
-        betas = np.array(betas)
         results = []
         for i in range(betas.shape[1]):
             df = pd.DataFrame({'X': np.ones_like(betas[:, i]), 'Y': betas[:, i]})

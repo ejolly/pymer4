@@ -204,11 +204,11 @@ def _partial_corr_group(dat, formula, group_col, group, rank):
     y, x = dmatrices(formula, dat, 1, return_type='dataframe')
     corrs = []
     for c in x.columns[1:]:
-        other_preds = [e for e in x.columns[1:] if e != c]
+        other_preds = [e for e in x.columns if e != c]
         other_preds = x[other_preds]
         cc = x[c]
-        pred_m_resid = _ols(other_preds, cc, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
-        dv_m_resid = _ols(other_preds, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        pred_m_resid = _ols(other_preds, cc, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        dv_m_resid = _ols(other_preds, y, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
         corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
     return corrs
 
