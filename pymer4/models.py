@@ -198,7 +198,7 @@ class Lmer(object):
             print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Using original model contrasts, orthogonality not guaranteed)")
         return self.anova_results
 
-    def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True):
+    def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True, no_warnings=False):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
@@ -210,6 +210,7 @@ class Lmer(object):
             summarize (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
+            no_warnings (bool): turn off auto-printing warnings messages; warnings are always stored in the .warnings attribute; default False
 
         Returns:
             DataFrame: R style summary() table
@@ -299,8 +300,9 @@ class Lmer(object):
         fit_messages_warnings = fit_messages + fit_warnings
         if fit_messages_warnings:
             self.warnings = fit_messages_warnings
-            for warning in self.warnings:
-                print(warning + ' \n')
+            if not no_warnings:
+                for warning in self.warnings:
+                    print(warning + ' \n')
         else:
             self.warnings = None
 
@@ -964,6 +966,7 @@ class Lm(object):
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
+        self.ranked = False 
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -974,7 +977,7 @@ class Lm(object):
             self.family)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
@@ -993,6 +996,7 @@ class Lm(object):
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
+            rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
@@ -1023,16 +1027,20 @@ class Lm(object):
 
         if self.family == 'gaussian':
             if verbose:
+                if rank:
+                    print_rank = 'rank'
+                else:
+                    print_rank = 'linear'
                 if not robust:
                     print_robust = 'non-robust'
                 else:
                     print_robust = 'robust ' + robust
 
                 if conf_int == 'boot':
-                    print("Fitting linear model with " + print_robust + " standard errors and \n" +
+                    print("Fitting " + print_rank + " model with " + print_robust + " standard errors and \n" +
                           str(n_boot) + " bootstrapped 95% confidence intervals...\n")
                 else:
-                    print("Fitting linear model with " + print_robust +
+                    print("Fitting " + print_rank + " model with " + print_robust +
                           " standard errors\nand 95% confidence intervals...\n")
 
                 if permute:
@@ -1045,7 +1053,13 @@ class Lm(object):
             ' (' + str(permute) + ')'
 
         # Parse formula using patsy to make design matrix
-        y, x = dmatrices(self.formula, self.data, 1, return_type='dataframe')
+        if rank:
+            self.ranked = True
+            ddat = self.data.rank()
+        else:
+            self.ranked = False
+            ddat = self.data
+        y, x = dmatrices(self.formula, ddat, 1, return_type='dataframe')
         self.design_matrix = x
 
         # Compute standard estimates
@@ -1186,10 +1200,11 @@ class Lm(object):
             preds = np.dot(X, coefs[1:])
         return preds
 
+
 class Lm2(object):
 
     """
-    Model class to perform two-stage OLS regression. In other words, a separate regression model is fit to each group in the data and then the coefficients from these regressions are entered into a second-level regression. The results from this second level regression are reported. This is an alternative to using Lmer, which implicitly allows intercept and slopes to vary by group. See https://bit.ly/2SwHhQU and Gelman (2005). Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specifiy columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
+    Model class to perform two-stage OLS regression. Practically, a separate regression model is fit to each group in the data and then the coefficients from these regressions are entered into a second-level intercept only model (i.e. 1-sample t-test per coefficient). The results from this second level regression are reported. This is an alternative to using Lmer, as it implicitly allows intercept and slopes to vary by group, however with no prior/smoothing/regularization on the random effects. See https://bit.ly/2SwHhQU and Gelman (2005). This approach maybe less preferable to Lmer if the number of observations per group are few, but the number of groups is large, in which case the 1st-level estimates are much noisier and are not smoothed/regularized as in Lmer. It maybe preferable when a "maximal" rfx Lmer model is not estimable. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specific columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
 
     Args:
         formula (str): Complete lm-style model formula
@@ -1252,7 +1267,7 @@ class Lm2(object):
 
     def fit(self, robust=False, conf_int='standard', permute=None, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
         """
-        Fit a variety of second-level OLS models; all lower level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
+        Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
         Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
         Robust estimators include:
@@ -1299,10 +1314,13 @@ class Lm2(object):
         results = pd.concat(results, axis=0)
         ivs = self.formula.split('~')[-1].strip().split('+')
         ivs = [e.strip() for e in ivs]
-        results.index = ['Intercept'] + ivs
+        results.index = ['(Intercept)'] + ivs
         self.coefs = results
         self.fitted = True
-        self.resid = []
+
+        # Need to figure out how best to compute predictions and residuals. Should test how Lmer does it, i.e. BLUPs or fixed effects?
+        # Option 1) Use only second-level estimates
+        # Option 2) Use only first-level estimates and make separate predictions per group
         # self.resid = res
         # self.data['fits'] = y.squeeze() - res
         # self.data['residuals'] = res
