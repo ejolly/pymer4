@@ -65,7 +65,7 @@ class Lmer(object):
             raise ValueError(
                 "Family must be one of: gaussian, binomial, gamma, inverse_gaussian or poisson!")
         self.fitted = False
-        self.formula = formula
+        self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.grps = None
         self.AIC = None
@@ -954,7 +954,7 @@ class Lm(object):
             raise NotImplementedError(
                 "Currently only linear (family ='gaussian') models supported! ")
         self.fitted = False
-        self.formula = formula
+        self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.AIC = None
         self.logLike = None
@@ -1188,7 +1188,7 @@ class Lm(object):
         corrs = []
         corrs.append(np.nan)  # don't compute for intercept
         for c in self.design_matrix.columns[1:]:
-            dv = self.formula.split(' ~ ')[0]
+            dv = self.formula.split('~')[0]
             other_preds = [e for e in self.design_matrix.columns[1:] if e != c]
             right_side = '+'.join(other_preds)
             y, x = dmatrices(c + '~' + right_side, self.data, 1, return_type='dataframe')
@@ -1264,7 +1264,7 @@ class Lm2(object):
         else:
             raise TypeError("group must be a string or list")
         self.fitted = False
-        self.formula = formula
+        self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.AIC = None
         self.logLike = None
@@ -1330,6 +1330,21 @@ class Lm2(object):
 
         # Loop over each group and fit a separate regression
         betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
+
+        from scipy.stats import pearsonr
+        corrs = []
+        corrs.append(np.nan)  # don't compute for intercept
+        for c in self.design_matrix.columns[1:]:
+            dv = self.formula.split('~')[0]
+            other_preds = [e for e in self.design_matrix.columns[1:] if e != c]
+            right_side = '+'.join(other_preds)
+            y, x = dmatrices(c + '~' + right_side, self.data, 1, return_type='dataframe')
+            pred_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+            y, x = dmatrices(dv + '~' + right_side, self.data, 1, return_type='dataframe')
+            dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+            corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
+        return pd.Series(corrs, index=self.coefs.index)
+
 
         # Perform an intercept only regression for each beta
         betas = np.array(betas)
