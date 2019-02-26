@@ -966,7 +966,7 @@ class Lm(object):
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
-        self.ranked = False 
+        self.ranked = False
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -1159,7 +1159,7 @@ class Lm(object):
         """
 
         if not self.fitted:
-            raise RuntimeError("Model must be fitted to generate summary!")
+            raise RuntimeError("Model must be fit to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\n".format(self.family))
@@ -1175,6 +1175,28 @@ class Lm(object):
     def post_hoc(self):
         raise NotImplementedError(
             "Post-hoc tests are not yet implemented for linear models.")
+
+    def partial_corrs(self):
+        """
+        For each predictor (except the intercept), compute the partial correlation of the of the predictor with the dependent variable for perhaps easier interpretability. This does *not* change how inferences are performed, as they are always performed on the betas, not the partial correlation coefficients. Returns a pandas Series.
+
+        """
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fit before partial correlations can be computed")
+        from scipy.stats import pearsonr
+        corrs = []
+        corrs.append(np.nan)  # don't compute for intercept
+        for c in self.design_matrix.columns[1:]:
+            dv = self.formula.split(' ~ ')[0]
+            other_preds = [e for e in self.design_matrix.columns[1:] if e != c]
+            right_side = '+'.join(other_preds)
+            y, x = dmatrices(c + '~' + right_side, self.data, 1, return_type='dataframe')
+            pred_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+            y, x = dmatrices(dv + '~' + right_side, self.data, 1, return_type='dataframe')
+            dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+            corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
+        return pd.Series(corrs, index=self.coefs.index)
 
     def predict(self, data):
         """
@@ -1254,6 +1276,7 @@ class Lm2(object):
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
+        self.ranked = False
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={}, group={})".format(
@@ -1265,7 +1288,7 @@ class Lm2(object):
             self.group)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
@@ -1284,6 +1307,7 @@ class Lm2(object):
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
+            rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
@@ -1299,8 +1323,13 @@ class Lm2(object):
         # Parallelize regression computation for 1st-level models
         par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
 
+        if rank:
+            self.ranked = True
+        else:
+            self.ranked = False
+
         # Loop over each group and fit a separate regression
-        betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i]) for i in range(self.data[self.group].nunique()))
+        betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
 
         # Perform an intercept only regression for each beta
         betas = np.array(betas)

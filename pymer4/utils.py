@@ -127,11 +127,13 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
     return np.sqrt(np.diag(vcv))
 
 
-def _ols(x, y, robust, n_lags, cluster, all_stats=True):
+def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False):
     """
     Compute OLS on data. Useful for single computation and within permutation schemes.
     """
 
+    if all_stats and resid_only:
+        raise ValueError("_ols must be called with EITHER all_stats OR resid_only")
     # Expects as input pandas series and dataframe
     Y, X = y.values.squeeze(), x.values
 
@@ -153,6 +155,8 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True):
 
         return b, se, t, res
 
+    elif resid_only:
+        return Y - np.dot(X, b)
     else:
         return b
 
@@ -179,9 +183,11 @@ def _chunk_boot_ols_coefs(dat, formula, seed):
     return list(b)
 
 
-def _ols_group(dat, formula, group_col, group):
+def _ols_group(dat, formula, group_col, group, rank):
     """Compute OLS on data given a formula."""
     dat = dat[dat[group_col] == group].reset_index(drop=True)
+    if rank:
+        dat = dat.rank()
     y, x = dmatrices(formula, dat, 1, return_type='dataframe')
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
     return list(b)
