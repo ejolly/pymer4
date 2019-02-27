@@ -17,7 +17,7 @@ from pymer4.utils import (_sig_stars,
                           _chunk_perm_ols,
                           _ols,
                           _ols_group,
-                          _partial_corr_group,
+                          _corr_group,
                           _perm_find,
                           _return_t
                           )
@@ -1177,9 +1177,10 @@ class Lm(object):
         raise NotImplementedError(
             "Post-hoc tests are not yet implemented for linear models.")
 
-    def partial_corrs(self, ztrans_partial_corrs=True):
+    def to_corrs(self, corr_type='semi', ztrans_corrs=True):
         """
-        For each predictor (except the intercept), compute the partial correlation of the of the predictor with the dependent variable for perhaps easier interpretability. This does *not* change how inferences are performed, as they are always performed on the betas, not the partial correlation coefficients. Returns a pandas Series.
+        For each predictor (except the intercept), compute the partial or semi-partial correlation of the of the predictor with the dependent variable for different interpretability. This does *not* change how inferences are performed, as they are always performed on the betas, not the correlation coefficients. Semi-partial corrs reflect the correlation between a predictor and the dv accounting for correlations between predictors; they are interpretable in the same way as the original betas. Partial corrs reflect the unique variance a predictor explains in the dv accounting for correlations between predictors *and* what is not explained by other predictors; this value is always >= the semi-partial correlation. Good ref: https://bit.ly/2GNwXh5
+         Returns a pandas Series.
 
         Args:
             ztrans_partial_corrs (bool): whether to fisher z-transform (arctan) partial correlations before reporting them; default True
@@ -1188,6 +1189,8 @@ class Lm(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before partial correlations can be computed")
+        if corr_type not in ['semi', 'partial']:
+            raise ValueError("corr_type must be 'semi' or 'partial'")
         from scipy.stats import pearsonr
         corrs = []
         corrs.append(np.nan)  # don't compute for intercept
@@ -1198,9 +1201,12 @@ class Lm(object):
             y, x = dmatrices(c + '~' + right_side, self.data, 1, return_type='dataframe')
             pred_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
             y, x = dmatrices(dv + '~' + right_side, self.data, 1, return_type='dataframe')
-            dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+            if corr_type == 'semi':
+                dv_m_resid = y.values.squeeze()
+            elif corr_type == 'partial':
+                dv_m_resid = _ols(x, y, robust=False, n_lags=1, cluster=None, all_stats=False, resid_only=True)
             corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
-        if ztrans_partial_corrs:
+        if ztrans_corrs:
             corrs = np.arctanh(corrs)
         return pd.Series(corrs, index=self.coefs.index)
 
@@ -1284,6 +1290,7 @@ class Lm2(object):
         self.se_type = None
         self.sig_type = None
         self.ranked = False
+        self.iscorrs = False
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={}, group={})".format(
@@ -1295,7 +1302,7 @@ class Lm2(object):
             self.group)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, partial_corrs=False, ztrans_partial_corrs=True, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, to_corrs=False, ztrans_corrs=True, cluster=None):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
 
@@ -1315,8 +1322,8 @@ class Lm2(object):
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
-            partial_corrs (bool): for each first level model estimate partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
-            ztrans_partial_corrs (bool): whether to fisher-z transform (arcsin) first-level partial correlations before running second-level model; default True
+            to_corrs (bool/string): for each first level model estimate a semi-partial or partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
+            ztrans_corrs (bool): whether to fisher-z transform (arcsin) first-level correlations before running second-level model. Ignored if to_corrs is False; default True
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
@@ -1328,6 +1335,9 @@ class Lm2(object):
             DataFrame: R style summary() table
 
         """
+
+        if permute:
+            raise NotImplementedError("permutation testing is not yet implemented for Lm2 models")
         if robust:
             if isinstance(robust, bool):
                 robust = 'hc0'
@@ -1353,10 +1363,11 @@ class Lm2(object):
         else:
             self.ranked = False
 
-        if partial_corrs:
-            # Loop over each group and get partial correlation estimates
-            betas = par_for(delayed(_partial_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
-            if ztrans_partial_corrs:
+        if to_corrs:
+            # Loop over each group and get semi/partial correlation estimates
+            # Reminder len(betas) == len(betas) - 1, from normal OLS, since corr of intercept is not computed
+            betas = par_for(delayed(_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked, to_corrs) for i in range(self.data[self.group].nunique()))
+            if ztrans_corrs:
                 betas = np.arctanh(betas)
             else:
                 betas = np.array(betas)
@@ -1370,13 +1381,13 @@ class Lm2(object):
         for i in range(betas.shape[1]):
             df = pd.DataFrame({'X': np.ones_like(betas[:, i]), 'Y': betas[:, i]})
             lm = Lm('Y ~ 1', data=df)
-            lm.fit(robust=robust, conf_int=conf_int, permute=permute, summarize=False, n_boot=n_boot, n_jobs=n_jobs, n_lags=n_lags)
+            lm.fit(robust=robust, conf_int=conf_int, summarize=False, n_boot=n_boot, n_jobs=n_jobs, n_lags=n_lags)
             results.append(lm.coefs)
 
         results = pd.concat(results, axis=0)
         ivs = self.formula.split('~')[-1].strip().split('+')
         ivs = [e.strip() for e in ivs]
-        if partial_corrs:
+        if to_corrs:
             intercept_pd = dict()
             for c in results.columns:
                 intercept_pd[c] = np.nan
@@ -1384,7 +1395,10 @@ class Lm2(object):
             results = pd.concat([intercept_pd, results], ignore_index=True)
         results.index = ['(Intercept)'] + ivs
         self.coefs = results
-        self.fixef = pd.DataFrame(betas, columns=['(Intercept)'] + ivs)
+        if to_corrs:
+            self.fixef = pd.DataFrame(betas, columns=ivs)
+        else:
+            self.fixef = pd.DataFrame(betas, columns=['(Intercept)'] + ivs)
         self.fixef.index = self.data[self.group].unique()
         self.fixef.index.name = self.group
         self.fitted = True
@@ -1403,6 +1417,7 @@ class Lm2(object):
         self.logLike = np.nan
         self.AIC = np.nan
         self.BIC = np.nan
+        self.iscorrs = to_corrs
 
         if summarize:
             return self.summary()
@@ -1425,4 +1440,10 @@ class Lm2(object):
         print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" %
               (self.logLike, self.AIC, self.BIC))
         print("Fixed effects:\n")
+        if self.iscorrs:
+            if self.iscorrs == 'semi':
+                corr = 'semi-partial'
+            else:
+                corr = self.iscorrs
+            print("Note: {} correlations reported".format(corr))
         return self.coefs.round(3)

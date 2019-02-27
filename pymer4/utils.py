@@ -8,7 +8,7 @@ __all__ = ['get_resource_path',
            '_chunk_perm_ols',
            '_ols',
            '_ols_group',
-           '_partial_corr_group',
+           '_corr_group',
            '_perm_find',
            'isPSD',
            'nearestPSD']
@@ -194,7 +194,7 @@ def _ols_group(dat, formula, group_col, group, rank):
     return list(b)
 
 
-def _partial_corr_group(dat, formula, group_col, group, rank):
+def _corr_group(dat, formula, group_col, group, rank, corr_type):
     """Compute partial correlations via OLS."""
 
     from scipy.stats import pearsonr
@@ -208,7 +208,10 @@ def _partial_corr_group(dat, formula, group_col, group, rank):
         other_preds = x[other_preds]
         cc = x[c]
         pred_m_resid = _ols(other_preds, cc, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
-        dv_m_resid = _ols(other_preds, y, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        if corr_type == 'semi':
+            dv_m_resid = y.values.squeeze()
+        elif corr_type == 'partial':
+            dv_m_resid = _ols(other_preds, y, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
         corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
     return corrs
 
