@@ -238,10 +238,12 @@ def to_ranks_by_group(dat, group, formula, exclude_cols=[]):
         exclude_cols = [exclude_cols]
     original_col_order = list(dat.columns)
     formula = formula.replace(" ", "")
-    ivs = formula.split('~')[-1].split('(')[0].split('+')[:-1]
-    ivs = [c for c in ivs if c not in exclude_cols]
-    other_cols = [c for c in dat.columns if c not in ivs]
-    dat = pd.concat([dat[other_cols], dat.groupby(group).apply(lambda g: g[ivs].rank())], axis=1)
+    to_rank = formula.split('~')[-1].split('(')[0].split('+')[:-1]
+    # add dv to be ranked
+    to_rank.append(formula.split('~')[0])
+    to_rank = [c for c in to_rank if c not in exclude_cols]
+    other_cols = [c for c in dat.columns if c not in to_rank]
+    dat = pd.concat([dat[other_cols], dat.groupby(group).apply(lambda g: g[to_rank].rank())], axis=1)
     return dat[original_col_order]
 
 
