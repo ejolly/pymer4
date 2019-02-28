@@ -6,6 +6,7 @@ __all__ = ['get_resource_path',
            '_robust_estimator',
            '_chunk_boot_ols_coefs',
            '_chunk_perm_ols',
+           '_permute_sign',
            '_ols',
            '_ols_group',
            '_corr_group',
@@ -172,6 +173,17 @@ def _chunk_perm_ols(x, y, robust, n_lags, cluster, seed):
     b, s, t, res = _ols(x, y, robust, n_lags, cluster, all_stats=True)
 
     return list(t)
+
+
+def _permute_sign(data, seed, return_stat='mean',):
+    """Given a list/array of data, randomly sign flip the values and compute a new mean. For use in one-sample permutation test. Returns a 'mean' or 't-stat'."""
+
+    random_state = np.random.RandomState(seed)
+    new_dat = data*random_state.choice([1, -1], len(data))
+    if return_stat == 'mean':
+        return np.mean(new_dat)
+    elif return_stat == 't-stat':
+        return np.mean(new_dat)/(np.std(new_dat, ddof=1)/np.sqrt(len(new_dat)))
 
 
 def _chunk_boot_ols_coefs(dat, formula, seed):

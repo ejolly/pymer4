@@ -15,6 +15,7 @@ from joblib import Parallel, delayed
 from pymer4.utils import (_sig_stars,
                           _chunk_boot_ols_coefs,
                           _chunk_perm_ols,
+                          _permute_sign,
                           _ols,
                           _ols_group,
                           _corr_group,
@@ -1012,7 +1013,7 @@ class Lm(object):
 
     def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
         """
-        Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
+        Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
 
         Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
         Robust estimators include:
@@ -1082,7 +1083,7 @@ class Lm(object):
 
         self.ci_type = conf_int + \
             ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
-        if conf_int == 'boot':
+        if (conf_int == 'boot') and (permute is None):
             self.sig_type = 'bootstrapped'
         else:
             if permute:
@@ -1344,9 +1345,9 @@ class Lm2(object):
             self.group)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, to_corrs=False, ztrans_corrs=True, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, perm_on='t-stat', rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, to_corrs=False, ztrans_corrs=True, cluster=None):
         """
-        Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters.
+        Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='mean') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
 
         Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
         Robust estimators include:
@@ -1363,6 +1364,7 @@ class Lm2(object):
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
+            perm_on (str): permute based on a null distribution of the 'mean' of first-level estimates or the 't-stat' of first-level estimates; default 't-stat'
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
             to_corrs (bool/string): for each first level model estimate a semi-partial or partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
             ztrans_corrs (bool): whether to fisher-z transform (arcsin) first-level correlations before running second-level model. Ignored if to_corrs is False; default True
@@ -1378,8 +1380,6 @@ class Lm2(object):
 
         """
 
-        if permute:
-            raise NotImplementedError("permutation testing is not yet implemented for Lm2 models")
         if robust:
             if isinstance(robust, bool):
                 robust = 'hc0'
@@ -1395,10 +1395,12 @@ class Lm2(object):
         self.ci_type = conf_int + \
             ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
 
-        if conf_int == 'boot':
+        if (conf_int == 'boot') and (permute is None):
             self.sig_type = 'bootstrapped'
         else:
             if permute:
+                if perm_on not in ['mean', 't-stat']:
+                    raise ValueError("perm_on must be 't-stat' or 'mean'")
                 self.sig_type = 'permutation' + \
                     ' (' + str(permute) + ')'
             else:
@@ -1427,11 +1429,22 @@ class Lm2(object):
 
         # Perform an intercept only regression for each beta
         results = []
+        perm_ps = []
         for i in range(betas.shape[1]):
             df = pd.DataFrame({'X': np.ones_like(betas[:, i]), 'Y': betas[:, i]})
             lm = Lm('Y ~ 1', data=df)
             lm.fit(robust=robust, conf_int=conf_int, summarize=False, n_boot=n_boot, n_jobs=n_jobs, n_lags=n_lags)
             results.append(lm.coefs)
+            if permute:
+                # sign-flip permutation test for each beta instead to replace p-values
+                seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
+                par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
+                perm_est = par_for(delayed(_permute_sign)(data=betas[:, i],  seed=seeds[j], return_stat=perm_on) for j in range(permute))
+                perm_est = np.array(perm_est)
+                if perm_on == 'mean':
+                    perm_ps.append(_perm_find(perm_est, betas[:, i].mean()))
+                else:
+                    perm_ps.append(_perm_find(perm_est, lm.coefs['T-stat'].values))
 
         results = pd.concat(results, axis=0)
         ivs = self.formula.split('~')[-1].strip().split('+')
@@ -1450,6 +1463,21 @@ class Lm2(object):
             self.fixef = pd.DataFrame(betas, columns=['(Intercept)'] + ivs)
         self.fixef.index = self.data[self.group].unique()
         self.fixef.index.name = self.group
+        if permute:
+            # get signifance stars
+            sig = [_sig_stars(elem) for elem in perm_ps]
+            # Replace dof and p-vales with permutation results
+            if conf_int != 'boot':
+                self.coefs = self.coefs.drop(columns=['DF', 'P-val'])
+            if to_corrs:
+                self.coefs['Num_perm'] = [np.nan] + [permute]*(self.coefs.shape[0] - 1)
+                self.coefs['Sig'] = [np.nan] + sig
+                self.coefs['Perm-P-val'] = [np.nan] + perm_ps
+            else:
+                self.coefs['Num_perm'] = [permute]*self.coefs.shape[0]
+                self.coefs['Sig'] = sig
+                self.coefs['Perm-P-val'] = perm_ps
+            self.coefs = self.coefs[['Estimate', '2.5_ci', '97.5_ci', 'SE', 'Num_perm', 'T-stat', 'Perm-P-val', 'Sig']]
         self.fitted = True
 
         # Need to figure out how best to compute predictions and residuals. Should test how Lmer does it, i.e. BLUPs or fixed effects?
