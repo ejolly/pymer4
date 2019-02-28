@@ -10,6 +10,7 @@ __all__ = ['get_resource_path',
            '_ols_group',
            '_corr_group',
            '_perm_find',
+           'to_ranks_by_group',
            'isPSD',
            'nearestPSD']
 
@@ -185,7 +186,7 @@ def _chunk_boot_ols_coefs(dat, formula, seed):
 
 
 def _ols_group(dat, formula, group_col, group, rank):
-    """Compute OLS on data given a formula."""
+    """Compute OLS on data given a formula. Used by Lm2"""
     dat = dat[dat[group_col] == group].reset_index(drop=True)
     if rank:
         dat = dat.rank()
@@ -195,7 +196,7 @@ def _ols_group(dat, formula, group_col, group, rank):
 
 
 def _corr_group(dat, formula, group_col, group, rank, corr_type):
-    """Compute partial correlations via OLS."""
+    """Compute partial correlations via OLS. Used by Lm2"""
 
     from scipy.stats import pearsonr
     dat = dat[dat[group_col] == group].reset_index(drop=True)
@@ -214,6 +215,34 @@ def _corr_group(dat, formula, group_col, group, rank, corr_type):
             dv_m_resid = _ols(other_preds, y, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
         corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
     return corrs
+
+
+def to_ranks_by_group(dat, group, formula, exclude_cols=[]):
+    """
+    Covert predictors to ranks separately for each group for use in rank Lmer. Any columns not in the model formula or in exclude_cols will not be converted to ranks.
+
+    Args:
+        dat (pd.DataFrame): dataframe of data
+        group (string): string name of column to group data on
+        formula (string): Lmer flavored model formula with random effects
+        exclude_cols (list): optional columns that are part of the formula to exclude from rank conversion.
+
+    Returns:
+        pandas.core.frame.DataFrame: ranked data
+
+    """
+
+    if (not isinstance(group, str)) and (group not in dat.columns):
+        raise TypeError("group must be a valid column name in the dataframe. Currently only 1 grouping variable is supported.")
+    if isinstance(exclude_cols, str):
+        exclude_cols = [exclude_cols]
+    original_col_order = list(dat.columns)
+    formula = formula.replace(" ", "")
+    ivs = formula.split('~')[-1].split('(')[0].split('+')[:-1]
+    ivs = [c for c in ivs if c not in exclude_cols]
+    other_cols = [c for c in dat.columns if c not in ivs]
+    dat = pd.concat([dat[other_cols], dat.groupby(group).apply(lambda g: g[ivs].rank())], axis=1)
+    return dat[original_col_order]
 
 
 def _perm_find(arr, x):

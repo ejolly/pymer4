@@ -19,7 +19,8 @@ from pymer4.utils import (_sig_stars,
                           _ols_group,
                           _corr_group,
                           _perm_find,
-                          _return_t
+                          _return_t,
+                          to_ranks_by_group
                           )
 
 __author__ = ['Eshin Jolly']
@@ -71,7 +72,7 @@ class Lmer(object):
         self.grps = None
         self.AIC = None
         self.logLike = None
-        self.warnings = None
+        self.warnings = []
         self.ranef_var = None
         self.ranef_corr = None
         self.ranef = None
@@ -81,6 +82,7 @@ class Lmer(object):
         self.coefs = None
         self.model_obj = None
         self.factors = None
+        self.ranked_data = False
         self.marginal_estimates = None
         self.marginal_contrasts = None
         self.sig_type = None
@@ -199,18 +201,22 @@ class Lmer(object):
             print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Using original model contrasts, orthogonality not guaranteed)")
         return self.anova_results
 
-    def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True, no_warnings=False):
+    def fit(self, conf_int='Wald', n_boot=500, factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True, rank=False, rank_group='', rank_exclude_cols=[], no_warnings=False,):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
+            n_boot (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
             factors (dict): Keys should be column names in data to treat as factors. Values should either be a list containing unique variable levels if dummy-coding or polynomial coding is desired. Otherwise values should be another dictionary with unique variable levels as keys and desired contrast values (as specified in R!) as keys. See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
             summarize (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
+            rank (bool): covert predictors in model formula to ranks by group prior to estimation. Model object will still contain original data not ranked data; default False
+            rank_group (str): column name to group data on prior to rank conversion
+            rank_exclude_cols (list/str): columns in model formula to not apply rank conversion to
             no_warnings (bool): turn off auto-printing warnings messages; warnings are always stored in the .warnings attribute; default False
 
         Returns:
@@ -242,8 +248,22 @@ class Lmer(object):
             self.factors = factors
         else:
             dat = self.data
-        self.sig_type = 'parametric' if not permute else 'permutation' + \
-            ' (' + str(permute) + ')'
+        if rank:
+            if not rank_group:
+                raise ValueError("rank_group must be provided if rank is True")
+            dat = to_ranks_by_group(self.data, rank_group, self.formula, rank_exclude_cols)
+            if factors and (set(factors.keys()) != set(rank_exclude_cols)):
+                w = "Factors and ranks requested, but factors are not excluded from rank conversion. Are you sure you wanted to do this?"
+                warnings.warn(w)
+                self.warnings.append(w)
+        if conf_int == 'boot':
+            self.sig_type = 'bootstrapped'
+        else:
+            if permute:
+                self.sig_type = 'permutation' + \
+                    ' (' + str(permute) + ')'
+            else:
+                self.sig_type = 'parametric'
         if self.family == 'gaussian':
             _fam = 'gaussian'
             if verbose:
@@ -300,12 +320,12 @@ class Lmer(object):
 
         fit_messages_warnings = fit_messages + fit_warnings
         if fit_messages_warnings:
-            self.warnings = fit_messages_warnings
+            self.warnings.append(fit_messages_warnings)
             if not no_warnings:
                 for warning in self.warnings:
                     print(warning + ' \n')
         else:
-            self.warnings = None
+            self.warnings = []
 
         # Coefficients, and inference statistics
         if self.family in ['gaussian', 'gamma', 'inverse_gaussian', 'poisson']:
@@ -313,7 +333,7 @@ class Lmer(object):
             rstring = """
                 function(model){
                 out.coef <- data.frame(unclass(summary(model))$coefficients)
-                out.ci <- data.frame(confint(model,method='""" + conf_int + """'))
+                out.ci <- data.frame(confint(model,method='""" + conf_int + """',nsim=""" + str(n_boot) + """))
                 n <- c(rownames(out.ci))
                 idx <- max(grep('sig',n))
                 out.ci <- out.ci[-seq(1:idx),]
@@ -361,7 +381,7 @@ class Lmer(object):
             rstring = """
                 function(model){
                 out.coef <- data.frame(unclass(summary(model))$coefficients)
-                out.ci <- data.frame(confint(model,method='""" + conf_int + """'))
+                out.ci <- data.frame(confint(model,method='""" + conf_int + """',nsim=""" + str(n_boot) + """))
                 n <- c(rownames(out.ci))
                 idx <- max(grep('sig',n))
                 out.ci <- out.ci[-seq(1:idx),]
@@ -413,13 +433,25 @@ class Lmer(object):
                 else:
                     pvals.append(_perm_find(perms[:, c], df['Z-stat'][c]))
             df['P-val'] = pvals
-            df['DF'] = [permute] * df.shape[0]
-            df = df.rename(columns={'DF': 'Num_perm', 'P-val': 'Perm-P-val'})
+            if 'DF' in df.columns:
+                df['DF'] = [permute] * df.shape[0]
+                df = df.rename(columns={'DF': 'Num_perm', 'P-val': 'Perm-P-val'})
+            else:
+                df['Num_perm'] = [permute] * df.shape[0]
+                df = df.rename(columns={'P-val': 'Perm-P-val'})
 
         if 'P-val' in df.columns:
             df['Sig'] = df['P-val'].apply(lambda x: _sig_stars(x))
         elif 'Perm-P-val' in df.columns:
             df['Sig'] = df['Perm-P-val'].apply(lambda x: _sig_stars(x))
+
+        if (conf_int == 'boot') and (permute is None):
+            # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
+            df = df.drop(columns=['P-val', 'Sig'])
+            if 'DF' in df.columns:
+                df = df.drop(columns='DF')
+            df['Sig'] = df.apply(lambda row: '*' if row['2.5_ci']*row['97.5_ci'] > 0 else '', axis=1)
+
         if permute:
             # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
             cols = list(df.columns)
@@ -967,7 +999,7 @@ class Lm(object):
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
-        self.ranked = False
+        self.ranked_data = False
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -1050,15 +1082,21 @@ class Lm(object):
 
         self.ci_type = conf_int + \
             ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
-        self.sig_type = 'parametric' if not permute else 'permutation' + \
-            ' (' + str(permute) + ')'
+        if conf_int == 'boot':
+            self.sig_type = 'bootstrapped'
+        else:
+            if permute:
+                self.sig_type = 'permutation' + \
+                    ' (' + str(permute) + ')'
+            else:
+                self.sig_type = 'parametric'
 
         # Parse formula using patsy to make design matrix
         if rank:
-            self.ranked = True
+            self.ranked_data = True
             ddat = self.data.rank()
         else:
-            self.ranked = False
+            self.ranked_data = False
             ddat = self.data
         y, x = dmatrices(self.formula, ddat, 1, return_type='dataframe')
         self.design_matrix = x
@@ -1091,7 +1129,6 @@ class Lm(object):
 
             boot_betas = np.array(boot_betas)
             ci_u = np.percentile(boot_betas, 97.5, axis=0)
-            print(ci_u)
             ci_l = np.percentile(boot_betas, 2.5, axis=0)
 
         else:
@@ -1127,6 +1164,11 @@ class Lm(object):
                            'SE', 'DF', 'T-stat', 'P-val', 'Sig']
         results[['Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']] = results[[
             'Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']].apply(pd.to_numeric)
+
+        if (conf_int == 'boot') and (permute is None):
+            # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
+            results = results.drop(columns=['P-val', 'Sig', 'DF'])
+            results['Sig'] = results.apply(lambda row: '*' if row['2.5_ci']*row['97.5_ci'] > 0 else '', axis=1)
 
         if permute:
             results = results.rename(
@@ -1289,7 +1331,7 @@ class Lm2(object):
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
-        self.ranked = False
+        self.ranked_data = False
         self.iscorrs = False
 
     def __repr__(self):
@@ -1352,28 +1394,35 @@ class Lm2(object):
             self.se_type = 'non-robust'
         self.ci_type = conf_int + \
             ' (' + str(n_boot) + ')' if conf_int == 'boot' else conf_int
-        self.sig_type = 'parametric' if not permute else 'permutation' + \
-            ' (' + str(permute) + ')'
+
+        if conf_int == 'boot':
+            self.sig_type = 'bootstrapped'
+        else:
+            if permute:
+                self.sig_type = 'permutation' + \
+                    ' (' + str(permute) + ')'
+            else:
+                self.sig_type = 'parametric'
 
         # Parallelize regression computation for 1st-level models
         par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
 
         if rank:
-            self.ranked = True
+            self.ranked_data = True
         else:
-            self.ranked = False
+            self.ranked_data = False
 
         if to_corrs:
             # Loop over each group and get semi/partial correlation estimates
             # Reminder len(betas) == len(betas) - 1, from normal OLS, since corr of intercept is not computed
-            betas = par_for(delayed(_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked, to_corrs) for i in range(self.data[self.group].nunique()))
+            betas = par_for(delayed(_corr_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked_data, to_corrs) for i in range(self.data[self.group].nunique()))
             if ztrans_corrs:
                 betas = np.arctanh(betas)
             else:
                 betas = np.array(betas)
         else:
             # Loop over each group and fit a separate regression
-            betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked) for i in range(self.data[self.group].nunique()))
+            betas = par_for(delayed(_ols_group)(self.data, self.formula, self.group, self.data[self.group].unique()[i], self.ranked_data) for i in range(self.data[self.group].nunique()))
             betas = np.array(betas)
 
         # Perform an intercept only regression for each beta
