@@ -324,7 +324,11 @@ class Lmer(object):
             self.warnings.append(fit_messages_warnings)
             if not no_warnings:
                 for warning in self.warnings:
-                    print(warning + ' \n')
+                    if isinstance(warning, list):
+                        for w in warning:
+                            print(w + ' \n')
+                    else:
+                        print(warning + ' \n')
         else:
             self.warnings = []
 
