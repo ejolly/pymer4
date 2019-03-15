@@ -1168,7 +1168,7 @@ class Lm(object):
         results.columns = ['Estimate', '2.5_ci', '97.5_ci',
                            'SE', 'DF', 'T-stat', 'P-val', 'Sig']
         results[['Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']] = results[[
-            'Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']].apply(pd.to_numeric)
+            'Estimate', '2.5_ci', '97.5_ci', 'SE', 'DF', 'T-stat', 'P-val']].apply(pd.to_numeric, args=('coerce',))
 
         if (conf_int == 'boot') and (permute is None):
             # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
