@@ -268,15 +268,13 @@ class Lmer(object):
         if self.family == 'gaussian':
             _fam = 'gaussian'
             if verbose:
-                print("Fitting linear model using lmer with " +
-                      conf_int + " confidence intervals...\n")
+                print("Fitting linear model using lmer with " + conf_int + " confidence intervals...\n")
 
             lmer = importr('lmerTest')
             self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML)
         else:
             if verbose:
-                print("Fitting generalized linear model using glmer (family {}) with " +
-                      conf_int + " confidence intervals...\n".format(self.family))
+                print("Fitting generalized linear model using glmer (family {}) with " + conf_int + " confidence intervals...\n".format(self.family))
             lmer = importr('lme4')
             if self.family == 'inverse_gaussian':
                 _fam = 'inverse.gaussian'
@@ -1075,11 +1073,9 @@ class Lm(object):
                     print_robust = 'robust ' + robust
 
                 if conf_int == 'boot':
-                    print("Fitting " + print_rank + " model with " + print_robust + " standard errors and \n" +
-                          str(n_boot) + " bootstrapped 95% confidence intervals...\n")
+                    print("Fitting " + print_rank + " model with " + print_robust + " standard errors and \n" + str(n_boot) + "bootstrapped 95% confidence intervals...\n")
                 else:
-                    print("Fitting " + print_rank + " model with " + print_robust +
-                          " standard errors\nand 95% confidence intervals...\n")
+                    print("Fitting " + print_rank + " model with " + print_robust + " standard errors\nand 95% confidence intervals...\n")
 
                 if permute:
                     print(
@@ -1443,7 +1439,7 @@ class Lm2(object):
                 # sign-flip permutation test for each beta instead to replace p-values
                 seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
                 par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
-                perm_est = par_for(delayed(_permute_sign)(data=betas[:, i],  seed=seeds[j], return_stat=perm_on) for j in range(permute))
+                perm_est = par_for(delayed(_permute_sign)(data=betas[:, i], seed=seeds[j], return_stat=perm_on) for j in range(permute))
                 perm_est = np.array(perm_est)
                 if perm_on == 'mean':
                     perm_ps.append(_perm_find(perm_est, betas[:, i].mean()))
