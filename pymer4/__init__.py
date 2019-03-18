@@ -10,6 +10,7 @@ from .simulate import (easy_multivariate_normal,
                        simulate_lm,
                        simulate_lmm)
 
-from .utils import get_resource_path
+from .utils import get_resource_path, boot_func
+from .stats import discrete_inverse_logit, cohens_d, perm_test, tost_equivalence
 
 from .version import __version__

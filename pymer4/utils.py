@@ -1,7 +1,8 @@
 from __future__ import division
 
 __all__ = ['get_resource_path',
-           'discrete_inverse_logit',
+           'boot_func',
+           '_check_random_state',
            '_sig_stars',
            '_robust_estimator',
            '_chunk_boot_ols_coefs',
@@ -22,13 +23,14 @@ from os.path import dirname, join, sep
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
-from scipy.special import expit
 from scipy.stats import chi2
 from itertools import product
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
+from joblib import Parallel, delayed
 
 base = importr('base')
+MAX_INT = np.iinfo(np.int32).max
 
 
 def get_resource_path():
@@ -36,11 +38,65 @@ def get_resource_path():
     return join(dirname(__file__), 'resources') + sep
 
 
-def discrete_inverse_logit(arr):
-    """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes"""
-    probabilities = expit(arr)
-    out = np.random.binomial(1, probabilities)
-    return out
+def boot_func(x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jobs=-1, seed=None):
+    """
+    Bootstrap an arbitrary function by resampling from x and y independently or jointly.
+
+    Args:
+        x (list-like): list of values for first group
+        y (list-like): list of values for second group; optional
+        function : function that accepts x or y
+        paired (bool): whether to resample x and y jointly or independently
+
+    Result:
+        results (dict): result of func, and 95% confidence bounds of resampling func
+    """
+
+    if not callable(func):
+        raise TypeError("func must be a valid callable function")
+
+    orig_result = func(x, y, **func_args)
+    if n_boot:
+        random_state = _check_random_state(seed)
+        seeds = random_state.randint(MAX_INT, size=n_boot)
+        par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
+        boots = par_for(delayed(_boot_func)(x, y, func, func_args, paired,
+                                            **func_args, random_state=seeds[i]) for i in range(n_boot))
+        ci_u = np.percentile(boots, 97.5, axis=0)
+        ci_l = np.percentile(boots, 2.5, axis=0)
+        return orig_result, (ci_l, ci_u)
+    else:
+        return orig_result
+
+
+def _boot_func(x, y, func, func_args, paired, random_state):
+    '''For use in parallel boot_func'''
+    random_state = _check_random_state(random_state)
+    if paired:
+        idx = np.random.choice(np.arange(len(x)), size=x.size)
+        x, y = x[idx], y[idx]
+    else:
+        x = random_state.choice(x, size=x.size, replace=True)
+        y = random_state.choice(y, size=y.size, replace=True)
+    return boot_func(x, y, func, func_args, paired=paired, n_boot=0)
+
+
+def _check_random_state(seed):
+    """Turn seed into a np.random.RandomState instance. Note: credit for this code goes entirely to sklearn.utils.check_random_state. Using the source here simply avoids an unecessary dependency.
+
+    Args:
+        seed (None, int, np.RandomState): iff seed is None, return the RandomState singleton used by np.random. If seed is an int, return a new RandomState instance seeded with seed. If seed is already a RandomState instance, return it. Otherwise raise ValueError.
+    """
+
+    import numbers
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, (numbers.Integral, np.integer)):
+        return np.random.RandomState(seed)
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
+                     ' instance' % seed)
 
 
 def _sig_stars(val):

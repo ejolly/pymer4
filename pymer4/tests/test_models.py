@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from scipy.special import logit
 import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True' # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
 
 
 def test_gaussian_lm2():
@@ -87,8 +87,7 @@ def test_gaussian_lmm():
 def test_post_hoc():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
-    model = Lmer('DV ~ IV1*IV3*DV_l + (IV1|Group)',
-                 data=df, family='gaussian')
+    model = Lmer('DV ~ IV1*IV3*DV_l + (IV1|Group)', data=df, family='gaussian')
     model.fit(factors={
         'IV3': ['0.5', '1.0', '1.5'],
         'DV_l': ['0', '1']

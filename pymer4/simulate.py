@@ -2,7 +2,8 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import squareform
-from pymer4.utils import discrete_inverse_logit, isPSD, nearestPSD
+from pymer4.utils import isPSD, nearestPSD
+from pymer4.stats import discrete_inverse_logit
 
 __all__ = ['easy_multivariate_normal',
            'simulate_lm',

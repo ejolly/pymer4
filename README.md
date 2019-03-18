@@ -72,15 +72,19 @@ If you run into issues using either option above, it's likely due to compiler is
 
 #### Option 2 (Using [Pytest](https://docs.pytest.org/en/latest/))  
 
-`pytest` in project root for all tests  
+`pytest -s --capture=no` in project root for all tests  
 
 `pytest pymer4/tests/test_models.py -k "test_gaussian_lm"` for specific tests
 
 
-
-Using [tox]()
-
 #### Change-log  
+**0.7.0**
+- Addition of a `pymer4.stats` module for various parametrics and non-parametric statistics functions (i.e. permutation testing and bootstrapping)
+- Addition of `Lm2` models that can perform multi-level modeling by first estimating `Lm` separately for each group and then performing inference on those estimates. Can perform inference on first-level semi-partial and partial correlation coefficients instead of betas too.
+- `Lm` models can also perform inference on partial or semi-partial correlation coefficients
+- All model clases now have the ability to rank transform data prior to estimation 
+- Automated testing on travis now pins specific r and r-package versions. This is because of recent changes to the `lme4` and other R packages which result in slightly different estimates that the associated `conda-forge` versions see [this issue](https://github.com/ejolly/pymer4/issues/37). Additionally obtaining references to elements via `rpy2` seems to have changed in some cases (e.g. recent version of `lsmeans` on `conda-forge`). If users are installing via option 1 and are running into issues, it's suggested they try the following installation command instead `conda install -c conda-forge r-base=3.4.1 r-lme4=1.1_13 r-lmertest=3.0_1 r-lsmeans=2.27_62 rpy2=2.9.4`  
+
 **0.6.0**  
 - Upgraded to latest version of `rpy2`, meaning that from this version onwards `pymer4` is **only compatible with Python 3**.  
 - This has the direct benefit of making installation *substantially easier* by using Anaconda and the less problematic recent versions of `rpy2`  
