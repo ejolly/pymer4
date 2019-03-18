@@ -1512,10 +1512,11 @@ class Lm2(object):
         print("Family: {}\n".format(self.family))
         print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,
                                                                      self.ci_type, self.sig_type))
-        print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" %
-              (self.data.shape[0], self.rsquared, self.rsquared_adj))
-        print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" %
-              (self.logLike, self.AIC, self.BIC))
+        print("Number of observations: %s\t Groups: %s\n" % (self.data.shape[0], {str(self.group): self.data[self.group].nunique()}))
+        # print("R^2: %.3f\t R^2_adj: %.3f\n" %
+        #       (self.data.shape[0], self.rsquared, self.rsquared_adj))
+        # print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" %
+        #       (self.logLike, self.AIC, self.BIC))
         print("Fixed effects:\n")
         if self.iscorrs:
             if self.iscorrs == 'semi':

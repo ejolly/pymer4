@@ -62,6 +62,24 @@ If you run into issues using either option above, it's likely due to compiler is
 9. Finally install `rpy2` using the new compiler you just installed: `conda install -c conda-forge rpy2` if you followed Option 1 above or `pip install rpy2` if you followed Option 2
 10. Now you should be able to `pip install pymer4` :)
 
+## Testing  
+
+`git clone https://github.com/ejolly/pymer4.git`
+
+#### Option 1 (Using [Tox](https://tox.readthedocs.io/en/latest/))  
+
+`tox` in project root directory for all tests  
+
+#### Option 2 (Using [Pytest](https://docs.pytest.org/en/latest/))  
+
+`pytest` in project root for all tests  
+
+`pytest pymer4/tests/test_models.py -k "test_gaussian_lm"` for specific tests
+
+
+
+Using [tox]()
+
 #### Change-log  
 **0.6.0**  
 - Upgraded to latest version of `rpy2`, meaning that from this version onwards `pymer4` is **only compatible with Python 3**.  

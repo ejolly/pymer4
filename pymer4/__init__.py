@@ -5,7 +5,7 @@ __all__ = ["models",
            "simulate",
            "__version__"]
 
-from .models import Lmer, Lm
+from .models import Lmer, Lm, Lm2
 from .simulate import (easy_multivariate_normal,
                        simulate_lm,
                        simulate_lmm)

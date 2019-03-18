@@ -1,10 +1,27 @@
 from __future__ import division
-from pymer4.models import Lmer, Lm
+from pymer4.models import Lmer, Lm, Lm2
 from pymer4.utils import get_resource_path
 import pandas as pd
 import numpy as np
-import os
 from scipy.special import logit
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True' # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
+
+
+def test_gaussian_lm2():
+
+    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    model = Lm2('DV ~ IV3 + IV2', group='Group', data=df)
+    model.fit(summarize=False)
+    assert model.coefs.shape == (3, 8)
+    estimates = np.array([16.11554138, -1.38425772, 0.59547697])
+    assert np.allclose(model.coefs['Estimate'], estimates, atol=.001)
+    assert model.fixef.shape == (47, 3)
+
+    # Test bootstrapping and permutation tests
+    model.fit(permute=500, conf_int='boot', n_boot=500, summarize=False)
+    assert model.ci_type == 'boot (500)'
+    assert model.sig_type == 'permutation (500)'
 
 
 def test_gaussian_lm():
