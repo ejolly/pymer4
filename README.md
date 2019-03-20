@@ -25,7 +25,7 @@ Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. *Journ
 
 If you don't have R installed and you use the Anaconda Python distribution simply run the following commands to have Anaconda install R and the required packages for you. This is fairly painless installation, but model fitting will be slower than if you install R and `pymer4` separately and configure them (option 2).
 
-1. `conda install -c conda-forge r r-base r-lmertest r-lsmeans rpy2`  
+1. `conda install -c conda-forge r r-base r-lmertest r-lsmeans rpy2=2.9.4`  
 2. `pip install pymer4`
 3. Test the installation to see if it's working by running: `python -c "from pymer4.test_install import test_install; test_install()"`
 4. If there are errors follow the guide below
