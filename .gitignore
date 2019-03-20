@@ -13,3 +13,5 @@ dist/*
 .tox/*
 .pytest_cache/*
 **/__pycache__
+dev/
+.vscode
