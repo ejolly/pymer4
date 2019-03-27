@@ -151,7 +151,7 @@ def perm_test(
                 if isinstance(y, (list, np.ndarray)):
                     return x.mean() - y.mean()
                 elif isinstance(y, (float, int)):
-                    return x.mean() - y
+                    raise NotImplementedError("One-sample mean test with a scalar y is not currently supported")
             else:
                 return x.mean()
 
@@ -360,7 +360,10 @@ def _perm_test(x, y, stat, equal_var, random_state):
     if stat in ["pearsonr", "spearmanr"]:
         y = random_state.permutation(y)
     elif stat in ["tstat", "cohensd", "mean"]:
-        if (y is None) or (isinstance(y, (float, int))):
+        if (y is None):
+            x = x * random_state.choice([1, -1], len(x))
+        elif (isinstance(y, (float, int))):
+            x -= y
             x = x * random_state.choice([1, -1], len(x))
         else:
             shuffled_combined = random_state.permutation(np.hstack([x, y]))
