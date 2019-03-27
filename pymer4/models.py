@@ -12,6 +12,7 @@ from patsy import dmatrices
 import seaborn as sns
 import warnings
 from joblib import Parallel, delayed
+from pymer4.stats import _welch_ingredients
 from pymer4.utils import (_sig_stars,
                           _chunk_boot_ols_coefs,
                           _chunk_perm_ols,
@@ -804,8 +805,7 @@ class Lmer(object):
             print("P-values adjusted by tukey method for family of {} estimates".format(
                 self.marginal_contrasts['Contrast'].nunique()))
         elif p_adjust != 'tukey':
-            print("P-values adjusted by {} method for {} comparisons".format(p_adjust,
-                                                                             self.marginal_contrasts['Contrast'].nunique()))
+            print("P-values adjusted by {} method for {} comparisons".format(p_adjust,                                                                 self.marginal_contrasts['Contrast'].nunique()))
         if summarize:
             return self.marginal_estimates.round(3), self.marginal_contrasts.round(3)
 
@@ -1003,6 +1003,7 @@ class Lm(object):
         self.se_type = None
         self.sig_type = None
         self.ranked_data = False
+        self.estimator = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -1013,7 +1014,7 @@ class Lm(object):
             self.family)
         return out
 
-    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None):
+    def fit(self, robust=False, conf_int='standard', permute=None, rank=False, summarize=True, verbose=False, n_boot=500, n_jobs=-1, n_lags=1, cluster=None, weights=None, wls_dof_correction=True):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
 
@@ -1028,6 +1029,21 @@ class Lm(object):
 
         - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
 
+        Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch's t-test). E.g:
+        ```
+        # Simple regression that estimates a between groups t-test but not assuming equal variances
+        model = Lm('DV ~ Group', data=df)
+
+        # Have pymer4 compute the between group variances automatically (preferred)
+        model.fit(weights='Group') 
+
+        # Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied
+        weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
+        model.fit(weights=weights)
+
+
+        ```
+
         Args:
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
@@ -1039,6 +1055,8 @@ class Lm(object):
             n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
             cluster (str): column name identifying clusters/groups for robust estimator type 'cluster' (ignored unless robust='cluster')
+            weights (string/pd.Series/np.ndarray): weights to perform WLS instead of OLS. Pass in a column name in data to use to compute group variances and automatically adjust dof. Otherwise provide an array or series containing 1 / variance of each observation, in which case dof correction will not occur.
+            wls_dof_correction (bool): whether to apply Welch-Satterthwaite approximate correction for dof when using weights based on an existing column in the data, ignored otherwise. Set to False to force standard dof calculation
 
         Returns:
             DataFrame: R style summary() table
@@ -1099,12 +1117,28 @@ class Lm(object):
         else:
             self.ranked_data = False
             ddat = self.data
+      
+        # Handle weights if provided
+        if isinstance(weights, str):
+            if weights not in self.data.columns:
+                raise ValueError("If weights is a string it must be a column that exists in the data")
+            else:
+                dv = self.formula.split('~')[0]
+                weight_groups = self.data.groupby(weights)
+                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
+        else:
+            weight_vals = weights
+        if weights is None:
+            self.estimator = "OLS"
+        else:
+            self.estimator = "WLS"
+    
         y, x = dmatrices(self.formula, ddat, 1, return_type='dataframe')
         self.design_matrix = x
 
         # Compute standard estimates
         b, se, t, res = _ols(x, y, robust, all_stats=True,
-                             n_lags=n_lags, cluster=cluster)
+                             n_lags=n_lags, cluster=cluster, weights=weight_vals)
         if cluster is not None:
             # Cluster corrected dof (num clusters - num coef)
             # Differs from stats and statsmodels which do num cluster - 1
@@ -1112,6 +1146,13 @@ class Lm(object):
             df = cluster.nunique() - x.shape[1]
         else:
             df = x.shape[0] - x.shape[1]
+            if isinstance(weights, str) and wls_dof_correction:
+                if weight_groups.ngroups != 2:
+                    warnings.warn("Welch-Satterthwait DOF correction only supported for 2 groups in the data")
+                else:
+                    welch_ingredients = np.array(self.data.groupby(weights)[dv].apply(_welch_ingredients).values.tolist())
+                    df = np.power(welch_ingredients[:,0].sum(), 2) / welch_ingredients[:,1].sum()
+
         p = 2 * (1 - t_dist.cdf(np.abs(t), df))
         df = np.array([df] * len(t))
         sig = np.array([_sig_stars(elem) for elem in p])
@@ -1126,7 +1167,7 @@ class Lm(object):
 
             # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
             boot_betas = par_for(delayed(_chunk_boot_ols_coefs)(
-                dat=self.data, formula=self.formula, seed=seeds[i]) for i in range(n_boot))
+                dat=self.data, formula=self.formula, weights=weights, seed=seeds[i]) for i in range(n_boot))
 
             boot_betas = np.array(boot_betas)
             ci_u = np.percentile(boot_betas, 97.5, axis=0)
@@ -1147,7 +1188,7 @@ class Lm(object):
             par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
             seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
             perm_ts = par_for(delayed(_chunk_perm_ols
-                                      )(x=x, y=y, robust=robust, n_lags=n_lags, cluster=cluster, seed=seeds[i]) for i in range(permute))
+                                      )(x=x, y=y, robust=robust, n_lags=n_lags, cluster=cluster, weights=weights, seed=seeds[i]) for i in range(permute))
             perm_ts = np.array(perm_ts)
 
             p = []
@@ -1206,7 +1247,7 @@ class Lm(object):
             raise RuntimeError("Model must be fit to generate summary!")
 
         print("Formula: {}\n".format(self.formula))
-        print("Family: {}\n".format(self.family))
+        print("Family: {}\t Estimator: {}\n".format(self.family, self.estimator))
         print("Std-errors: {}\tCIs: {} 95%\tInference: {} \n".format(self.se_type,
                                                                      self.ci_type, self.sig_type))
         print("Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n" %

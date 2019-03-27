@@ -186,7 +186,25 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
     return np.sqrt(np.diag(vcv))
 
 
-def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False):
+def _whiten_wls(mat, weights):
+    """
+    Whiten a matrix for a WLS regression. Just multiply each column of mat by sqrt(weights) if mat is 2d. Similar to statsmodels
+
+    Args:
+        x (np.ndarray): design matrix to be passed to _ols
+        weights (np.ndarray): 1d array of weights, most often variance of each group if some columns in x refer to categorical predictors
+    """
+
+    if weights.shape[0] != mat.shape[0]:
+        raise ValueError("The number of weights must be the same as the number of observations")
+    if mat.ndim == 1:
+        return mat * np.sqrt(weights)
+    elif mat.ndim == 2:
+        # return np.column_stack([x[:,0], np.sqrt(weights)[:, None]*x[:,1:]])
+        return np.sqrt(weights)[:, None]*mat
+
+
+def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weights=None):
     """
     Compute OLS on data. Useful for single computation and within permutation schemes.
     """
@@ -195,6 +213,13 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False):
         raise ValueError("_ols must be called with EITHER all_stats OR resid_only")
     # Expects as input pandas series and dataframe
     Y, X = y.values.squeeze(), x.values
+
+    # Whiten if required
+    if weights is not None:
+        if isinstance(weights, (pd.DataFrame, pd.Series)):
+            weights = weights.values
+        X = _whiten_wls(X, weights)
+        Y = _whiten_wls(Y, weights)
 
     # The good stuff
     b = np.dot(np.linalg.pinv(X), Y)
@@ -220,18 +245,18 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False):
         return b
 
 
-def _chunk_perm_ols(x, y, robust, n_lags, cluster, seed):
+def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
     """
     Permuted OLS chunk.
     """
     # Shuffle y labels
     y = y.sample(frac=1, replace=False, random_state=seed)
-    b, s, t, res = _ols(x, y, robust, n_lags, cluster, all_stats=True)
+    b, s, t, res = _ols(x, y, robust, n_lags, cluster, weights=weights, all_stats=True)
 
     return list(t)
 
 
-def _permute_sign(data, seed, return_stat='mean',):
+def _permute_sign(data, seed, return_stat='mean'):
     """Given a list/array of data, randomly sign flip the values and compute a new mean. For use in one-sample permutation test. Returns a 'mean' or 't-stat'."""
 
     random_state = np.random.RandomState(seed)
@@ -242,14 +267,14 @@ def _permute_sign(data, seed, return_stat='mean',):
         return np.mean(new_dat)/(np.std(new_dat, ddof=1)/np.sqrt(len(new_dat)))
 
 
-def _chunk_boot_ols_coefs(dat, formula, seed):
+def _chunk_boot_ols_coefs(dat, formula, weights, seed):
     """
     OLS computation of coefficients to be used in a parallelization context.
     """
     # Random sample with replacement from all data
     dat = dat.sample(frac=1, replace=True, random_state=seed)
     y, x = dmatrices(formula, dat, 1, return_type='dataframe')
-    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
+    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights)
     return list(b)
 
 

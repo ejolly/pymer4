@@ -2,7 +2,7 @@ from __future__ import division
 
 """User-facing statistics functions and tests."""
 
-__all__ = ["discrete_inverse_logit", "cohens_d", "perm_test", "tost_equivalence"]
+__all__ = ["discrete_inverse_logit", "cohens_d", "perm_test", "tost_equivalence", "welch_dof"]
 
 __author__ = ["Eshin Jolly"]
 __license__ = ["MIT"]
@@ -151,7 +151,9 @@ def perm_test(
                 if isinstance(y, (list, np.ndarray)):
                     return x.mean() - y.mean()
                 elif isinstance(y, (float, int)):
-                    raise NotImplementedError("One-sample mean test with a scalar y is not currently supported")
+                    raise NotImplementedError(
+                        "One-sample mean test with a scalar y is not currently supported"
+                    )
             else:
                 return x.mean()
 
@@ -360,14 +362,14 @@ def _perm_test(x, y, stat, equal_var, random_state):
     if stat in ["pearsonr", "spearmanr"]:
         y = random_state.permutation(y)
     elif stat in ["tstat", "cohensd", "mean"]:
-        if (y is None):
+        if y is None:
             x = x * random_state.choice([1, -1], len(x))
-        elif (isinstance(y, (float, int))):
+        elif isinstance(y, (float, int)):
             x -= y
             x = x * random_state.choice([1, -1], len(x))
         else:
             shuffled_combined = random_state.permutation(np.hstack([x, y]))
-            x, y = shuffled_combined[:x.size], shuffled_combined[x.size:]
+            x, y = shuffled_combined[: x.size], shuffled_combined[x.size :]
     elif (stat == "tstat-paired") or (y is None):
         x = x * random_state.choice([1, -1], len(x))
 
@@ -390,3 +392,26 @@ def _cohens_d(x, y, paired, equal_var, value, random_state):
 def _mean_diff(x, y):
     """For use in plotting of tost_equivalence"""
     return np.mean(x) - np.mean(y)
+
+
+def welch_dof(x, y):
+    """Compute adjusted dof via Welch-Satterthwaite equation"""
+
+    if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
+
+        x_numerator, x_denominator = _welch_ingredients(x)
+        y_numerator, y_denominator = _welch_ingredients(y) 
+
+        return np.power(x_numerator + y_numerator, 2) / (x_denominator + y_denominator)
+    else:
+        raise TypeError("Both x and y must be 1d numpy arrays")
+
+
+def _welch_ingredients(x):
+    """
+    Helper function to compute the numerator and denominator for a single group/array for use in Welch's degrees of freedom calculation.
+    """
+
+    numerator = x.var(ddof=1) / x.size
+    denominator = np.power(x.var(ddof=1) / x.size, 2) / (x.size - 1)
+    return [numerator, denominator]
