@@ -1307,7 +1307,7 @@ class Lm(object):
         summarize=True,
         verbose=False,
         n_boot=500,
-        n_jobs=-1,
+        n_jobs=1,
         n_lags=1,
         cluster=None,
         weights=None,
@@ -1328,6 +1328,7 @@ class Lm(object):
         - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
 
         Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch's t-test). E.g:
+
         ```
         # Simple regression that estimates a between groups t-test but not assuming equal variances
         model = Lm('DV ~ Group', data=df)
@@ -1335,7 +1336,7 @@ class Lm(object):
         # Have pymer4 compute the between group variances automatically (preferred)
         model.fit(weights='Group') 
 
-        # Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied
+        # Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied because its not trivial to compute
         weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
         model.fit(weights=weights)
 
@@ -1350,7 +1351,7 @@ class Lm(object):
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
-            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
+            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default 1
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
             cluster (str): column name identifying clusters/groups for robust estimator type 'cluster' (ignored unless robust='cluster')
             weights (string/pd.Series/np.ndarray): weights to perform WLS instead of OLS. Pass in a column name in data to use to compute group variances and automatically adjust dof. Otherwise provide an array or series containing 1 / variance of each observation, in which case dof correction will not occur.
@@ -1792,7 +1793,7 @@ class Lm2(object):
         summarize=True,
         verbose=False,
         n_boot=500,
-        n_jobs=-1,
+        n_jobs=1,
         n_lags=1,
         to_corrs=False,
         ztrans_corrs=True,
@@ -1823,7 +1824,7 @@ class Lm2(object):
             summarize (bool): whether to print a model summary after fitting; default True
             verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted
             n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int='boot')
-            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default all cores
+            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default 1
             n_lags (int): number of lags for robust estimator type 'hac' (ignored unless robust='hac'); default 1
             cluster (str): column name identifying clusters/groups for robust estimator type 'cluster' (ignored unless robust='cluster')
 
@@ -1851,7 +1852,6 @@ class Lm2(object):
         if isinstance(to_corrs, str):
             if to_corrs not in ['semi', 'partial']:
                 raise ValueError("to_corrs must be 'semi' or 'partial'")
-
 
         if (conf_int == "boot") and (permute is None):
             self.sig_type = "bootstrapped"
@@ -2064,7 +2064,7 @@ class Lm2(object):
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
-        m_fixef = self.coefs.drop("(Intercept)",axis=0)
+        m_fixef = self.coefs.drop("(Intercept)", axis=0)
 
         if error_bars == "ci":
             col_lb = m_fixef["Estimate"] - m_fixef["2.5_ci"]

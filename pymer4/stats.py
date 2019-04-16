@@ -25,7 +25,7 @@ def discrete_inverse_logit(arr):
 
 
 def cohens_d(
-    x, y=None, paired=False, n_boot=1000, equal_var=False, value=0, n_jobs=-1, seed=None
+    x, y=None, paired=False, n_boot=1000, equal_var=False, value=0, n_jobs=1, seed=None
 ):
     """
     Compute Cohen's d for one or two samples (paired or independent). For paired samples Cohen's Dz is computed (ref: https://bit.ly/2J54P61). If x and y are not the same size this will use the same pooled SD calculation in Welch's ttest to account for unequal variances. Unequal variance calculation will almost always produce a *smaller* estimate than the standard formula, except as the variance of the group with fewer observations increases. In that case, this estimate can be *larger* than the standard formula. This can be turned off with the equal_var=True argument. Percentile boot-strapped confidence intervals can also be returned
@@ -37,7 +37,7 @@ def cohens_d(
         n_boot: number of bootstrap samples to run; set to 0 to skip computing
         equal_var (bool): should we pool standard deviation as in Welch's t-test
         value (float): a value to see if the effect size is bigger than, i.e. eff size - value will be computed
-        n_jobs (int): number of parallel cores to use for bootstraping; default -1 (all)
+        n_jobs (int): number of parallel cores to use for bootstraping; default 1
         seed (int or None): numerical seed for reproducibility of bootstrapping
 
     Returns:
@@ -103,7 +103,7 @@ def perm_test(
     equal_var=False,
     tails=2,
     return_dist=False,
-    n_jobs=-1,
+    n_jobs=1,
     seed=None,
 ):
     """
@@ -117,6 +117,7 @@ def perm_test(
         equal_var (bool): should assume equal variances for tstat and cohensd
         tails (int): perform one or two-tailed p-value computations; default 2
         return_dists (bool): return permutation distribution
+        n_jobs (int): number of parallel cores to use for bootstraping; default 1
         seed (int): for reproducing results
 
     Returns:
