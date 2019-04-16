@@ -1848,6 +1848,10 @@ class Lm2(object):
         self.ci_type = (
             conf_int + " (" + str(n_boot) + ")" if conf_int == "boot" else conf_int
         )
+        if isinstance(to_corrs, str):
+            if to_corrs not in ['semi', 'partial']:
+                raise ValueError("to_corrs must be 'semi' or 'partial'")
+
 
         if (conf_int == "boot") and (permute is None):
             self.sig_type = "bootstrapped"
