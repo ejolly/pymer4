@@ -42,9 +42,22 @@ def test_gaussian_lm():
     model.fit(robust='hc0', summarize=False)
     assert np.allclose(model.coefs['SE'], hc0_se, atol=.001)
 
+    hc1_se = np.array([7.1857547, 0.31797745, 3.82937992])
+    # hc1 is the default
+    model.fit(robust=True, summarize=False)
+    assert np.allclose(model.coefs['SE'], hc1_se, atol=.001)
+
+    hc2_se = np.array([7.19555971, 0.31842139, 3.83386854])
+    model.fit(robust='hc1', summarize=False)
+    assert np.allclose(model.coefs['SE'], hc2_se, atol=.001)
+
     hc3_se = np.array([7.22466699, 0.31971942, 3.84863701])
     model.fit(robust='hc3', summarize=False)
     assert np.allclose(model.coefs['SE'], hc3_se, atol=.001)
+
+    hac_lag1_se = np.array([8.20858448, 0.39184764, 3.60205873])
+    model.fit(robust='hac', summarize=False)
+    assert np.allclose(model.coefs['SE'], hac_lag1_se, atol=.001)
 
     # Test bootstrapping
     model.fit(summarize=False, conf_int='boot')

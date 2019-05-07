@@ -113,12 +113,15 @@ def _sig_stars(val):
     return star
 
 
-def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
+def _robust_estimator(vals, X, robust_estimator='hc1', n_lags=1, cluster=None):
     """
     Computes robust sandwich estimators for standard errors used in OLS computation. Types include:
     'hc0': Huber (1980) sandwich estimator to return robust standard error estimates.
-    'hc3': MacKinnon and White (1985) HC3 sandwich estimator. Provides more robustness in smaller samples than HC0 Long & Ervin (2000)
+    'hc1': small sample dof correction to 'hc0'
+    'hc2': alternate small sample weighting correction to 'hc0'
+    'hc3': MacKinnon and White (1985) HC3 sandwich estimator. Provides more robustness in smaller samples than HC0 and HC1 Long & Ervin (2000)
     'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
+    Good reference: https://bit.ly/2VRb7jK
 
     Args:
         vals (np.ndarray): 1d array of residuals
@@ -133,17 +136,16 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
     """
 
     assert robust_estimator in [
-        'hc0', 'hc3', 'hac', 'cluster'], "robust_estimator must be one of hc0, hc3, hac, or cluster"
+        'hc0', 'hc1', 'hc2', 'hc3', 'hac', 'cluster'], "robust_estimator must be one of hc0, hc1, hc2, hc3, hac, or cluster"
 
     # Make a sandwich!
     # First we need bread
     bread = np.linalg.pinv(np.dot(X.T, X))
 
     # Then we need meat
-    if robust_estimator == 'hc0':
-        V = np.diag(vals**2)
-        meat = np.dot(np.dot(X.T, V), X)
+    # First deal with estimators that have more complicated formulations
 
+    # Cluster robust
     if robust_estimator == 'cluster':
         # Good ref: http://projects.iq.harvard.edu/files/gov2001/files/sesection_5.pdf
         if cluster is None:
@@ -159,11 +161,8 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
             meat = (num_grps / (num_grps - 1)) * \
                 (X.shape[0] / (X.shape[0] - X.shape[1])) * \
                 u_clust.T.dot(u_clust)
-
-    elif robust_estimator == 'hc3':
-        V = np.diag(vals**2) / (1 - np.diag(np.dot(X, np.dot(bread, X.T))))**2
-        meat = np.dot(np.dot(X.T, V), X)
-
+    
+    # Auto-correlation robust
     elif robust_estimator == 'hac':
         weights = 1 - np.arange(n_lags + 1.) / (n_lags + 1.)
 
@@ -180,7 +179,28 @@ def _robust_estimator(vals, X, robust_estimator='hc0', n_lags=1, cluster=None):
 
             meat += weights[l] * (meat_1 + meat_2)
 
-    # Then we make a sandwich
+    else:
+        # Otherwise deal with estimators that modify the same essential operation
+        V = np.diag(vals**2)
+
+        if robust_estimator == 'hc0':
+            # No modification of residuals
+            pass
+            
+        elif robust_estimator == 'hc1':
+            # Degrees of freedom adjustment to HC0
+            V = V * X.shape[0] / (X.shape[0] - X.shape[1])
+        
+        elif robust_estimator == 'hc2':
+            # Rather than dof correction, weight residuals by reciprocal of "leverage values" in the hat-matrix
+            V = V / (1 - np.diag(np.dot(X, np.dot(bread, X.T))))
+
+        elif robust_estimator == 'hc3':
+            # Same as hc2 but more aggressive weighting due to squaring 
+            V = V / (1 - np.diag(np.dot(X, np.dot(bread, X.T))))**2
+        
+        meat = np.dot(np.dot(X.T, V), X)
+    # Finally we make a sandwich
     vcv = np.dot(np.dot(bread, meat), bread)
 
     return np.sqrt(np.diag(vcv))
@@ -201,7 +221,7 @@ def _whiten_wls(mat, weights):
         return mat * np.sqrt(weights)
     elif mat.ndim == 2:
         # return np.column_stack([x[:,0], np.sqrt(weights)[:, None]*x[:,1:]])
-        return np.sqrt(weights)[:, None]*mat
+        return np.sqrt(weights)[:, None] * mat
 
 
 def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weights=None):
@@ -260,11 +280,11 @@ def _permute_sign(data, seed, return_stat='mean'):
     """Given a list/array of data, randomly sign flip the values and compute a new mean. For use in one-sample permutation test. Returns a 'mean' or 't-stat'."""
 
     random_state = np.random.RandomState(seed)
-    new_dat = data*random_state.choice([1, -1], len(data))
+    new_dat = data * random_state.choice([1, -1], len(data))
     if return_stat == 'mean':
         return np.mean(new_dat)
     elif return_stat == 't-stat':
-        return np.mean(new_dat)/(np.std(new_dat, ddof=1)/np.sqrt(len(new_dat)))
+        return np.mean(new_dat) / (np.std(new_dat, ddof=1) / np.sqrt(len(new_dat)))
 
 
 def _chunk_boot_ols_coefs(dat, formula, weights, seed):

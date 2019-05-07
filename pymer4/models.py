@@ -1316,12 +1316,16 @@ class Lm(object):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
 
-        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata's robust routine. Of the choices below, 'hc1' or 'hc3' are amongst the more popular.  
         Robust estimators include:
 
-        - 'hc0': Huber (1980) original sandwich estimator
+        - 'hc0': Huber (1967) original sandwich estimator
 
-        - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
+        - 'hc1': Hinkley (1977) DOF adjustment to 'hc0' to account for small sample sizes (default)
+
+        - 'hc2': different kind of small-sample adjustment of 'hc0' by leverage values in hat matrix
+
+        - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc2, Long & Ervin (2000)
 
         - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
 
@@ -1344,7 +1348,7 @@ class Lm(object):
         ```
 
         Args:
-            robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
+            robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc1', 'hc2', hc3','hac','cluster'). If robust = True, default robust estimator is 'hc1'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
@@ -1367,7 +1371,7 @@ class Lm(object):
             self.warnings.append(w)
         if robust:
             if isinstance(robust, bool):
-                robust = "hc0"
+                robust = "hc1"
             self.se_type = "robust" + " (" + robust + ")"
             if cluster:
                 if cluster not in self.data.columns:
@@ -1474,9 +1478,9 @@ class Lm(object):
             df = x.shape[0] - x.shape[1]
             if isinstance(weights, str) and wls_dof_correction:
                 if weight_groups.ngroups != 2:
-                    warnings.warn(
-                        "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
-                    )
+                    w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
+                    warnings.warn(w)
+                    self.warnings.append(w)
                 else:
                     welch_ingredients = np.array(
                         self.data.groupby(weights)[dv]
@@ -1568,13 +1572,6 @@ class Lm(object):
         ].apply(
             pd.to_numeric, args=("coerce",)
         )
-
-        if (conf_int == "boot") and (permute is None):
-            # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
-            results = results.drop(columns=["P-val", "Sig", "DF"])
-            results["Sig"] = results.apply(
-                lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "", axis=1
-            )
 
         if permute:
             results = results.rename(columns={"DF": "Num_perm", "P-val": "Perm-P-val"})
@@ -1802,10 +1799,14 @@ class Lm2(object):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='mean') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
 
-        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates. This is similar to Stata's robust routine.
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata's robust routine.  
         Robust estimators include:
 
         - 'hc0': Huber (1980) original sandwich estimator
+        
+        - 'hc1': Hinkley (1977) DOF adjustment to 'hc0' to account for small sample sizes (default)
+
+        - 'hc2': different kind of small-sample adjustment of 'hc0' by leverage values in hat matrix
 
         - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
 

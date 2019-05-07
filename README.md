@@ -85,6 +85,7 @@ If you run into issues using either option above, it's likely due to compiler is
 - `Lm` models can also perform weight-least-squares (WLS) regression given the `weights` argument to `.fit()`, with optional dof correction via Satterthwaite approximation. This is useful for categorical (e.g. group) comparison where one does not want to assume equal variance between groups (e.g. Welch's t-test)
 - All model classes now have the ability to rank transform data prior to estimation, see the `rank` argument of their respective `.fit()` methods.
 - All methods/functions capable of parallelization now have their default `n_jobs` set to 1 (i.e. no default parallelization)
+- `Lm` can compute `hc1` and `hc2` robust standard errors now. `hc1` is the new default from `hc0`. 
 - Automated testing on travis now pins specific r and r-package versions. This is because of recent changes to the `lme4` and other R packages which result in slightly different estimates that the associated `conda-forge` versions see [this issue](https://github.com/ejolly/pymer4/issues/37). Additionally obtaining references to elements via `rpy2` seems to have changed in some cases (e.g. recent version of `lsmeans` on `conda-forge`). If users are installing via option 1 and are running into issues, it's suggested they try the following installation command instead `conda install -c conda-forge r-base=3.4.1 r-lme4=1.1_13 r-lmertest=3.0_1 r-lsmeans=2.27_62 rpy2=2.9.4`  
 
 **0.6.0**  
