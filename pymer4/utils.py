@@ -252,7 +252,8 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
             se = _robust_estimator(
                 res, X, robust_estimator=robust, n_lags=n_lags, cluster=cluster)
         else:
-            sigma = np.std(res, axis=0, ddof=X.shape[1])
+
+            sigma = np.sqrt(res.T.dot(res) / (X.shape[0] - X.shape[1]))
             se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T, X)))) * sigma
 
         t = b / se
