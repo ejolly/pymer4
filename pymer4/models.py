@@ -24,6 +24,8 @@ from pymer4.utils import (
     _perm_find,
     _return_t,
     to_ranks_by_group,
+    rsquared,
+    rsquared_adj
 )
 
 __author__ = ["Eshin Jolly"]
@@ -1579,15 +1581,17 @@ class Lm(object):
         self.coefs = results
         self.fitted = True
         self.resid = res
+        self.fits = y.squeeze() - res
         self.data["fits"] = y.squeeze() - res
         self.data["residuals"] = res
 
         # Fit statistics
-        self.rsquared = np.corrcoef(np.dot(x, b), y.squeeze()) ** 2
-        self.rsquared = self.rsquared[0, 1]
-        self.rsquared_adj = 1.0 - (len(res) - 1.0) / (len(res) - x.shape[1]) * (
-            1.0 - self.rsquared
-        )
+        if 'Intercept' in self.design_matrix.columns:
+            center_tss = True
+        else:
+            center_tss = False
+        self.rsquared = rsquared(y.squeeze(), res, center_tss)
+        self.rsquared_adj = rsquared_adj(self.rsquared, len(res), len(res) - x.shape[1], center_tss)
         half_obs = len(res) / 2.0
         ssr = np.dot(res, res.T)
         self.logLike = (-np.log(ssr) * half_obs) - (

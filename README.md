@@ -79,6 +79,8 @@ If you run into issues using either option above, it's likely due to compiler is
 
 ## Change-log  
 **0.7.0**
+- **Result Altering Change** - `Lm` standard errors are now computed using the square-root of the adjusted mean-squared-error  (`np.sqrt(res.T.dot(res) / (X.shape[0] - X.shape[1]))`) rather than the standard deviation of the residuals with DOF adjustment (`np.std(res, axis=0, ddof=X.shape[1])`). While these produce the same results if an intercept is included in the model, they differ slightly when an intercept is not included. Formerly in the no-intercept case, results from `pymer4` would differ slightly from `R` or `statsmodels`. This change ensures the results are always identical in all cases.
+- **Result Altering Change** - `Lm` rsquared and adjusted rsquared now take into account whether an intercept is included in the model estimation and adjust accordingly. This is consistent with the behavior of `R` and `statsmodels`
 - Addition of a `pymer4.stats` module for various parametric and non-parametric statistics functions (i.e. permutation testing and bootstrapping)
 - Addition of `Lm2` models that can perform multi-level modeling by first estimating `Lm` separately for each group and then performing inference on those estimates. Can perform inference on first-level semi-partial and partial correlation coefficients instead of betas too.
 - `Lm` models can also perform inference on partial or semi-partial correlation coefficients

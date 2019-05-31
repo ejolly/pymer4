@@ -252,7 +252,6 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
             se = _robust_estimator(
                 res, X, robust_estimator=robust, n_lags=n_lags, cluster=cluster)
         else:
-
             sigma = np.sqrt(res.T.dot(res) / (X.shape[0] - X.shape[1]))
             se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T, X)))) * sigma
 
@@ -517,14 +516,56 @@ def R2con(arr):
     """
     Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user. Reference: https://goo.gl/E4Mms2
 
-        Args:
-            arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
+    Args:
+        arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
 
-        Returns:
-            out (np.ndarray): 2d array organized as contrasts X factor levels
+    Returns:
+        out (np.ndarray): 2d array organized as contrasts X factor levels
     """
 
     intercept = np.ones((arr.shape[0], 1))
     mat = np.column_stack([intercept, arr])
     inv = np.linalg.inv(mat)
     return inv
+
+
+def rsquared(y, res, has_constant=True):
+    """
+    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance" 
+
+    Args:
+        y (np.ndarray): 1d array of dependent variable
+        res (np.ndarray): 1d array of residuals
+        has_constant (bool): whether the fitted model included a constant (intercept)
+    
+    Returns:
+        r2: coefficient of determination
+    """
+
+    y_mean = y.mean()
+    rss = np.sum(res ** 2)
+    if has_constant:
+        tss = np.sum((y - y_mean) ** 2)
+    else:
+        tss = np.sum(y ** 2)
+    return 1 - (rss / tss)
+
+
+def rsquared_adj(r, nobs, df_res, has_constant=True):
+    """
+    Compute the adjusted R^2, coefficient of determination. 
+
+    Args:
+        r (float): rsquared value
+        nobs (int): number of observations the model was fit on
+        df_res (int): degrees of freedom of the residuals (nobs - number of model params)
+        has_constant (bool): whether the fitted model included a constant (intercept)
+    
+    Returns:
+        r2_add: adjusted coefficient of determination
+    """
+
+    if has_constant:
+        return 1. - (nobs - 1) / df_res * (1. - r)
+    else:
+        return 1. - nobs / df_res * (1. - r)
