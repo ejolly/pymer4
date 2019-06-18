@@ -659,7 +659,10 @@ class Lmer(object):
         """
         resid_func = robjects.r(rstring)
         self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
-        self.data["residuals"] = copy(self.resid)
+        try:
+            self.data["residuals"] = copy(self.resid)
+        except ValueError as e:
+            print("**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n")
 
         # Model fits
         rstring = """
@@ -670,7 +673,10 @@ class Lmer(object):
         """
         fit_func = robjects.r(rstring)
         self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
-        self.data["fits"] = copy(self.fits)
+        try:
+            self.data["fits"] = copy(self.fits)
+        except ValueError as e:
+            print("**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n")
 
         if summarize:
             return self.summary()
