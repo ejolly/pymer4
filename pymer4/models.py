@@ -1917,6 +1917,8 @@ class Lm2(object):
             )
             betas = np.array(betas)
 
+        # Get the model matrix formula from patsy to make it more reliable to set the results dataframe index like Lmer
+        y, x = dmatrices(self.formula, self.data, 1, return_type="dataframe")
         # Perform an intercept only regression for each beta
         results = []
         perm_ps = []
@@ -1957,12 +1959,12 @@ class Lm2(object):
                 intercept_pd[c] = np.nan
             intercept_pd = pd.DataFrame(intercept_pd, index=[0])
             results = pd.concat([intercept_pd, results], ignore_index=True)
-        results.index = ["(Intercept)"] + ivs
+        results.index = x.columns 
         self.coefs = results
         if to_corrs:
             self.fixef = pd.DataFrame(betas, columns=ivs)
         else:
-            self.fixef = pd.DataFrame(betas, columns=["(Intercept)"] + ivs)
+            self.fixef = pd.DataFrame(betas, columns=x.columns)
         self.fixef.index = self.data[self.group].unique()
         self.fixef.index.name = self.group
         if permute:
