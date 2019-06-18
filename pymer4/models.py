@@ -1335,19 +1335,6 @@ class Lm(object):
 
         Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch's t-test). E.g:
 
-        ```
-        # Simple regression that estimates a between groups t-test but not assuming equal variances
-        model = Lm('DV ~ Group', data=df)
-
-        # Have pymer4 compute the between group variances automatically (preferred)
-        model.fit(weights='Group') 
-
-        # Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied because its not trivial to compute
-        weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
-        model.fit(weights=weights)
-
-
-        ```
 
         Args:
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc1', 'hc2', hc3','hac','cluster'). If robust = True, default robust estimator is 'hc1'; default False
@@ -1365,6 +1352,22 @@ class Lm(object):
 
         Returns:
             DataFrame: R style summary() table
+
+        
+        Examples:
+
+            Simple regression that estimates a between groups t-test but not assuming equal variances  
+
+            >>> model = Lm('DV ~ Group', data=df)
+
+            Have pymer4 compute the between group variances automatically (preferred)  
+
+            >>> model.fit(weights='Group') 
+
+            Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied because its not trivial to compute  
+            
+            >>> weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
+            model.fit(weights=weights)
 
         """
         if permute and permute < 500:
