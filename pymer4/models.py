@@ -369,19 +369,29 @@ class Lmer(object):
                 odds.ci <- exp(out.ci)
                 colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
                 probs.ci <- data.frame(sapply(out.ci,plogis))
+                num_pred <- ncol(model.matrix(model))
+                if (num_pred == 1) {
+                    probs.ci <- t(probs.ci)    
+                }
                 colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
                 out <- cbind(out,odds,odds.ci,probs,probs.ci)
-                list(out,rownames(out))
+                list(out,rownames(out), num_pred)
                 }
             """
 
             estimates_func = robjects.r(rstring)
-            out_summary, out_rownames = estimates_func(self.model_obj)
+            out_summary, out_rownames, num_IV = estimates_func(self.model_obj)
+            num_IV = num_IV[0]
             df = pandas2ri.ri2py(out_summary)
             df.index = out_rownames
-            # df = pandas2ri.ri2py(estimates_func(self.model_obj))
-
-            df.columns = ['Estimate', 'SE', 'Z-stat', 'P-val', '2.5_ci', '97.5_ci',
+            
+            # Handle situation where intercept only or rfx only model was estimated
+            if int(num_IV) < 1:
+                df = df.assign(z=None, p=None)
+                df.columns = ['Estimate', 'SE', '2.5_ci', '97.5_ci',
+                          'OR', 'OR_2.5_ci', 'OR_97.5_ci', 'Prob', 'Prob_2.5_ci', 'Prob_97.5_ci', 'Z-stat', 'P-val']
+            else:
+                df.columns = ['Estimate', 'SE', 'Z-stat', 'P-val', '2.5_ci', '97.5_ci',
                           'OR', 'OR_2.5_ci', 'OR_97.5_ci', 'Prob', 'Prob_2.5_ci', 'Prob_97.5_ci']
             df = df[['Estimate', '2.5_ci', '97.5_ci', 'SE', 'OR', 'OR_2.5_ci',
                      'OR_97.5_ci', 'Prob', 'Prob_2.5_ci', 'Prob_97.5_ci', 'Z-stat', 'P-val']]
