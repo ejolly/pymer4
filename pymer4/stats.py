@@ -194,16 +194,18 @@ def perm_test(
             for i in range(n_perm)
         )
 
+        denom = float(len(perms)) + 1
+
         if tails == 2:
-            p = np.mean(np.abs(perms) >= np.abs(original_stat))
+            numer = np.sum(np.abs(perms) >= np.abs(original_stat)) + 1
         elif tails == 1:
             if original_stat >= 0:
-                p = np.mean(perms >= original_stat)
+                numer = np.sum(perms >= original_stat) + 1
             else:
-                p = np.mean(perms <= original_stat)
+                numer = np.sum(perms <= original_stat) + 1
         else:
             raise ValueError("tails must be 1 or 2")
-
+        p = numer / denom
         if return_dist:
             return original_stat, p, perms
         else:
@@ -370,7 +372,7 @@ def _perm_test(x, y, stat, equal_var, random_state):
             x = x * random_state.choice([1, -1], len(x))
         else:
             shuffled_combined = random_state.permutation(np.hstack([x, y]))
-            x, y = shuffled_combined[: x.size], shuffled_combined[x.size :]
+            x, y = shuffled_combined[:x.size], shuffled_combined[x.size:]
     elif (stat == "tstat-paired") or (y is None):
         x = x * random_state.choice([1, -1], len(x))
 

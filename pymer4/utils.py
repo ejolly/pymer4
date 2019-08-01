@@ -362,9 +362,9 @@ def to_ranks_by_group(dat, group, formula, exclude_cols=[]):
 
 def _perm_find(arr, x):
     """
-    Find permutation cutoff in array.
+    Find permutation cutoff in array. Two-tailed only
     """
-    return np.sum(np.abs(arr) >= np.abs(x)) / float(len(arr))
+    return (np.sum(np.abs(arr) >= np.abs(x)) + 1) / (float(len(arr)) + 1)
 
 
 def isPSD(mat, tol=1e-8):
@@ -380,7 +380,7 @@ def isPSD(mat, tol=1e-8):
 
 def nearestPSD(A, nit=100):
     """
-    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Sstatsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
+    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Statsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
 
     Args:
         nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
