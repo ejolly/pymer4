@@ -8,6 +8,7 @@ __author__ = ["Eshin Jolly"]
 __license__ = ["MIT"]
 
 import numpy as np
+import pandas as pd
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
@@ -16,6 +17,48 @@ from joblib import Parallel, delayed
 
 MAX_INT = np.iinfo(np.int32).max
 
+
+def vif(df, has_intercept=True, exclude_intercept=True, tol=5., check_only=False):
+    """
+    Compute variance inflation factor amongst columns of a dataframe to be used as a design matrix. Uses the same method as Matlab and R (diagonal elements) of the inverted correlation matrix. Prints a warning if any vifs are >= to tol. If check_only is true it will only return a 1 if any vifs are higher than tol.
+
+    Args:
+        df (pandas.DataFrame): dataframe of design matrix output from patsy
+        has_intercept (bool): whether the first column of the dataframe is the intercept
+        exclude_intercept (bool): exclude intercept from computation and assumed intercept is the first column; default True
+        tol (float): tolerance check to print warning if any vifs exceed this value
+        check_only (bool): restrict return to a dictionary of vifs that exceed tol only rather than all; default False
+    
+    Returns:
+        dict: dictionary with keys as column names and values as vifs
+    """
+
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("input needs to be a pandas dataframe")
+    if has_intercept:
+        if df.iloc[:, 0].sum() != df.shape[0]:
+            raise ValueError("has_intercept is true, but first column does not appear to be a constant")
+        if exclude_intercept:
+            corr_mat = df.iloc[:, 1:].corr()
+            keys = np.array(df.iloc[:, 1:].columns)
+    else:
+        corr_mat = df.corr()
+        keys = np.array(df.columns)
+
+    try:
+        vifs = np.diag(np.linalg.inv(corr_mat), 0)
+        mask = np.where(vifs >= tol)
+        if mask:
+            high_vifs = dict(zip(keys[mask], vifs[mask]))
+        else:
+            high_vifs = {}
+        if check_only:
+            return high_vifs
+        else:
+            return high_vifs, dict(zip(keys, vifs))
+    except np.linalg.LinAlgError:
+        print("ERROR: Cannot compute vifs! Design Matrix is strictly singular.")
+    
 
 def discrete_inverse_logit(arr):
     """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes"""
