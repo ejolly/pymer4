@@ -383,7 +383,7 @@ def _cohens_d(x, y, paired, equal_var, value, random_state):
     """For use in parallel cohens_d"""
     random_state = _check_random_state(random_state)
     if paired:
-        idx = np.random.choice(np.arange(len(x)), size=x.size)
+        idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
         x, y = x[idx], y[idx]
     else:
         x = random_state.choice(x, size=x.size, replace=True)

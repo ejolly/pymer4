@@ -2080,7 +2080,7 @@ class Lm2(object):
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
-        m_fixef = self.coefs.drop("(Intercept)", axis=0)
+        m_fixef = self.coefs.drop("Intercept", axis=0)
 
         if error_bars == "ci":
             col_lb = m_fixef["Estimate"] - m_fixef["2.5_ci"]
@@ -2150,4 +2150,5 @@ class Lm2(object):
        
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
+        plt.tight_layout()
         return ax
