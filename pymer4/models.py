@@ -25,7 +25,7 @@ from pymer4.utils import (
     _return_t,
     to_ranks_by_group,
     rsquared,
-    rsquared_adj
+    rsquared_adj,
 )
 
 __author__ = ["Eshin Jolly"]
@@ -98,6 +98,7 @@ class Lmer(object):
         self.marginal_contrasts = None
         self.sig_type = None
         self.factors_prev_ = None
+        self._oldrpy2 = False
 
     def __repr__(self):
         out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
@@ -345,11 +346,21 @@ class Lmer(object):
 
         # Do scalars first cause they're easier
 
-        r_grps = base.data_frame(unsum.rx2("ngrps"))
-        grps = pandas2ri.ri2py(r_grps)
+        #r_grps = base.data_frame(unsum.rx2("ngrps"))
+        #grps = pandas2ri.ri2py(r_grps)
+        
         # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
-        grp_names = pandas2ri.ri2py(base.rownames(r_grps))
-        self.grps = dict(zip(grp_names, grps.values.flatten()))
+        #grp_names = pandas2ri.ri2py(base.rownames(r_grps))
+        try:
+            grps =base.data_frame(unsum.rx2("ngrps"))
+            grp_names = base.rownames(grps)
+            self.grps = dict(zip(grp_names, grps.values.flatten()))
+        except AttributeError:
+            self._oldrpy2=True
+            r_grps = base.data_frame(unsum.rx2("ngrps"))
+            grps = pandas2ri.ri2py(r_grps)
+            grp_names = pandas2ri.ri2py(base.rownames(r_grps))
+            self.grps = dict(zip(grp_names, grps.values.flatten()))
 
         self.AIC = unsum.rx2("AICtab")[0]
         self.logLike = unsum.rx2("logLik")[0]
@@ -358,18 +369,25 @@ class Lmer(object):
         fit_messages = unsum.rx2("optinfo").rx2("conv").rx2("lme4").rx2("messages")
         # Then check warnings for additional stuff
         fit_warnings = unsum.rx2("optinfo").rx2("warnings")
-        if len(fit_warnings) != 0:
-            fit_warnings = [str(elem) for elem in fit_warnings]
-        else:
-            fit_warnings = []
-        if not isinstance(fit_messages, rpy2.rinterface.RNULLType):
-            fit_messages = [str(elem) for elem in fit_messages]
-        else:
-            fit_messages = []
 
-        fit_messages_warnings = fit_messages + fit_warnings
+        # This code might be needed for older versions of rpy2
+        # leaving it commented out in case we need a try except here
+        # if len(fit_warnings) != 0:
+        #     fit_warnings = [str(elem) for elem in fit_warnings]
+        # else:
+        #     fit_warnings = []
+
+        # if not isinstance(fit_messages, rpy2.rinterface.RNULLType):
+        #     fit_messages = [str(elem) for elem in fit_messages]
+        # else:
+        #     fit_messages = []
+
+        fit_warnings = [fw for fw in fit_warnings]
+        fit_messages = [fm for fm in fit_messages]
+
+        fit_messages_warnings = fit_warnings + fit_messages
         if fit_messages_warnings:
-            self.warnings.append(fit_messages_warnings)
+            self.warnings.extend(fit_messages_warnings)
             if not no_warnings:
                 for warning in self.warnings:
                     if isinstance(warning, list):
@@ -379,7 +397,6 @@ class Lmer(object):
                         print(warning + " \n")
         else:
             self.warnings = []
-
         # Coefficients, and inference statistics
         if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
 
@@ -402,12 +419,17 @@ class Lmer(object):
             )
             estimates_func = robjects.r(rstring)
             out_summary, out_rownames = estimates_func(self.model_obj)
-            df = pandas2ri.ri2py(out_summary)
+            try:
+                df = out_summary
+                dfshape = df.shape[1]
+            except AttributeError:
+                df = pandas2ri.ri2py(out_summary)
+                dfshape = df.shape[1]
             df.index = out_rownames
             # df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             # gaussian
-            if df.shape[1] == 7:
+            if dfshape == 7:
                 df.columns = [
                     "Estimate",
                     "SE",
@@ -422,7 +444,7 @@ class Lmer(object):
                 ]
 
             # gamma, inverse_gaussian
-            elif df.shape[1] == 6:
+            elif dfshape == 6:
                 if self.family in ["gamma", "inverse_gaussian"]:
                     df.columns = [
                         "Estimate",
@@ -445,7 +467,7 @@ class Lmer(object):
                     df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]]
 
             # Incase lmerTest chokes it won't return p-values
-            elif df.shape[1] == 5 and self.family == "gaussian":
+            elif dfshape == 5 and self.family == "gaussian":
                 if not permute:
                     warnings.warn(
                         "MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance..."
@@ -551,9 +573,9 @@ class Lmer(object):
                 df = df.rename(columns={"P-val": "Perm-P-val"})
 
         if "P-val" in df.columns:
-            df["Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:,"Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
         elif "Perm-P-val" in df.columns:
-            df["Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:,"Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
 
         if (conf_int == "boot") and (permute is None):
             # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
@@ -573,8 +595,12 @@ class Lmer(object):
         self.fitted = True
 
         # Random effect variances and correlations
-        df = pandas2ri.ri2py(base.data_frame(unsum.rx2("varcor")))
-        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
+        try:
+            df = base.data_frame(unsum.rx2("varcor"))
+            ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
+        except AttributeError:
+            df = pandas2ri.ri2py(base.data_frame(unsum.rx2("varcor")))
+            ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
         ran_vars.columns = ["Name", "Var", "Std"]
@@ -605,13 +631,21 @@ class Lmer(object):
         if len(fixefs) > 1:
             f_corrected_order = []
             for f in fixefs:
-                f = pandas2ri.ri2py(f)
-                f_corrected_order.append(
-                    f[
-                        list(self.coefs.index)
-                        + [elem for elem in f.columns if elem not in self.coefs.index]
-                    ]
-                )
+                try:
+                    f_corrected_order.append(
+                        f[
+                            list(self.coefs.index)
+                            + [elem for elem in f.columns if elem not in self.coefs.index]
+                        ]
+                    )
+                except AttributeError:
+                    f = pandas2ri.ri2py(f)
+                    f_corrected_order.append(
+                        f[
+                            list(self.coefs.index)
+                            + [elem for elem in f.columns if elem not in self.coefs.index]
+                        ]
+                    )
             self.fixef = f_corrected_order
             # self.fixef = [pandas2ri.ri2py(f) for f in fixefs]
         else:
@@ -637,18 +671,27 @@ class Lmer(object):
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
-        if len(ranefs) > 1:
-            self.ranef = [pandas2ri.ri2py(r) for r in ranefs]
+        if self._oldrpy2:
+            if len(ranefs) > 1:
+                self.ranef = [pandas2ri.ri2py(r) for r in ranefs]
+            else:
+                self.ranef = pandas2ri.ri2py(ranefs[0])
         else:
-            self.ranef = pandas2ri.ri2py(ranefs[0])
+            if len(ranefs) > 1:
+                self.ranef = [r for r in ranefs]
+            else:
+                self.ranef = ranefs[0]            
 
         # Save the design matrix
         # Make sure column names match population coefficients
         stats = importr("stats")
-        self.design_matrix = pandas2ri.ri2py(stats.model_matrix(self.model_obj))
-        self.design_matrix = pd.DataFrame(
-            self.design_matrix, columns=self.coefs.index[:]
-        )
+        try:
+            self.design_matrix = stats.model_matrix(self.model_obj)
+            self.design_matrix = pd.DataFrame(
+                self.design_matrix, columns=self.coefs.index[:]
+            )
+        except ValueError:
+            self.design_matrix = pandas2ri.ri2py(stats.model_matrix(self.model_obj))
 
         # Model residuals
         rstring = """
@@ -657,10 +700,12 @@ class Lmer(object):
             out
             }
         """
-        resid_func = robjects.r(rstring)
-        self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
+        resid_func = robjects.r(rstring)   
         try:
-            self.data["residuals"] = copy(self.resid)
+            if self._oldrpy2:
+                self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
+            else:
+                self.data["residuals"] = copy(self.resid)
         except ValueError as e:
             print("**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n")
 
@@ -672,7 +717,10 @@ class Lmer(object):
             }
         """
         fit_func = robjects.r(rstring)
-        self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
+        if self._oldrpy2:
+            self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
+        else:
+            self.fits = fit_func(self.model_obj)
         try:
             self.data["fits"] = copy(self.fits)
         except ValueError as e:
