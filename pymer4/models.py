@@ -98,7 +98,6 @@ class Lmer(object):
         self.marginal_contrasts = None
         self.sig_type = None
         self.factors_prev_ = None
-        self._oldrpy2 = False
 
     def __repr__(self):
         out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
@@ -149,7 +148,8 @@ class Lmer(object):
         for k in factor_dict.keys():
             df[k] = df[k].astype(str)
 
-        r_df = pandas2ri.py2ri(df)
+        #r_df = pandas2ri.py2ri(df)
+        r_df = df
         for k, v in factor_dict.items():
             if isinstance(v, list):
                 r_df = factorize(r_df, k, v)
@@ -356,11 +356,8 @@ class Lmer(object):
             grp_names = base.rownames(grps)
             self.grps = dict(zip(grp_names, grps.values.flatten()))
         except AttributeError:
-            self._oldrpy2=True
-            r_grps = base.data_frame(unsum.rx2("ngrps"))
-            grps = pandas2ri.ri2py(r_grps)
-            grp_names = pandas2ri.ri2py(base.rownames(r_grps))
-            self.grps = dict(zip(grp_names, grps.values.flatten()))
+            raise Exception("You appear to have an old version of rpy2, upgrade to >3.0")
+            
 
         self.AIC = unsum.rx2("AICtab")[0]
         self.logLike = unsum.rx2("logLik")[0]
@@ -372,15 +369,6 @@ class Lmer(object):
 
         # This code might be needed for older versions of rpy2
         # leaving it commented out in case we need a try except here
-        # if len(fit_warnings) != 0:
-        #     fit_warnings = [str(elem) for elem in fit_warnings]
-        # else:
-        #     fit_warnings = []
-
-        # if not isinstance(fit_messages, rpy2.rinterface.RNULLType):
-        #     fit_messages = [str(elem) for elem in fit_messages]
-        # else:
-        #     fit_messages = []
 
         fit_warnings = [fw for fw in fit_warnings]
         fit_messages = [fm for fm in fit_messages]
@@ -419,12 +407,8 @@ class Lmer(object):
             )
             estimates_func = robjects.r(rstring)
             out_summary, out_rownames = estimates_func(self.model_obj)
-            try:
-                df = out_summary
-                dfshape = df.shape[1]
-            except AttributeError:
-                df = pandas2ri.ri2py(out_summary)
-                dfshape = df.shape[1]
+            df = out_summary
+            dfshape = df.shape[1]
             df.index = out_rownames
             # df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
@@ -506,7 +490,7 @@ class Lmer(object):
 
             estimates_func = robjects.r(rstring)
             out_summary, out_rownames = estimates_func(self.model_obj)
-            df = pandas2ri.ri2py(out_summary)
+            df = out_summary
             df.index = out_rownames
             # df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
@@ -595,12 +579,8 @@ class Lmer(object):
         self.fitted = True
 
         # Random effect variances and correlations
-        try:
-            df = base.data_frame(unsum.rx2("varcor"))
-            ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
-        except AttributeError:
-            df = pandas2ri.ri2py(base.data_frame(unsum.rx2("varcor")))
-            ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
+        df = base.data_frame(unsum.rx2("varcor"))
+        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
         ran_vars.columns = ["Name", "Var", "Std"]
@@ -631,25 +611,16 @@ class Lmer(object):
         if len(fixefs) > 1:
             f_corrected_order = []
             for f in fixefs:
-                try:
-                    f_corrected_order.append(
-                        f[
-                            list(self.coefs.index)
-                            + [elem for elem in f.columns if elem not in self.coefs.index]
-                        ]
-                    )
-                except AttributeError:
-                    f = pandas2ri.ri2py(f)
-                    f_corrected_order.append(
-                        f[
-                            list(self.coefs.index)
-                            + [elem for elem in f.columns if elem not in self.coefs.index]
-                        ]
-                    )
+                f_corrected_order.append(
+                    f[
+                        list(self.coefs.index)
+                        + [elem for elem in f.columns if elem not in self.coefs.index]
+                    ]
+                )
             self.fixef = f_corrected_order
             # self.fixef = [pandas2ri.ri2py(f) for f in fixefs]
         else:
-            self.fixef = pandas2ri.ri2py(fixefs[0])
+            self.fixef = fixefs[0]
             self.fixef = self.fixef[
                 list(self.coefs.index)
                 + [elem for elem in self.fixef.columns if elem not in self.coefs.index]
@@ -671,27 +642,18 @@ class Lmer(object):
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
-        if self._oldrpy2:
-            if len(ranefs) > 1:
-                self.ranef = [pandas2ri.ri2py(r) for r in ranefs]
-            else:
-                self.ranef = pandas2ri.ri2py(ranefs[0])
+        if len(ranefs) > 1:
+            self.ranef = [r for r in ranefs]
         else:
-            if len(ranefs) > 1:
-                self.ranef = [r for r in ranefs]
-            else:
-                self.ranef = ranefs[0]            
+            self.ranef = ranefs[0]            
 
         # Save the design matrix
         # Make sure column names match population coefficients
         stats = importr("stats")
-        try:
-            self.design_matrix = stats.model_matrix(self.model_obj)
-            self.design_matrix = pd.DataFrame(
-                self.design_matrix, columns=self.coefs.index[:]
-            )
-        except ValueError:
-            self.design_matrix = pandas2ri.ri2py(stats.model_matrix(self.model_obj))
+        self.design_matrix = stats.model_matrix(self.model_obj)
+        self.design_matrix = pd.DataFrame(
+            self.design_matrix, columns=self.coefs.index[:]
+        )
 
         # Model residuals
         rstring = """
@@ -702,10 +664,7 @@ class Lmer(object):
         """
         resid_func = robjects.r(rstring)   
         try:
-            if self._oldrpy2:
-                self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
-            else:
-                self.data["residuals"] = copy(self.resid)
+            self.data["residuals"] = copy(self.resid)
         except ValueError as e:
             print("**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n")
 
@@ -717,10 +676,7 @@ class Lmer(object):
             }
         """
         fit_func = robjects.r(rstring)
-        if self._oldrpy2:
-            self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
-        else:
-            self.fits = fit_func(self.model_obj)
+        self.fits = fit_func(self.model_obj)
         try:
             self.data["fits"] = copy(self.fits)
         except ValueError as e:
@@ -809,7 +765,7 @@ class Lmer(object):
         )
 
         predict_func = robjects.r(rstring)
-        preds = pandas2ri.ri2py(predict_func(self.model_obj, data))
+        preds = predict_func(self.model_obj, data)
         return preds
 
     def summary(self):
@@ -841,7 +797,7 @@ class Lmer(object):
         self, marginal_vars, grouping_vars=None, p_adjust="tukey", summarize=True
     ):
         """
-        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the lsmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/lsmeans/lsmeans.pdf
+        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the emmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/emmeans/emmeans.pdf
 
         Args:
             marginal_var (str/list): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
@@ -886,7 +842,7 @@ class Lmer(object):
                     "All grouping_vars must be existing categorical variables (i.e. factors)"
                 )
 
-        # Need to figure out if marginal_vars is continuous or not to determine lstrends or lsmeans call
+        # Need to figure out if marginal_vars is continuous or not to determine lstrends or emmeans call
         cont, factor = [], []
         for var in marginal_vars:
             if not self.factors or var not in self.factors.keys():
@@ -916,7 +872,7 @@ class Lmer(object):
                             rstring = (
                                 """
                                 function(model){
-                                suppressMessages(library(lsmeans))
+                                suppressMessages(library(emmeans))
                                 out <- lstrends(model,pairwise ~ """
                                 + g1
                                 + """|"""
@@ -933,7 +889,7 @@ class Lmer(object):
                             rstring = (
                                 """
                                 function(model){
-                                suppressMessages(library(lsmeans))
+                                suppressMessages(library(emmeans))
                                 out <- lstrends(model,pairwise ~ """
                                 + grouping_vars[0]
                                 + """,var='"""
@@ -953,13 +909,13 @@ class Lmer(object):
             if factor:
                 _marginal = "+".join(factor)
                 if grouping_vars:
-                    # Lsmeans with pipe
+                    # emmeans with pipe
                     _conditional = "+".join(grouping_vars)
                     rstring = (
                         """
                         function(model){
-                        suppressMessages(library(lsmeans))
-                        out <- lsmeans(model,pairwise ~ """
+                        suppressMessages(library(emmeans))
+                        out <- emmeans(model,pairwise ~ """
                         + _marginal
                         + """|"""
                         + _conditional
@@ -970,12 +926,12 @@ class Lmer(object):
                         }"""
                     )
                 else:
-                    # Lsmeans without pipe
+                    # emmeans without pipe
                     rstring = (
                         """
                         function(model){
-                        suppressMessages(library(lsmeans))
-                        out <- lsmeans(model,pairwise ~ """
+                        suppressMessages(library(emmeans))
+                        out <- emmeans(model,pairwise ~ """
                         + _marginal
                         + """,adjust='"""
                         + p_adjust
@@ -989,11 +945,11 @@ class Lmer(object):
         func = robjects.r(rstring)
         res = func(self.model_obj)
         base = importr("base")
-        lsmeans = importr("lsmeans")
+        emmeans = importr("emmeans")
 
         # Marginal estimates
-        # self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
-        self.marginal_estimates = pandas2ri.ri2py(base.summary(res)[0])
+        # self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('emmeans')))
+        self.marginal_estimates = base.summary(res)[0]
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -1009,7 +965,7 @@ class Lmer(object):
         )[sorted]
 
         # Marginal Contrasts
-        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res)[1]).rename(
+        self.marginal_contrasts = base.summary(res)[1].rename(
             columns={
                 "t.ratio": "T-stat",
                 "p.value": "P-val",
@@ -1018,9 +974,9 @@ class Lmer(object):
                 "contrast": "Contrast",
             }
         )
-        # Need to make another call to lsmeans to get confidence intervals on contrasts
+        # Need to make another call to emmeans to get confidence intervals on contrasts
         confs = (
-            pandas2ri.ri2py(base.unclass(lsmeans.confint_ref_grid(res))[1])
+            base.unclass(emmeans.confint_emmGrid(res))[1]
             .iloc[:, -2:]
             .rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         )
