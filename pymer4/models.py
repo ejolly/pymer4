@@ -197,7 +197,7 @@ class Lmer(object):
             print("SS Type III Analysis of Variance Table with Satterthwaite approximated degrees of freedom:\n(NOTE: Using original model contrasts, orthogonality not guaranteed)")
         return self.anova_results
 
-    def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True):
+    def fit(self, conf_int='Wald', factors=None, permute=None, ordered=False, summarize=True, verbose=False, REML=True, opt_opts=''):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
 
@@ -209,6 +209,7 @@ class Lmer(object):
             summarize (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
+            opt_opts (str): string containing options to be passed to (g)lmer control. see https://www.rdocumentation.org/packages/lme4/versions/1.1-21/topics/lmerControl
 
         Returns:
             DataFrame: R style summary() table
@@ -227,6 +228,10 @@ class Lmer(object):
             Custom-contrast: Treat Col1 as a factor which 3 levels: A, B, C. Compare A to the mean of B and C. Model intercept will be the grand-mean of all levels, and parameters will be the desired contrast, a well as an automatically determined orthogonal contrast.
 
             >>> model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))
+
+            Here is an example specifying stricter deviance and paramter values stopping criteria.
+
+            >>> model.fit(opt_opts="optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)")
 
         """
 
@@ -248,7 +253,8 @@ class Lmer(object):
                       conf_int + " confidence intervals...\n")
 
             lmer = importr('lmerTest')
-            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML)
+            lmc = robjects.r(f'lmerControl({opt_opts})')
+            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML, control=lmc)
         else:
             if verbose:
                 print("Fitting generalized linear model using glmer (family {}) with " +
@@ -260,8 +266,9 @@ class Lmer(object):
                 _fam = 'Gamma'
             else:
                 _fam = self.family
+            lmc = robjects.r(f'glmerControl({opt_opts})')
             self.model_obj = lmer.glmer(
-                self.formula, data=dat, family=_fam, REML=REML)
+                self.formula, data=dat, family=_fam, REML=REML, control=lmc)
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))

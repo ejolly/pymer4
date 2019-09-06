@@ -156,3 +156,27 @@ def test_inverse_gaussian_lmm():
     m.fit(summarize=False)
     assert m.family == 'inverse_gaussian'
     assert m.coefs.shape == (2, 7)
+
+
+def test_lmer_opt_passing():
+    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    model = Lmer('DV ~ IV2 + (IV2|Group)', data=df)
+    opt_opts = 'optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)'
+    model.fit(summarize=False, opt_opts=opt_opts)
+    estimates = np.array([10.301072, 0.682124])
+    assert np.allclose(model.coefs['Estimate'], estimates, atol=.001)
+    assert model.warnings is None
+
+    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    model = Lmer('DV ~ IV2 + (IV2|Group)', data=df)
+    opt_opts = 'optCtrl = list(ftol_abs=1e-4, xtol_abs=1e-4)'
+    model.fit(summarize=False, opt_opts=opt_opts)
+    assert model.warnings is not None
+    
+def test_glmer_opt_passing():
+    np.random.seed(1)
+    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    df['DV_int'] = np.random.randint(1, 10, df.shape[0])
+    m = Lmer('DV_int ~ IV3 + (1|Group)', data=df, family='poisson')
+    m.fit(summarize=False, opt_opts='optCtrl = list(FtolAbs=1e-1, FtolRel=1e-1, maxfun=10)')
+    assert m.warnings is not None
