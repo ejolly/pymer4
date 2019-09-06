@@ -256,6 +256,7 @@ class Lmer(object):
         rank_group="",
         rank_exclude_cols=[],
         no_warnings=False,
+        control=''
     ):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
@@ -273,6 +274,7 @@ class Lmer(object):
             rank_group (str): column name to group data on prior to rank conversion
             rank_exclude_cols (list/str): columns in model formula to not apply rank conversion to
             no_warnings (bool): turn off auto-printing warnings messages; warnings are always stored in the .warnings attribute; default False
+            control (str): string containing options to be passed to (g)lmer control. see https://www.rdocumentation.org/packages/lme4/versions/1.1-21/topics/lmerControl
 
         Returns:
             DataFrame: R style summary() table
@@ -291,6 +293,10 @@ class Lmer(object):
             Custom-contrast: Treat Col1 as a factor which 3 levels: A, B, C. Compare A to the mean of B and C. Model intercept will be the grand-mean of all levels, and parameters will be the desired contrast, a well as an automatically determined orthogonal contrast.
 
             >>> model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))
+
+            Here is an example specifying stricter deviance and paramter values stopping criteria.
+
+            >>> model.fit(opt_opts="optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)")
 
         """
 
@@ -329,8 +335,10 @@ class Lmer(object):
                     + " confidence intervals...\n"
                 )
 
-            lmer = importr("lmerTest")
-            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML)
+
+            lmer = importr('lmerTest')
+            lmc = robjects.r(f'lmerControl({control})')
+            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML, control=lmc)
         else:
             if verbose:
                 print(
@@ -345,7 +353,9 @@ class Lmer(object):
                 _fam = "Gamma"
             else:
                 _fam = self.family
-            self.model_obj = lmer.glmer(self.formula, data=dat, family=_fam, REML=REML)
+            lmc = robjects.r(f'glmerControl({control})')
+            self.model_obj = lmer.glmer(
+                self.formula, data=dat, family=_fam, REML=REML, control=lmc)
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
