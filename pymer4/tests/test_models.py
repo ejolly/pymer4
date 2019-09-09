@@ -47,7 +47,7 @@ def test_gaussian_lm():
     model.fit(robust=True, summarize=False)
     assert np.allclose(model.coefs['SE'], hc1_se, atol=.001)
 
-    hc2_se = np.array([7.19555971, 0.31842139, 3.83386854])
+    hc2_se = np.array([7.185755, 0.317977, 3.829380])
     model.fit(robust='hc1', summarize=False)
     assert np.allclose(model.coefs['SE'], hc2_se, atol=.001)
 
