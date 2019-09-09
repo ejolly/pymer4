@@ -25,7 +25,7 @@ Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. *Journ
 
 If you don't have R installed and you use the Anaconda Python distribution simply run the following commands to have Anaconda install R and the required packages for you. This is fairly painless installation, but model fitting will be slower than if you install R and `pymer4` separately and configure them (option 2).
 
-1. `conda install -c conda-forge r-base=3.4.1 r-lme4=1.1_13 r-lmertest=3.0_1 r-lsmeans=2.27_62 rpy2=2.9.4`  
+1. `conda install -c conda-forge r-base=3.6.1 r-lme4=1.1_21 r-lmertest=3.1_0 r-emmeans=1.3.5.1 rpy2=3.1.0`  
 2. `pip install pymer4`
 3. Test the installation to see if it's working by running: `python -c "from pymer4.test_install import test_install; test_install()"`
 4. If there are errors follow the guide below
@@ -34,7 +34,7 @@ If you don't have R installed and you use the Anaconda Python distribution simpl
 
 This method assumes you already have R installed. If not install first install it from the [R Project website](https://www.r-project.org/). Then complete the following steps:
 
-1. Install the required R packages by running the following command from within R: `install.packages(c('lme4','lmerTest','lsmeans'))`
+1. Install the required R packages by running the following command from within R: `install.packages(c('lme4','lmerTest','emmeans'))`
 2. Install pymer4: `pip install pymer4`
 3. Test the installation to see if it's working by running: `python -c "from pymer4.test_install import test_install; test_install()"`
 4. If there are errors follow the guide below  
@@ -88,7 +88,10 @@ If you run into issues using either option above, it's likely due to compiler is
 - All model classes now have the ability to rank transform data prior to estimation, see the `rank` argument of their respective `.fit()` methods.
 - All methods/functions capable of parallelization now have their default `n_jobs` set to 1 (i.e. no default parallelization)
 - `Lm` can compute `hc1` and `hc2` robust standard errors now. `hc1` is the new default from `hc0`. 
-- Automated testing on travis now pins specific r and r-package versions. This is because of recent changes to the `lme4` and other R packages which result in slightly different estimates that the associated `conda-forge` versions see [this issue](https://github.com/ejolly/pymer4/issues/37). Additionally obtaining references to elements via `rpy2` seems to have changed in some cases (e.g. recent version of `lsmeans` on `conda-forge`). If users are installing via option 1 and are running into issues, it's suggested they try the following installation command instead `conda install -c conda-forge r-base=3.4.1 r-lme4=1.1_13 r-lmertest=3.0_1 r-lsmeans=2.27_62 rpy2=2.9.4`  
+- Automated testing on travis now pins specific r and r-package versions. This is because of recent changes to the `lme4` and other R packages which result in slightly different estimates that the associated `conda-forge` versions see [this issue](https://github.com/ejolly/pymer4/issues/37). Additionally obtaining references to elements via `rpy2` seems to have changed in some cases (e.g. recent version of `lsmeans` on `conda-forge`). If users are installing via option 1 and are running into issues, it's suggested they try the following installation command instead `conda install -c conda-forge r-base=3.6.1 r-lme4=1.1_21 r-lmertest=3.1_0 r-emmeans=1.3.5.1 rpy2=3.1.0` 
+- Switched from `lsmeans` to `emmeans` for calculating confidence intervals because `lsmeans` is deprecated.
+- Updated interactions with rpy2 api for compatibility with version 3 and higher. This is a breaking change
+and pymer4 will no longer be compatible with versions of rpy2 < 3.
 
 **0.6.0**  
 - Upgraded to latest version of `rpy2`, meaning that from this version onwards `pymer4` is **only compatible with Python 3**.  
