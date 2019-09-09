@@ -204,7 +204,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = pandas2ri.ri2py(anova(self.model_obj))
+        self.anova_results = anova(self.model_obj)
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
