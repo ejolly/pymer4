@@ -232,6 +232,16 @@ class Lmer(object):
             )
         return self.anova_results
 
+    def _get_ngrps(self):
+        """Get the groups information from the model as a dictionary
+        """
+        rstring="function(model){data.frame(unclass(summary(model))$ngrps)}"
+        get_ngrps = robjects.r(rstring)
+        res = get_ngrps(self.model_obj)
+        if len(res.columns) != 1:
+            raise Exception("Appears there's been another rpy2 or lme4 api change.")
+        self.grps = res.to_dict()[res.columns[0]]
+
     def fit(
         self,
         conf_int="Wald",
@@ -346,18 +356,11 @@ class Lmer(object):
 
         # Do scalars first cause they're easier
 
-        #r_grps = base.data_frame(unsum.rx2("ngrps"))
-        #grps = pandas2ri.ri2py(r_grps)
-        
         # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
-        #grp_names = pandas2ri.ri2py(base.rownames(r_grps))
         try:
-            grps =base.data_frame(unsum.rx2("ngrps"))
-            grp_names = base.rownames(grps)
-            self.grps = dict(zip(grp_names, grps.values.flatten()))
+            self._get_ngrps()
         except AttributeError:
             raise Exception("You appear to have an old version of rpy2, upgrade to >3.0")
-            
 
         self.AIC = unsum.rx2("AICtab")[0]
         self.logLike = unsum.rx2("logLik")[0]
