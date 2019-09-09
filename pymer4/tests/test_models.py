@@ -96,6 +96,10 @@ def test_gaussian_lmm():
     assert np.allclose(model.predict(
         model.data, use_rfx=True), model.data.fits)
 
+    # Smoketest for simulate
+    model.simulate(2)
+
+    model.simulat(2, use_rfx=True)
 
 def test_post_hoc():
     np.random.seed(1)
