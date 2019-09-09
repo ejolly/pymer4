@@ -726,7 +726,7 @@ class Lmer(object):
         """
         )
         simulate_func = robjects.r(rstring)
-        sims = pandas2ri.ri2py(simulate_func(self.model_obj))
+        sims = simulate_func(self.model_obj)
         return sims
 
     def predict(self, data, use_rfx=False, pred_type="response"):
