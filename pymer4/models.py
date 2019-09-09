@@ -296,7 +296,11 @@ class Lmer(object):
 
             Here is an example specifying stricter deviance and paramter values stopping criteria.
 
-            >>> model.fit(opt_opts="optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)")
+            >>> model.fit(control="optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)")
+
+            Here is an example specifying a different optimizer in addition to stricter deviance and paramter values stopping criteria.
+
+            >>> model.fit(control="optimizer='Nelder_Mead', optCtrl = list(FtolAbs=1e-8, XtolRel=1e-8)")
 
         """
 
@@ -394,7 +398,7 @@ class Lmer(object):
             self.warnings.extend(fit_messages_warnings)
             if not no_warnings:
                 for warning in self.warnings:
-                    if isinstance(warning, list):
+                    if isinstance(warning, list) | isinstance(warning, np.ndarray):
                         for w in warning:
                             print(w + " \n")
                     else:
