@@ -370,11 +370,14 @@ class Lmer(object):
         # Then check warnings for additional stuff
         fit_warnings = unsum.rx2("optinfo").rx2("warnings")
 
-        # This code might be needed for older versions of rpy2
-        # leaving it commented out in case we need a try except here
-
-        fit_warnings = [fw for fw in fit_warnings]
-        fit_messages = [fm for fm in fit_messages]
+        try:
+            fit_warnings = [fw for fw in fit_warnings]
+        except TypeError:
+            fit_warnings = []
+        try:
+            fit_messages = [fm for fm in fit_messages]
+        except TypeError:
+            fit_messages = []
 
         fit_messages_warnings = fit_warnings + fit_messages
         if fit_messages_warnings:
