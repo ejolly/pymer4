@@ -2,7 +2,6 @@ from __future__ import division
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
-import rpy2
 from copy import copy
 import pandas as pd
 import numpy as np
@@ -25,7 +24,7 @@ from pymer4.utils import (
     _return_t,
     to_ranks_by_group,
     rsquared,
-    rsquared_adj
+    rsquared_adj,
 )
 
 __author__ = ["Eshin Jolly"]
@@ -148,7 +147,8 @@ class Lmer(object):
         for k in factor_dict.keys():
             df[k] = df[k].astype(str)
 
-        r_df = pandas2ri.py2ri(df)
+        # r_df = pandas2ri.py2ri(df)
+        r_df = df
         for k, v in factor_dict.items():
             if isinstance(v, list):
                 r_df = factorize(r_df, k, v)
@@ -203,7 +203,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = pandas2ri.ri2py(anova(self.model_obj))
+        self.anova_results = anova(self.model_obj)
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
@@ -231,6 +231,16 @@ class Lmer(object):
             )
         return self.anova_results
 
+    def _get_ngrps(self):
+        """Get the groups information from the model as a dictionary
+        """
+        rstring = "function(model){data.frame(unclass(summary(model))$ngrps)}"
+        get_ngrps = robjects.r(rstring)
+        res = get_ngrps(self.model_obj)
+        if len(res.columns) != 1:
+            raise Exception("Appears there's been another rpy2 or lme4 api change.")
+        self.grps = res.to_dict()[res.columns[0]]
+
     def fit(
         self,
         conf_int="Wald",
@@ -245,6 +255,7 @@ class Lmer(object):
         rank_group="",
         rank_exclude_cols=[],
         no_warnings=False,
+        control="",
     ):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
@@ -262,6 +273,7 @@ class Lmer(object):
             rank_group (str): column name to group data on prior to rank conversion
             rank_exclude_cols (list/str): columns in model formula to not apply rank conversion to
             no_warnings (bool): turn off auto-printing warnings messages; warnings are always stored in the .warnings attribute; default False
+            control (str): string containing options to be passed to (g)lmer control. see https://www.rdocumentation.org/packages/lme4/versions/1.1-21/topics/lmerControl
 
         Returns:
             DataFrame: R style summary() table
@@ -280,6 +292,14 @@ class Lmer(object):
             Custom-contrast: Treat Col1 as a factor which 3 levels: A, B, C. Compare A to the mean of B and C. Model intercept will be the grand-mean of all levels, and parameters will be the desired contrast, a well as an automatically determined orthogonal contrast.
 
             >>> model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))
+
+            Here is an example specifying stricter deviance and paramter values stopping criteria.
+
+            >>> model.fit(control="optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)")
+
+            Here is an example specifying a different optimizer in addition to stricter deviance and paramter values stopping criteria.
+
+            >>> model.fit(control="optimizer='Nelder_Mead', optCtrl = list(FtolAbs=1e-8, XtolRel=1e-8)")
 
         """
 
@@ -319,7 +339,8 @@ class Lmer(object):
                 )
 
             lmer = importr("lmerTest")
-            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML)
+            lmc = robjects.r(f"lmerControl({control})")
+            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML, control=lmc)
         else:
             if verbose:
                 print(
@@ -334,7 +355,10 @@ class Lmer(object):
                 _fam = "Gamma"
             else:
                 _fam = self.family
-            self.model_obj = lmer.glmer(self.formula, data=dat, family=_fam, REML=REML)
+            lmc = robjects.r(f"glmerControl({control})")
+            self.model_obj = lmer.glmer(
+                self.formula, data=dat, family=_fam, REML=REML, control=lmc
+            )
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
@@ -345,11 +369,13 @@ class Lmer(object):
 
         # Do scalars first cause they're easier
 
-        r_grps = base.data_frame(unsum.rx2("ngrps"))
-        grps = pandas2ri.ri2py(r_grps)
         # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
-        grp_names = pandas2ri.ri2py(base.rownames(r_grps))
-        self.grps = dict(zip(grp_names, grps.values.flatten()))
+        try:
+            self._get_ngrps()
+        except AttributeError:
+            raise Exception(
+                "You appear to have an old version of rpy2, upgrade to >3.0"
+            )
 
         self.AIC = unsum.rx2("AICtab")[0]
         self.logLike = unsum.rx2("logLik")[0]
@@ -358,28 +384,28 @@ class Lmer(object):
         fit_messages = unsum.rx2("optinfo").rx2("conv").rx2("lme4").rx2("messages")
         # Then check warnings for additional stuff
         fit_warnings = unsum.rx2("optinfo").rx2("warnings")
-        if len(fit_warnings) != 0:
-            fit_warnings = [str(elem) for elem in fit_warnings]
-        else:
+
+        try:
+            fit_warnings = [fw for fw in fit_warnings]
+        except TypeError:
             fit_warnings = []
-        if not isinstance(fit_messages, rpy2.rinterface.RNULLType):
-            fit_messages = [str(elem) for elem in fit_messages]
-        else:
+        try:
+            fit_messages = [fm for fm in fit_messages]
+        except TypeError:
             fit_messages = []
 
-        fit_messages_warnings = fit_messages + fit_warnings
+        fit_messages_warnings = fit_warnings + fit_messages
         if fit_messages_warnings:
-            self.warnings.append(fit_messages_warnings)
+            self.warnings.extend(fit_messages_warnings)
             if not no_warnings:
                 for warning in self.warnings:
-                    if isinstance(warning, list):
+                    if isinstance(warning, list) | isinstance(warning, np.ndarray):
                         for w in warning:
                             print(w + " \n")
                     else:
                         print(warning + " \n")
         else:
             self.warnings = []
-
         # Coefficients, and inference statistics
         if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
 
@@ -402,12 +428,13 @@ class Lmer(object):
             )
             estimates_func = robjects.r(rstring)
             out_summary, out_rownames = estimates_func(self.model_obj)
-            df = pandas2ri.ri2py(out_summary)
+            df = out_summary
+            dfshape = df.shape[1]
             df.index = out_rownames
             # df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
             # gaussian
-            if df.shape[1] == 7:
+            if dfshape == 7:
                 df.columns = [
                     "Estimate",
                     "SE",
@@ -422,7 +449,7 @@ class Lmer(object):
                 ]
 
             # gamma, inverse_gaussian
-            elif df.shape[1] == 6:
+            elif dfshape == 6:
                 if self.family in ["gamma", "inverse_gaussian"]:
                     df.columns = [
                         "Estimate",
@@ -445,7 +472,7 @@ class Lmer(object):
                     df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]]
 
             # Incase lmerTest chokes it won't return p-values
-            elif df.shape[1] == 5 and self.family == "gaussian":
+            elif dfshape == 5 and self.family == "gaussian":
                 if not permute:
                     warnings.warn(
                         "MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance..."
@@ -484,7 +511,7 @@ class Lmer(object):
 
             estimates_func = robjects.r(rstring)
             out_summary, out_rownames = estimates_func(self.model_obj)
-            df = pandas2ri.ri2py(out_summary)
+            df = out_summary
             df.index = out_rownames
             # df = pandas2ri.ri2py(estimates_func(self.model_obj))
 
@@ -551,9 +578,9 @@ class Lmer(object):
                 df = df.rename(columns={"P-val": "Perm-P-val"})
 
         if "P-val" in df.columns:
-            df["Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:, "Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
         elif "Perm-P-val" in df.columns:
-            df["Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:, "Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
 
         if (conf_int == "boot") and (permute is None):
             # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
@@ -573,7 +600,7 @@ class Lmer(object):
         self.fitted = True
 
         # Random effect variances and correlations
-        df = pandas2ri.ri2py(base.data_frame(unsum.rx2("varcor")))
+        df = base.data_frame(unsum.rx2("varcor"))
         ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
@@ -605,7 +632,6 @@ class Lmer(object):
         if len(fixefs) > 1:
             f_corrected_order = []
             for f in fixefs:
-                f = pandas2ri.ri2py(f)
                 f_corrected_order.append(
                     f[
                         list(self.coefs.index)
@@ -615,7 +641,7 @@ class Lmer(object):
             self.fixef = f_corrected_order
             # self.fixef = [pandas2ri.ri2py(f) for f in fixefs]
         else:
-            self.fixef = pandas2ri.ri2py(fixefs[0])
+            self.fixef = fixefs[0]
             self.fixef = self.fixef[
                 list(self.coefs.index)
                 + [elem for elem in self.fixef.columns if elem not in self.coefs.index]
@@ -638,14 +664,14 @@ class Lmer(object):
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = [pandas2ri.ri2py(r) for r in ranefs]
+            self.ranef = [r for r in ranefs]
         else:
-            self.ranef = pandas2ri.ri2py(ranefs[0])
+            self.ranef = ranefs[0]
 
         # Save the design matrix
         # Make sure column names match population coefficients
         stats = importr("stats")
-        self.design_matrix = pandas2ri.ri2py(stats.model_matrix(self.model_obj))
+        self.design_matrix = stats.model_matrix(self.model_obj)
         self.design_matrix = pd.DataFrame(
             self.design_matrix, columns=self.coefs.index[:]
         )
@@ -657,12 +683,12 @@ class Lmer(object):
             out
             }
         """
-        resid_func = robjects.r(rstring)
-        self.resid = pandas2ri.ri2py(resid_func(self.model_obj))
         try:
             self.data["residuals"] = copy(self.resid)
-        except ValueError as e:
-            print("**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n")
+        except ValueError as e:  # NOQA
+            print(
+                "**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n"
+            )
 
         # Model fits
         rstring = """
@@ -672,11 +698,13 @@ class Lmer(object):
             }
         """
         fit_func = robjects.r(rstring)
-        self.fits = pandas2ri.ri2py(fit_func(self.model_obj))
+        self.fits = fit_func(self.model_obj)
         try:
             self.data["fits"] = copy(self.fits)
-        except ValueError as e:
-            print("**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n")
+        except ValueError as e:  # NOQA
+            print(
+                "**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n"
+            )
 
         if summarize:
             return self.summary()
@@ -716,7 +744,7 @@ class Lmer(object):
         """
         )
         simulate_func = robjects.r(rstring)
-        sims = pandas2ri.ri2py(simulate_func(self.model_obj))
+        sims = simulate_func(self.model_obj)
         return sims
 
     def predict(self, data, use_rfx=False, pred_type="response"):
@@ -761,7 +789,7 @@ class Lmer(object):
         )
 
         predict_func = robjects.r(rstring)
-        preds = pandas2ri.ri2py(predict_func(self.model_obj, data))
+        preds = predict_func(self.model_obj, data)
         return preds
 
     def summary(self):
@@ -793,7 +821,7 @@ class Lmer(object):
         self, marginal_vars, grouping_vars=None, p_adjust="tukey", summarize=True
     ):
         """
-        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the lsmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/lsmeans/lsmeans.pdf
+        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the emmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/emmeans/emmeans.pdf
 
         Args:
             marginal_var (str/list): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
@@ -838,7 +866,7 @@ class Lmer(object):
                     "All grouping_vars must be existing categorical variables (i.e. factors)"
                 )
 
-        # Need to figure out if marginal_vars is continuous or not to determine lstrends or lsmeans call
+        # Need to figure out if marginal_vars is continuous or not to determine lstrends or emmeans call
         cont, factor = [], []
         for var in marginal_vars:
             if not self.factors or var not in self.factors.keys():
@@ -868,7 +896,7 @@ class Lmer(object):
                             rstring = (
                                 """
                                 function(model){
-                                suppressMessages(library(lsmeans))
+                                suppressMessages(library(emmeans))
                                 out <- lstrends(model,pairwise ~ """
                                 + g1
                                 + """|"""
@@ -885,7 +913,7 @@ class Lmer(object):
                             rstring = (
                                 """
                                 function(model){
-                                suppressMessages(library(lsmeans))
+                                suppressMessages(library(emmeans))
                                 out <- lstrends(model,pairwise ~ """
                                 + grouping_vars[0]
                                 + """,var='"""
@@ -905,13 +933,13 @@ class Lmer(object):
             if factor:
                 _marginal = "+".join(factor)
                 if grouping_vars:
-                    # Lsmeans with pipe
+                    # emmeans with pipe
                     _conditional = "+".join(grouping_vars)
                     rstring = (
                         """
                         function(model){
-                        suppressMessages(library(lsmeans))
-                        out <- lsmeans(model,pairwise ~ """
+                        suppressMessages(library(emmeans))
+                        out <- emmeans(model,pairwise ~ """
                         + _marginal
                         + """|"""
                         + _conditional
@@ -922,12 +950,12 @@ class Lmer(object):
                         }"""
                     )
                 else:
-                    # Lsmeans without pipe
+                    # emmeans without pipe
                     rstring = (
                         """
                         function(model){
-                        suppressMessages(library(lsmeans))
-                        out <- lsmeans(model,pairwise ~ """
+                        suppressMessages(library(emmeans))
+                        out <- emmeans(model,pairwise ~ """
                         + _marginal
                         + """,adjust='"""
                         + p_adjust
@@ -941,11 +969,11 @@ class Lmer(object):
         func = robjects.r(rstring)
         res = func(self.model_obj)
         base = importr("base")
-        lsmeans = importr("lsmeans")
+        emmeans = importr("emmeans")
 
         # Marginal estimates
-        # self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('lsmeans')))
-        self.marginal_estimates = pandas2ri.ri2py(base.summary(res)[0])
+        # self.marginal_estimates = pandas2ri.ri2py(base.summary(res.rx2('emmeans')))
+        self.marginal_estimates = base.summary(res)[0]
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -961,7 +989,7 @@ class Lmer(object):
         )[sorted]
 
         # Marginal Contrasts
-        self.marginal_contrasts = pandas2ri.ri2py(base.summary(res)[1]).rename(
+        self.marginal_contrasts = base.summary(res)[1].rename(
             columns={
                 "t.ratio": "T-stat",
                 "p.value": "P-val",
@@ -970,9 +998,9 @@ class Lmer(object):
                 "contrast": "Contrast",
             }
         )
-        # Need to make another call to lsmeans to get confidence intervals on contrasts
+        # Need to make another call to emmeans to get confidence intervals on contrasts
         confs = (
-            pandas2ri.ri2py(base.unclass(lsmeans.confint_ref_grid(res))[1])
+            base.unclass(emmeans.confint_emmGrid(res))[1]
             .iloc[:, -2:]
             .rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         )
@@ -1020,8 +1048,8 @@ class Lmer(object):
         intercept=True,
         ranef_alpha=0.5,
         coef_fmt="o",
-        orient='v',
-        **kwargs
+        orient="v",
+        **kwargs,
     ):
         """
         Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). By default display the 95% confidence intervals computed during fitting.
@@ -1040,7 +1068,7 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
-        if orient not in ['h', 'v']:
+        if orient not in ["h", "v"]:
             raise ValueError("orientation must be 'h' or 'v'")
 
         if isinstance(self.fixef, list):
@@ -1075,27 +1103,31 @@ class Lmer(object):
         else:
             alpha_plot = 0
 
-        if orient == 'v':
-            x_strip = 'value'
-            x_err = m_fixef['Estimate']
-            y_strip = 'variable'
+        if orient == "v":
+            x_strip = "value"
+            x_err = m_fixef["Estimate"]
+            y_strip = "variable"
             y_err = range(m_fixef.shape[0])
             xerr = [col_lb, col_ub]
             yerr = None
-            ax.vlines(x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.vlines(
+                x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 xlim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
                 xlim = axlim
             ylim = None
         else:
-            y_strip = 'value'
-            y_err = m_fixef['Estimate']
-            x_strip = 'variable'
+            y_strip = "value"
+            y_err = m_fixef["Estimate"]
+            x_strip = "variable"
             x_err = range(m_fixef.shape[0])
             yerr = [col_lb, col_ub]
             xerr = None
-            ax.hlines(y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.hlines(
+                y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 ylim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
@@ -1103,13 +1135,7 @@ class Lmer(object):
             xlim = None
 
         sns.stripplot(
-            x=x_strip,
-            y=y_strip,
-            data=m,
-            ax=ax,
-            size=6,
-            alpha=alpha_plot,
-            color="grey",
+            x=x_strip, y=y_strip, data=m, ax=ax, size=6, alpha=alpha_plot, color="grey"
         )
 
         ax.errorbar(
@@ -1124,7 +1150,7 @@ class Lmer(object):
             ms=12,
             zorder=9999999999,
         )
-       
+
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
         return ax
@@ -1595,12 +1621,14 @@ class Lm(object):
         self.data["residuals"] = res
 
         # Fit statistics
-        if 'Intercept' in self.design_matrix.columns:
+        if "Intercept" in self.design_matrix.columns:
             center_tss = True
         else:
             center_tss = False
         self.rsquared = rsquared(y.squeeze(), res, center_tss)
-        self.rsquared_adj = rsquared_adj(self.rsquared, len(res), len(res) - x.shape[1], center_tss)
+        self.rsquared_adj = rsquared_adj(
+            self.rsquared, len(res), len(res) - x.shape[1], center_tss
+        )
         half_obs = len(res) / 2.0
         ssr = np.dot(res, res.T)
         self.logLike = (-np.log(ssr) * half_obs) - (
@@ -1864,7 +1892,7 @@ class Lm2(object):
             conf_int + " (" + str(n_boot) + ")" if conf_int == "boot" else conf_int
         )
         if isinstance(to_corrs, str):
-            if to_corrs not in ['semi', 'partial']:
+            if to_corrs not in ["semi", "partial"]:
                 raise ValueError("to_corrs must be 'semi' or 'partial'")
 
         if (conf_int == "boot") and (permute is None):
@@ -1959,7 +1987,7 @@ class Lm2(object):
                 intercept_pd[c] = np.nan
             intercept_pd = pd.DataFrame(intercept_pd, index=[0])
             results = pd.concat([intercept_pd, results], ignore_index=True)
-        results.index = x.columns 
+        results.index = x.columns
         self.coefs = results
         if to_corrs:
             self.fixef = pd.DataFrame(betas, columns=ivs)
@@ -2057,8 +2085,8 @@ class Lm2(object):
         axlim=None,
         ranef_alpha=0.5,
         coef_fmt="o",
-        orient='v',
-        **kwargs
+        orient="v",
+        **kwargs,
     ):
         """
         Create a forestplot overlaying estimated coefficients with first-level effects. By default display the 95% confidence intervals computed during fitting.
@@ -2076,7 +2104,7 @@ class Lm2(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
-        if orient not in ['h', 'v']:
+        if orient not in ["h", "v"]:
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
@@ -2098,27 +2126,31 @@ class Lm2(object):
         else:
             alpha_plot = 0
 
-        if orient == 'v':
-            x_strip = 'value'
-            x_err = m_fixef['Estimate']
-            y_strip = 'variable'
+        if orient == "v":
+            x_strip = "value"
+            x_err = m_fixef["Estimate"]
+            y_strip = "variable"
             y_err = range(m_fixef.shape[0])
             xerr = [col_lb, col_ub]
             yerr = None
-            ax.vlines(x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.vlines(
+                x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 xlim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
                 xlim = axlim
             ylim = None
         else:
-            y_strip = 'value'
-            y_err = m_fixef['Estimate']
-            x_strip = 'variable'
+            y_strip = "value"
+            y_err = m_fixef["Estimate"]
+            x_strip = "variable"
             x_err = range(m_fixef.shape[0])
             yerr = [col_lb, col_ub]
             xerr = None
-            ax.hlines(y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.hlines(
+                y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 ylim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
@@ -2126,13 +2158,7 @@ class Lm2(object):
             xlim = None
 
         sns.stripplot(
-            x=x_strip,
-            y=y_strip,
-            data=m,
-            ax=ax,
-            size=6,
-            alpha=alpha_plot,
-            color="grey"
+            x=x_strip, y=y_strip, data=m, ax=ax, size=6, alpha=alpha_plot, color="grey"
         )
 
         ax.errorbar(
@@ -2147,8 +2173,9 @@ class Lm2(object):
             ms=12,
             zorder=9999999999,
         )
-       
+
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
         plt.tight_layout()
         return ax
+
