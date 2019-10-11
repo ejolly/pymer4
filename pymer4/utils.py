@@ -1,22 +1,24 @@
 from __future__ import division
 
-__all__ = ['get_resource_path',
-           'boot_func',
-           '_check_random_state',
-           '_sig_stars',
-           '_robust_estimator',
-           '_chunk_boot_ols_coefs',
-           '_chunk_perm_ols',
-           '_permute_sign',
-           '_ols',
-           '_ols_group',
-           '_corr_group',
-           '_perm_find',
-           'to_ranks_by_group',
-           'isPSD',
-           'nearestPSD']
+__all__ = [
+    "get_resource_path",
+    "boot_func",
+    "_check_random_state",
+    "_sig_stars",
+    "_robust_estimator",
+    "_chunk_boot_ols_coefs",
+    "_chunk_perm_ols",
+    "_permute_sign",
+    "_ols",
+    "_ols_group",
+    "_corr_group",
+    "_perm_find",
+    "to_ranks_by_group",
+    "isPSD",
+    "nearestPSD",
+]
 
-__author__ = ['Eshin Jolly']
+__author__ = ["Eshin Jolly"]
 __license__ = "MIT"
 
 from os.path import dirname, join, sep
@@ -29,16 +31,18 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 from joblib import Parallel, delayed
 
-base = importr('base')
+base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
 
 
 def get_resource_path():
     """ Get path sample data directory. """
-    return join(dirname(__file__), 'resources') + sep
+    return join(dirname(__file__), "resources") + sep
 
 
-def boot_func(x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jobs=-1, seed=None):
+def boot_func(
+    x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jobs=-1, seed=None
+):
     """
     Bootstrap an arbitrary function by resampling from x and y independently or jointly.
 
@@ -59,9 +63,13 @@ def boot_func(x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jo
     if n_boot:
         random_state = _check_random_state(seed)
         seeds = random_state.randint(MAX_INT, size=n_boot)
-        par_for = Parallel(n_jobs=n_jobs, backend='multiprocessing')
-        boots = par_for(delayed(_boot_func)(x, y, func, func_args, paired,
-                                            **func_args, random_state=seeds[i]) for i in range(n_boot))
+        par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+        boots = par_for(
+            delayed(_boot_func)(
+                x, y, func, func_args, paired, **func_args, random_state=seeds[i]
+            )
+            for i in range(n_boot)
+        )
         ci_u = np.percentile(boots, 97.5, axis=0)
         ci_l = np.percentile(boots, 2.5, axis=0)
         return orig_result, (ci_l, ci_u)
@@ -70,7 +78,7 @@ def boot_func(x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jo
 
 
 def _boot_func(x, y, func, func_args, paired, random_state):
-    '''For use in parallel boot_func'''
+    """For use in parallel boot_func"""
     random_state = _check_random_state(random_state)
     if paired:
         idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
@@ -89,31 +97,33 @@ def _check_random_state(seed):
     """
 
     import numbers
+
     if seed is None or seed is np.random:
         return np.random.mtrand._rand
     if isinstance(seed, (numbers.Integral, np.integer)):
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed
-    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
-                     ' instance' % seed)
+    raise ValueError(
+        "%r cannot be used to seed a numpy.random.RandomState" " instance" % seed
+    )
 
 
 def _sig_stars(val):
     """Adds sig stars to coef table prettier output."""
-    star = ''
-    if 0 <= val < .001:
-        star = '***'
-    elif .001 <= val < 0.01:
-        star = '**'
-    elif .01 <= val < .05:
-        star = '*'
-    elif .05 <= val < .1:
-        star = '.'
+    star = ""
+    if 0 <= val < 0.001:
+        star = "***"
+    elif 0.001 <= val < 0.01:
+        star = "**"
+    elif 0.01 <= val < 0.05:
+        star = "*"
+    elif 0.05 <= val < 0.1:
+        star = "."
     return star
 
 
-def _robust_estimator(vals, X, robust_estimator='hc1', n_lags=1, cluster=None):
+def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
     """
     Computes robust sandwich estimators for standard errors used in OLS computation. Types include:
     'hc0': Huber (1980) sandwich estimator to return robust standard error estimates.
@@ -136,7 +146,13 @@ def _robust_estimator(vals, X, robust_estimator='hc1', n_lags=1, cluster=None):
     """
 
     assert robust_estimator in [
-        'hc0', 'hc1', 'hc2', 'hc3', 'hac', 'cluster'], "robust_estimator must be one of hc0, hc1, hc2, hc3, hac, or cluster"
+        "hc0",
+        "hc1",
+        "hc2",
+        "hc3",
+        "hac",
+        "cluster",
+    ], "robust_estimator must be one of hc0, hc1, hc2, hc3, hac, or cluster"
 
     # Make a sandwich!
     # First we need bread
@@ -146,28 +162,29 @@ def _robust_estimator(vals, X, robust_estimator='hc1', n_lags=1, cluster=None):
     # First deal with estimators that have more complicated formulations
 
     # Cluster robust
-    if robust_estimator == 'cluster':
+    if robust_estimator == "cluster":
         # Good ref: http://projects.iq.harvard.edu/files/gov2001/files/sesection_5.pdf
         if cluster is None:
-            raise ValueError(
-                "data column identifying clusters must be provided")
+            raise ValueError("data column identifying clusters must be provided")
         else:
             u = vals[:, np.newaxis] * X
             u = pd.DataFrame(u)
             # Use pandas groupby to get cluster-specific residuals
-            u['Group'] = cluster
-            u_clust = u.groupby('Group').sum()
-            num_grps = u['Group'].nunique()
-            meat = (num_grps / (num_grps - 1)) * \
-                (X.shape[0] / (X.shape[0] - X.shape[1])) * \
-                u_clust.T.dot(u_clust)
-    
+            u["Group"] = cluster
+            u_clust = u.groupby("Group").sum()
+            num_grps = u["Group"].nunique()
+            meat = (
+                (num_grps / (num_grps - 1))
+                * (X.shape[0] / (X.shape[0] - X.shape[1]))
+                * u_clust.T.dot(u_clust)
+            )
+
     # Auto-correlation robust
-    elif robust_estimator == 'hac':
-        weights = 1 - np.arange(n_lags + 1.) / (n_lags + 1.)
+    elif robust_estimator == "hac":
+        weights = 1 - np.arange(n_lags + 1.0) / (n_lags + 1.0)
 
         # First compute lag 0
-        V = np.diag(vals**2)
+        V = np.diag(vals ** 2)
         meat = weights[0] * np.dot(np.dot(X.T, V), X)
 
         # Now loop over additional lags
@@ -181,24 +198,24 @@ def _robust_estimator(vals, X, robust_estimator='hc1', n_lags=1, cluster=None):
 
     else:
         # Otherwise deal with estimators that modify the same essential operation
-        V = np.diag(vals**2)
+        V = np.diag(vals ** 2)
 
-        if robust_estimator == 'hc0':
+        if robust_estimator == "hc0":
             # No modification of residuals
             pass
-            
-        elif robust_estimator == 'hc1':
+
+        elif robust_estimator == "hc1":
             # Degrees of freedom adjustment to HC0
             V = V * X.shape[0] / (X.shape[0] - X.shape[1])
-        
-        elif robust_estimator == 'hc2':
+
+        elif robust_estimator == "hc2":
             # Rather than dof correction, weight residuals by reciprocal of "leverage values" in the hat-matrix
             V = V / (1 - np.diag(np.dot(X, np.dot(bread, X.T))))
 
-        elif robust_estimator == 'hc3':
-            # Same as hc2 but more aggressive weighting due to squaring 
-            V = V / (1 - np.diag(np.dot(X, np.dot(bread, X.T))))**2
-        
+        elif robust_estimator == "hc3":
+            # Same as hc2 but more aggressive weighting due to squaring
+            V = V / (1 - np.diag(np.dot(X, np.dot(bread, X.T)))) ** 2
+
         meat = np.dot(np.dot(X.T, V), X)
     # Finally we make a sandwich
     vcv = np.dot(np.dot(bread, meat), bread)
@@ -216,7 +233,9 @@ def _whiten_wls(mat, weights):
     """
 
     if weights.shape[0] != mat.shape[0]:
-        raise ValueError("The number of weights must be the same as the number of observations")
+        raise ValueError(
+            "The number of weights must be the same as the number of observations"
+        )
     if mat.ndim == 1:
         return mat * np.sqrt(weights)
     elif mat.ndim == 2:
@@ -250,7 +269,8 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
 
         if robust:
             se = _robust_estimator(
-                res, X, robust_estimator=robust, n_lags=n_lags, cluster=cluster)
+                res, X, robust_estimator=robust, n_lags=n_lags, cluster=cluster
+            )
         else:
             sigma = np.sqrt(res.T.dot(res) / (X.shape[0] - X.shape[1]))
             se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T, X)))) * sigma
@@ -276,14 +296,14 @@ def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
     return list(t)
 
 
-def _permute_sign(data, seed, return_stat='mean'):
+def _permute_sign(data, seed, return_stat="mean"):
     """Given a list/array of data, randomly sign flip the values and compute a new mean. For use in one-sample permutation test. Returns a 'mean' or 't-stat'."""
 
     random_state = np.random.RandomState(seed)
     new_dat = data * random_state.choice([1, -1], len(data))
-    if return_stat == 'mean':
+    if return_stat == "mean":
         return np.mean(new_dat)
-    elif return_stat == 't-stat':
+    elif return_stat == "t-stat":
         return np.mean(new_dat) / (np.std(new_dat, ddof=1) / np.sqrt(len(new_dat)))
 
 
@@ -293,8 +313,10 @@ def _chunk_boot_ols_coefs(dat, formula, weights, seed):
     """
     # Random sample with replacement from all data
     dat = dat.sample(frac=1, replace=True, random_state=seed)
-    y, x = dmatrices(formula, dat, 1, return_type='dataframe')
-    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights)
+    y, x = dmatrices(formula, dat, 1, return_type="dataframe")
+    b = _ols(
+        x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights
+    )
     return list(b)
 
 
@@ -303,7 +325,7 @@ def _ols_group(dat, formula, group_col, group, rank):
     dat = dat[dat[group_col] == group].reset_index(drop=True)
     if rank:
         dat = dat.rank()
-    y, x = dmatrices(formula, dat, 1, return_type='dataframe')
+    y, x = dmatrices(formula, dat, 1, return_type="dataframe")
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
     return list(b)
 
@@ -312,20 +334,37 @@ def _corr_group(dat, formula, group_col, group, rank, corr_type):
     """Compute partial correlations via OLS. Used by Lm2"""
 
     from scipy.stats import pearsonr
+
     dat = dat[dat[group_col] == group].reset_index(drop=True)
     if rank:
         dat = dat.rank()
-    y, x = dmatrices(formula, dat, 1, return_type='dataframe')
+    y, x = dmatrices(formula, dat, 1, return_type="dataframe")
     corrs = []
     for c in x.columns[1:]:
         other_preds = [e for e in x.columns if e != c]
         other_preds = x[other_preds]
         cc = x[c]
-        pred_m_resid = _ols(other_preds, cc, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
-        if corr_type == 'semi':
+        pred_m_resid = _ols(
+            other_preds,
+            cc,
+            robust=None,
+            n_lags=1,
+            cluster=None,
+            all_stats=False,
+            resid_only=True,
+        )
+        if corr_type == "semi":
             dv_m_resid = y.values.squeeze()
-        elif corr_type == 'partial':
-            dv_m_resid = _ols(other_preds, y, robust=None, n_lags=1, cluster=None, all_stats=False, resid_only=True)
+        elif corr_type == "partial":
+            dv_m_resid = _ols(
+                other_preds,
+                y,
+                robust=None,
+                n_lags=1,
+                cluster=None,
+                all_stats=False,
+                resid_only=True,
+            )
         corrs.append(pearsonr(dv_m_resid, pred_m_resid)[0])
     return corrs
 
@@ -346,17 +385,21 @@ def to_ranks_by_group(dat, group, formula, exclude_cols=[]):
     """
 
     if (not isinstance(group, str)) and (group not in dat.columns):
-        raise TypeError("group must be a valid column name in the dataframe. Currently only 1 grouping variable is supported.")
+        raise TypeError(
+            "group must be a valid column name in the dataframe. Currently only 1 grouping variable is supported."
+        )
     if isinstance(exclude_cols, str):
         exclude_cols = [exclude_cols]
     original_col_order = list(dat.columns)
     formula = formula.replace(" ", "")
-    to_rank = formula.split('~')[-1].split('(')[0].split('+')[:-1]
+    to_rank = formula.split("~")[-1].split("(")[0].split("+")[:-1]
     # add dv to be ranked
-    to_rank.append(formula.split('~')[0])
+    to_rank.append(formula.split("~")[0])
     to_rank = [c for c in to_rank if c not in exclude_cols]
     other_cols = [c for c in dat.columns if c not in to_rank]
-    dat = pd.concat([dat[other_cols], dat.groupby(group).apply(lambda g: g[to_rank].rank())], axis=1)
+    dat = pd.concat(
+        [dat[other_cols], dat.groupby(group).apply(lambda g: g[to_rank].rank())], axis=1
+    )
     return dat[original_col_order]
 
 
@@ -396,7 +439,7 @@ def nearestPSD(A, nit=100):
         return Q * xdiag * Q.T
 
     def _getPs(A, W=None):
-        W05 = np.matrix(W**.5)
+        W05 = np.matrix(W ** 0.5)
         return W05.I * _getAplus(W05 * A * W05) * W05.I
 
     def _getPu(A, W=None):
@@ -421,25 +464,25 @@ def nearestPSD(A, nit=100):
 
 
 def upper(mat):
-    '''Return upper triangle of matrix'''
+    """Return upper triangle of matrix"""
     idx = np.triu_indices_from(mat, k=1)
     return mat[idx]
 
 
 def _return_t(model):
-    '''Return t or z stat from R model summary.'''
+    """Return t or z stat from R model summary."""
     summary = base.summary(model)
     unsum = base.unclass(summary)
-    return pandas2ri.ri2py(unsum.rx2('coefficients'))[:, -1]
+    return pandas2ri.ri2py(unsum.rx2("coefficients"))[:, -1]
 
 
 def _get_params(model):
-    '''Get number of params in a model.'''
+    """Get number of params in a model."""
     return model.coefs.shape[0]
 
 
 def _lrt(tup):
-    '''Likelihood ratio test between 2 models.'''
+    """Likelihood ratio test between 2 models."""
     d = np.abs(2 * (tup[0].logLike - tup[1].logLike))
     return chi2.sf(d, np.abs(tup[0].coefs.shape[0] - tup[1].coefs.shape[0]))
 
@@ -476,22 +519,29 @@ def lrt(models):
 
     model_pairs = list(product(models, repeat=2))
 
-    model_pairs = model_pairs[1:len(models)]
+    model_pairs = model_pairs[1 : len(models)]
     s = []
     for p in model_pairs:
         s.append(_lrt(p))
     out = pd.DataFrame()
     for i, m in enumerate(models):
         pval = s[i - 1] if i > 0 else np.nan
-        out = out.append(pd.DataFrame({
-            'model': m.formula,
-            'DF': m.coefs.loc['Intercept', 'DF'],
-            'AIC': m.AIC,
-            'BIC': m.BIC,
-            'log-likelihood': m.logLike,
-            'P-val': pval}, index=[0]), ignore_index=True)
-    out['Sig'] = out['P-val'].apply(lambda x: _sig_stars(x))
-    out = out[['model', 'log-likelihood', 'AIC', 'BIC', 'DF', 'P-val', 'Sig']]
+        out = out.append(
+            pd.DataFrame(
+                {
+                    "model": m.formula,
+                    "DF": m.coefs.loc["Intercept", "DF"],
+                    "AIC": m.AIC,
+                    "BIC": m.BIC,
+                    "log-likelihood": m.logLike,
+                    "P-val": pval,
+                },
+                index=[0],
+            ),
+            ignore_index=True,
+        )
+    out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
+    out = out[["model", "log-likelihood", "AIC", "BIC", "DF", "P-val", "Sig"]]
     return out
 
 
@@ -506,7 +556,7 @@ def con2R(arr):
         out (np.ndarray): 2d contrast matrix as expected by R's contrasts() function
     """
 
-    intercept = np.repeat(1. / arr.shape[1], arr.shape[1])
+    intercept = np.repeat(1.0 / arr.shape[1], arr.shape[1])
     mat = np.vstack([intercept, arr])
     inv = np.linalg.inv(mat)[:, 1:]
     return inv
@@ -566,6 +616,6 @@ def rsquared_adj(r, nobs, df_res, has_constant=True):
     """
 
     if has_constant:
-        return 1. - (nobs - 1) / df_res * (1. - r)
+        return 1.0 - (nobs - 1) / df_res * (1.0 - r)
     else:
-        return 1. - nobs / df_res * (1. - r)
+        return 1.0 - nobs / df_res * (1.0 - r)

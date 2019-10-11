@@ -2,7 +2,13 @@ from __future__ import division
 
 """User-facing statistics functions and tests."""
 
-__all__ = ["discrete_inverse_logit", "cohens_d", "perm_test", "tost_equivalence", "welch_dof"]
+__all__ = [
+    "discrete_inverse_logit",
+    "cohens_d",
+    "perm_test",
+    "tost_equivalence",
+    "welch_dof",
+]
 
 __author__ = ["Eshin Jolly"]
 __license__ = ["MIT"]
@@ -18,7 +24,7 @@ from joblib import Parallel, delayed
 MAX_INT = np.iinfo(np.int32).max
 
 
-def vif(df, has_intercept=True, exclude_intercept=True, tol=5., check_only=False):
+def vif(df, has_intercept=True, exclude_intercept=True, tol=5.0, check_only=False):
     """
     Compute variance inflation factor amongst columns of a dataframe to be used as a design matrix. Uses the same method as Matlab and R (diagonal elements) of the inverted correlation matrix. Prints a warning if any vifs are >= to tol. If check_only is true it will only return a 1 if any vifs are higher than tol.
 
@@ -37,7 +43,9 @@ def vif(df, has_intercept=True, exclude_intercept=True, tol=5., check_only=False
         raise TypeError("input needs to be a pandas dataframe")
     if has_intercept:
         if df.iloc[:, 0].sum() != df.shape[0]:
-            raise ValueError("has_intercept is true, but first column does not appear to be a constant")
+            raise ValueError(
+                "has_intercept is true, but first column does not appear to be a constant"
+            )
         if exclude_intercept:
             corr_mat = df.iloc[:, 1:].corr()
             keys = np.array(df.iloc[:, 1:].columns)
@@ -58,7 +66,7 @@ def vif(df, has_intercept=True, exclude_intercept=True, tol=5., check_only=False
             return high_vifs, dict(zip(keys, vifs))
     except np.linalg.LinAlgError:
         print("ERROR: Cannot compute vifs! Design Matrix is strictly singular.")
-    
+
 
 def discrete_inverse_logit(arr):
     """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes"""
@@ -415,7 +423,7 @@ def _perm_test(x, y, stat, equal_var, random_state):
             x = x * random_state.choice([1, -1], len(x))
         else:
             shuffled_combined = random_state.permutation(np.hstack([x, y]))
-            x, y = shuffled_combined[:x.size], shuffled_combined[x.size:]
+            x, y = shuffled_combined[: x.size], shuffled_combined[x.size :]
     elif (stat == "tstat-paired") or (y is None):
         x = x * random_state.choice([1, -1], len(x))
 
@@ -446,7 +454,7 @@ def welch_dof(x, y):
     if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
 
         x_numerator, x_denominator = _welch_ingredients(x)
-        y_numerator, y_denominator = _welch_ingredients(y) 
+        y_numerator, y_denominator = _welch_ingredients(y)
 
         return np.power(x_numerator + y_numerator, 2) / (x_denominator + y_denominator)
     else:
@@ -461,3 +469,4 @@ def _welch_ingredients(x):
     numerator = x.var(ddof=1) / x.size
     denominator = np.power(x.var(ddof=1) / x.size, 2) / (x.size - 1)
     return [numerator, denominator]
+

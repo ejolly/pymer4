@@ -2,7 +2,6 @@ from __future__ import division
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
-import rpy2
 from copy import copy
 import pandas as pd
 import numpy as np
@@ -148,7 +147,7 @@ class Lmer(object):
         for k in factor_dict.keys():
             df[k] = df[k].astype(str)
 
-        #r_df = pandas2ri.py2ri(df)
+        # r_df = pandas2ri.py2ri(df)
         r_df = df
         for k, v in factor_dict.items():
             if isinstance(v, list):
@@ -235,7 +234,7 @@ class Lmer(object):
     def _get_ngrps(self):
         """Get the groups information from the model as a dictionary
         """
-        rstring="function(model){data.frame(unclass(summary(model))$ngrps)}"
+        rstring = "function(model){data.frame(unclass(summary(model))$ngrps)}"
         get_ngrps = robjects.r(rstring)
         res = get_ngrps(self.model_obj)
         if len(res.columns) != 1:
@@ -256,7 +255,7 @@ class Lmer(object):
         rank_group="",
         rank_exclude_cols=[],
         no_warnings=False,
-        control=''
+        control="",
     ):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
@@ -339,9 +338,8 @@ class Lmer(object):
                     + " confidence intervals...\n"
                 )
 
-
-            lmer = importr('lmerTest')
-            lmc = robjects.r(f'lmerControl({control})')
+            lmer = importr("lmerTest")
+            lmc = robjects.r(f"lmerControl({control})")
             self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML, control=lmc)
         else:
             if verbose:
@@ -357,9 +355,10 @@ class Lmer(object):
                 _fam = "Gamma"
             else:
                 _fam = self.family
-            lmc = robjects.r(f'glmerControl({control})')
+            lmc = robjects.r(f"glmerControl({control})")
             self.model_obj = lmer.glmer(
-                self.formula, data=dat, family=_fam, REML=REML, control=lmc)
+                self.formula, data=dat, family=_fam, REML=REML, control=lmc
+            )
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
@@ -374,7 +373,9 @@ class Lmer(object):
         try:
             self._get_ngrps()
         except AttributeError:
-            raise Exception("You appear to have an old version of rpy2, upgrade to >3.0")
+            raise Exception(
+                "You appear to have an old version of rpy2, upgrade to >3.0"
+            )
 
         self.AIC = unsum.rx2("AICtab")[0]
         self.logLike = unsum.rx2("logLik")[0]
@@ -577,9 +578,9 @@ class Lmer(object):
                 df = df.rename(columns={"P-val": "Perm-P-val"})
 
         if "P-val" in df.columns:
-            df.loc[:,"Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:, "Sig"] = df["P-val"].apply(lambda x: _sig_stars(x))
         elif "Perm-P-val" in df.columns:
-            df.loc[:,"Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
+            df.loc[:, "Sig"] = df["Perm-P-val"].apply(lambda x: _sig_stars(x))
 
         if (conf_int == "boot") and (permute is None):
             # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
@@ -665,7 +666,7 @@ class Lmer(object):
         if len(ranefs) > 1:
             self.ranef = [r for r in ranefs]
         else:
-            self.ranef = ranefs[0]            
+            self.ranef = ranefs[0]
 
         # Save the design matrix
         # Make sure column names match population coefficients
@@ -682,11 +683,12 @@ class Lmer(object):
             out
             }
         """
-        resid_func = robjects.r(rstring)   
         try:
             self.data["residuals"] = copy(self.resid)
-        except ValueError as e:
-            print("**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n")
+        except ValueError as e:  # NOQA
+            print(
+                "**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n"
+            )
 
         # Model fits
         rstring = """
@@ -699,8 +701,10 @@ class Lmer(object):
         self.fits = fit_func(self.model_obj)
         try:
             self.data["fits"] = copy(self.fits)
-        except ValueError as e:
-            print("**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n")
+        except ValueError as e:  # NOQA
+            print(
+                "**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n"
+            )
 
         if summarize:
             return self.summary()
@@ -1044,8 +1048,8 @@ class Lmer(object):
         intercept=True,
         ranef_alpha=0.5,
         coef_fmt="o",
-        orient='v',
-        **kwargs
+        orient="v",
+        **kwargs,
     ):
         """
         Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). By default display the 95% confidence intervals computed during fitting.
@@ -1064,7 +1068,7 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
-        if orient not in ['h', 'v']:
+        if orient not in ["h", "v"]:
             raise ValueError("orientation must be 'h' or 'v'")
 
         if isinstance(self.fixef, list):
@@ -1099,27 +1103,31 @@ class Lmer(object):
         else:
             alpha_plot = 0
 
-        if orient == 'v':
-            x_strip = 'value'
-            x_err = m_fixef['Estimate']
-            y_strip = 'variable'
+        if orient == "v":
+            x_strip = "value"
+            x_err = m_fixef["Estimate"]
+            y_strip = "variable"
             y_err = range(m_fixef.shape[0])
             xerr = [col_lb, col_ub]
             yerr = None
-            ax.vlines(x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.vlines(
+                x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 xlim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
                 xlim = axlim
             ylim = None
         else:
-            y_strip = 'value'
-            y_err = m_fixef['Estimate']
-            x_strip = 'variable'
+            y_strip = "value"
+            y_err = m_fixef["Estimate"]
+            x_strip = "variable"
             x_err = range(m_fixef.shape[0])
             yerr = [col_lb, col_ub]
             xerr = None
-            ax.hlines(y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.hlines(
+                y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 ylim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
@@ -1127,13 +1135,7 @@ class Lmer(object):
             xlim = None
 
         sns.stripplot(
-            x=x_strip,
-            y=y_strip,
-            data=m,
-            ax=ax,
-            size=6,
-            alpha=alpha_plot,
-            color="grey",
+            x=x_strip, y=y_strip, data=m, ax=ax, size=6, alpha=alpha_plot, color="grey"
         )
 
         ax.errorbar(
@@ -1148,7 +1150,7 @@ class Lmer(object):
             ms=12,
             zorder=9999999999,
         )
-       
+
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
         return ax
@@ -1619,12 +1621,14 @@ class Lm(object):
         self.data["residuals"] = res
 
         # Fit statistics
-        if 'Intercept' in self.design_matrix.columns:
+        if "Intercept" in self.design_matrix.columns:
             center_tss = True
         else:
             center_tss = False
         self.rsquared = rsquared(y.squeeze(), res, center_tss)
-        self.rsquared_adj = rsquared_adj(self.rsquared, len(res), len(res) - x.shape[1], center_tss)
+        self.rsquared_adj = rsquared_adj(
+            self.rsquared, len(res), len(res) - x.shape[1], center_tss
+        )
         half_obs = len(res) / 2.0
         ssr = np.dot(res, res.T)
         self.logLike = (-np.log(ssr) * half_obs) - (
@@ -1888,7 +1892,7 @@ class Lm2(object):
             conf_int + " (" + str(n_boot) + ")" if conf_int == "boot" else conf_int
         )
         if isinstance(to_corrs, str):
-            if to_corrs not in ['semi', 'partial']:
+            if to_corrs not in ["semi", "partial"]:
                 raise ValueError("to_corrs must be 'semi' or 'partial'")
 
         if (conf_int == "boot") and (permute is None):
@@ -1983,7 +1987,7 @@ class Lm2(object):
                 intercept_pd[c] = np.nan
             intercept_pd = pd.DataFrame(intercept_pd, index=[0])
             results = pd.concat([intercept_pd, results], ignore_index=True)
-        results.index = x.columns 
+        results.index = x.columns
         self.coefs = results
         if to_corrs:
             self.fixef = pd.DataFrame(betas, columns=ivs)
@@ -2081,8 +2085,8 @@ class Lm2(object):
         axlim=None,
         ranef_alpha=0.5,
         coef_fmt="o",
-        orient='v',
-        **kwargs
+        orient="v",
+        **kwargs,
     ):
         """
         Create a forestplot overlaying estimated coefficients with first-level effects. By default display the 95% confidence intervals computed during fitting.
@@ -2100,7 +2104,7 @@ class Lm2(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
-        if orient not in ['h', 'v']:
+        if orient not in ["h", "v"]:
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
@@ -2122,27 +2126,31 @@ class Lm2(object):
         else:
             alpha_plot = 0
 
-        if orient == 'v':
-            x_strip = 'value'
-            x_err = m_fixef['Estimate']
-            y_strip = 'variable'
+        if orient == "v":
+            x_strip = "value"
+            x_err = m_fixef["Estimate"]
+            y_strip = "variable"
             y_err = range(m_fixef.shape[0])
             xerr = [col_lb, col_ub]
             yerr = None
-            ax.vlines(x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.vlines(
+                x=0, ymin=-1, ymax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 xlim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
                 xlim = axlim
             ylim = None
         else:
-            y_strip = 'value'
-            y_err = m_fixef['Estimate']
-            x_strip = 'variable'
+            y_strip = "value"
+            y_err = m_fixef["Estimate"]
+            x_strip = "variable"
             x_err = range(m_fixef.shape[0])
             yerr = [col_lb, col_ub]
             xerr = None
-            ax.hlines(y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey")
+            ax.hlines(
+                y=0, xmin=-1, xmax=self.coefs.shape[0], linestyles="--", color="grey"
+            )
             if not axlim:
                 ylim = (m["value"].min() - 1, m["value"].max() + 1)
             else:
@@ -2150,13 +2158,7 @@ class Lm2(object):
             xlim = None
 
         sns.stripplot(
-            x=x_strip,
-            y=y_strip,
-            data=m,
-            ax=ax,
-            size=6,
-            alpha=alpha_plot,
-            color="grey"
+            x=x_strip, y=y_strip, data=m, ax=ax, size=6, alpha=alpha_plot, color="grey"
         )
 
         ax.errorbar(
@@ -2171,8 +2173,9 @@ class Lm2(object):
             ms=12,
             zorder=9999999999,
         )
-       
+
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
         plt.tight_layout()
         return ax
+

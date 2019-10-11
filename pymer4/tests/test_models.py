@@ -102,6 +102,7 @@ def test_gaussian_lmm():
 
     model.simulate(2, use_rfx=True)
 
+
 def test_post_hoc():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
@@ -207,6 +208,7 @@ def test_lmer_opt_passing():
     model.fit(summarize=False, control=opt_opts)
     assert len(model.warnings) >= 1
     
+
 def test_glmer_opt_passing():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
