@@ -9,6 +9,7 @@ from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.robjects import pandas2ri
+from rpy2 import rinterface_lib
 import warnings
 import numpy as np
 import pandas as pd
@@ -17,6 +18,10 @@ import seaborn as sns
 from ..utils import _sig_stars, _perm_find, _return_t, to_ranks_by_group
 
 pandas2ri.activate()
+
+# Make a reference to the default R console writer from rpy2
+consolewrite_warning_backup = rinterface_lib.callbacks.consolewrite_warnerror
+consolewrite_print_backup = rinterface_lib.callbacks.consolewrite_print
 
 
 class Lmer(object):
@@ -225,6 +230,20 @@ class Lmer(object):
             raise Exception("Appears there's been another rpy2 or lme4 api change.")
         self.grps = res.to_dict()[res.columns[0]]
 
+    def _set_R_stdout(self, verbose):
+        """Adjust whether R prints to the console (often as a duplicate) based on the verbose flag of a method call."""
+
+        if verbose:
+            # use the default logging in R
+            rinterface_lib.callbacks.consolewrite_warnerror = consolewrite_warning_backup
+        else:
+            # Create a list buffer to catch messages and discard them
+            buf = []
+            
+            def _f(x):
+                buf.append(x)
+            rinterface_lib.callbacks.consolewrite_warnerror = _f
+    
     def fit(
         self,
         conf_int="Wald",
@@ -297,6 +316,8 @@ class Lmer(object):
         self._permute = permute
         self._conf_int = conf_int
         self._REML = REML
+        self._set_R_stdout(verbose)
+
         if old_optimizer:
             if control:
                 raise ValueError(
@@ -704,17 +725,20 @@ class Lmer(object):
         if summarize:
             return self.summary()
 
-    def simulate(self, num_datasets, use_rfx=True):
+    def simulate(self, num_datasets, use_rfx=True, verbose=False):
         """
         Simulate new responses based upon estimates from a fitted model. By default group/cluster means for simulated data will match those of the original data. Unlike predict, this is a non-deterministic operation because lmer will sample random-efects values for all groups/cluster and then sample data points from their respective conditional distributions.
 
         Args:
             num_datasets (int): number of simulated datasets to generate. Each simulation always generates a dataset that matches the size of the original data
             use_rfx (bool): match group/cluster means in simulated data?; Default True
+            verbose (bool): whether to print R messages to console
 
         Returns:
             ndarray: simulated data values
         """
+
+        self._set_R_stdout(verbose)
 
         if isinstance(num_datasets, float):
             num_datasets = int(num_datasets)
@@ -742,7 +766,7 @@ class Lmer(object):
         sims = simulate_func(self.model_obj)
         return sims
 
-    def predict(self, data, use_rfx=False, pred_type="response"):
+    def predict(self, data, use_rfx=False, pred_type="response", verbose=False):
         """
         Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the group identifier that were used to fit the model random effects terms. Using random effects to make predictions only makes sense if predictions are being made about the same groups/clusters.
 
@@ -750,11 +774,13 @@ class Lmer(object):
             data (pandas.core.frame.DataFrame): input data to make predictions on
             use_rfx (bool): whether to condition on random effects when making predictions
             pred_type (str): whether the prediction should be on the 'response' scale (default); or on the 'link' scale of the predictors passed through the link function (e.g. log-odds scale in a logit model instead of probability values)
+            verbose (bool): whether to print R messages to console
 
         Returns:
             ndarray: prediction values
 
         """
+        self._set_R_stdout(verbose)
         required_cols = self.design_matrix.columns[1:]
         if not all([col in data.columns for col in required_cols]):
             raise ValueError("Column names do not match all fixed effects model terms!")
@@ -813,7 +839,7 @@ class Lmer(object):
         return self.coefs.round(3)
 
     def post_hoc(
-        self, marginal_vars, grouping_vars=None, p_adjust="tukey", summarize=True
+        self, marginal_vars, grouping_vars=None, p_adjust="tukey", summarize=True, verbose=False
     ):
         """
         Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the emmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/emmeans/emmeans.pdf
@@ -823,6 +849,7 @@ class Lmer(object):
             grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
             p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
             summarize (bool): output effects and contrasts or don't (always stored in model object as model.marginal_estimates and model.marginal_contrasts); default True
+            verbose (bool): whether to print R messages to the console
 
         Returns:
             marginal_estimates (pd.Dataframe): unique factor level effects (e.g. means/coefs)
@@ -843,6 +870,8 @@ class Lmer(object):
             >>> model.post_hoc(marginal_vars=['A','B'])
 
         """
+
+        self._set_R_stdout(verbose)
 
         if not marginal_vars:
             raise ValueError("Must provide marginal_vars")
