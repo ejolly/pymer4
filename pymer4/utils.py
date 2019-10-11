@@ -28,7 +28,6 @@ from patsy import dmatrices
 from scipy.stats import chi2
 from itertools import product
 from rpy2.robjects.packages import importr
-from rpy2.robjects import pandas2ri
 from joblib import Parallel, delayed
 
 base = importr("base")
@@ -473,7 +472,7 @@ def _return_t(model):
     """Return t or z stat from R model summary."""
     summary = base.summary(model)
     unsum = base.unclass(summary)
-    return pandas2ri.ri2py(unsum.rx2("coefficients"))[:, -1]
+    return unsum.rx2("coefficients")[:, -1]
 
 
 def _get_params(model):
