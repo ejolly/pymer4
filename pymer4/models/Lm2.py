@@ -95,7 +95,7 @@ class Lm2(object):
         self,
         robust=False,
         conf_int="standard",
-        permute=None,
+        permute=False,
         perm_on="t-stat",
         rank=False,
         summarize=True,
@@ -172,6 +172,8 @@ class Lm2(object):
                 if perm_on not in ["mean", "t-stat"]:
                     raise ValueError("perm_on must be 't-stat' or 'mean'")
                 self.sig_type = "permutation" + " (" + str(permute) + ")"
+                if permute is True:
+                    raise TypeError("permute should 'False' or the number of permutations to perform")
             else:
                 self.sig_type = "parametric"
 

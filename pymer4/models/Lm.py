@@ -90,7 +90,7 @@ class Lm(object):
         self,
         robust=False,
         conf_int="standard",
-        permute=None,
+        permute=False,
         rank=False,
         summarize=True,
         verbose=False,
@@ -160,6 +160,8 @@ class Lm(object):
             w = "Permutation testing < 500 permutations is not recommended"
             warnings.warn(w)
             self.warnings.append(w)
+        elif permute is True:
+            raise TypeError("permute should 'False' or the number of permutations to perform")
         if robust:
             if isinstance(robust, bool):
                 robust = "hc1"

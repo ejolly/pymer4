@@ -249,7 +249,7 @@ class Lmer(object):
         conf_int="Wald",
         n_boot=500,
         factors=None,
-        permute=None,
+        permute=False,
         ordered=False,
         summarize=True,
         verbose=False,
@@ -317,6 +317,8 @@ class Lmer(object):
         self._conf_int = conf_int
         self._REML = REML
         self._set_R_stdout(verbose)
+        if permute is True:
+            raise TypeError("permute should 'False' or the number of permutations to perform")
 
         if old_optimizer:
             if control:
@@ -607,11 +609,11 @@ class Lmer(object):
                 lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "", axis=1
             )
 
-        if permute:
-            # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
-            cols = list(df.columns)
-            col_order = cols[:-4] + ["Num_perm"] + cols[-4:-2] + [cols[-1]]
-            df = df[col_order]
+        # if permute:
+        #     # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
+        #     cols = list(df.columns)
+        #     col_order = cols[:-4] + ["Num_perm"] + cols[-4:-2] + [cols[-1]]
+        #     df = df[col_order]
         self.coefs = df
         self.fitted = True
 
@@ -655,7 +657,6 @@ class Lmer(object):
                     ]
                 )
             self.fixef = f_corrected_order
-            # self.fixef = [pandas2ri.ri2py(f) for f in fixefs]
         else:
             self.fixef = fixefs[0]
             self.fixef = self.fixef[
