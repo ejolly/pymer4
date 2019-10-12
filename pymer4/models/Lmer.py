@@ -231,7 +231,7 @@ class Lmer(object):
         self.grps = res.to_dict()[res.columns[0]]
 
     def _set_R_stdout(self, verbose):
-        """Adjust whether R prints to the console (often as a duplicate) based on the verbose flag of a method call."""
+        """Adjust whether R prints to the console (often as a duplicate) based on the verbose flag of a method call. Reference to rpy2 interface here: https://bit.ly/2MsrufO"""
 
         if verbose:
             # use the default logging in R
