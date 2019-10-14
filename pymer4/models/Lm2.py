@@ -25,11 +25,11 @@ from ..utils import (
 class Lm2(object):
 
     """
-    Model class to perform two-stage OLS regression. Practically, a separate regression model is fit to each group in the data and then the coefficients from these regressions are entered into a second-level intercept only model (i.e. 1-sample t-test per coefficient). The results from this second level regression are reported. This is an alternative to using Lmer, as it implicitly allows intercept and slopes to vary by group, however with no prior/smoothing/regularization on the random effects. See https://bit.ly/2SwHhQU and Gelman (2005). This approach maybe less preferable to Lmer if the number of observations per group are few, but the number of groups is large, in which case the 1st-level estimates are much noisier and are not smoothed/regularized as in Lmer. It maybe preferable when a "maximal" rfx Lmer model is not estimable. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specific columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
+    Model class to perform two-stage OLS regression. Practically, this class fits a separate Lm() model to each cluster/group in the data and performs inference on the coefficients of each model (i.e. 1-sample t-test per coefficient). The results from this second level regression are reported. This is an alternative to using Lmer, as it implicitly allows intercept and slopes to vary by group, however with no prior/smoothing/regularization on the random effects. See https://bit.ly/2SwHhQU and Gelman (2005). This approach maybe less preferable to Lmer if the number of observations per group are few, but the number of groups is large, in which case the 1st-level estimates are much noisier and are not smoothed/regularized as in Lmer. It maybe preferable when a "maximal" rfx Lmer model is not estimable. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specific columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
 
     Args:
         formula (str): Complete lm-style model formula
-        data (pandas.core.frame.DataFrame): input data
+        data (pd.DataFrame): input data
         family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)
         group (list/string): the grouping variable to use to run the 1st-level regression; if a list is provided will run multiple levels feeding the coefficients from the previous level into the subsequent level
 
@@ -41,13 +41,14 @@ class Lm2(object):
         AIC (float): model akaike information criterion
         logLike (float): model Log-likelihood
         family (string): model family
-        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
-        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
-        coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
+        warnings (list): warnings output from Python
+        fixef (pd.DataFrame): cluster-level parameters
+        coefs (pd.DataFrame): model summary table of population parameters
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
-        model_obj(lm model): rpy2 lmer model object
-        factors (dict): factors used to fit the model if any
+        se_type (string): how standard errors are computed
+        sig_type (string): how inference is performed
+        
 
     """
 
@@ -73,7 +74,6 @@ class Lm2(object):
         self.fixef = None
         self.coefs = None
         self.model_obj = None
-        self.factors = None
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
@@ -108,28 +108,15 @@ class Lm2(object):
         cluster=None,
     ):
         """
-        Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='mean') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
+        Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='coef') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
 
-        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata's robust routine.  
-        Robust estimators include:
-
-        - 'hc0': Huber (1980) original sandwich estimator
-        
-        - 'hc1': Hinkley (1977) DOF adjustment to 'hc0' to account for small sample sizes (default)
-
-        - 'hc2': different kind of small-sample adjustment of 'hc0' by leverage values in hat matrix
-
-        - 'hc3': MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc0, Long & Ervin (2000)
-
-        - 'hac': Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.
-
-        - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
+        Heteroscedasticity robust standard errors can also be computed, but these are applied at the second-level, *not* at the first level. See the Lm() documentatation for more information about robust standard errors.
 
         Args:
             robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use ('hc0','hc3','hac','cluster'). If robust = True, default robust estimator is 'hc0'; default False
             conf_int (str): whether confidence intervals should be computed through bootstrap ('boot') or assuming a t-distribution ('standard'); default 'standard'
             permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators
-            perm_on (str): permute based on a null distribution of the 'mean' of first-level estimates or the 't-stat' of first-level estimates; default 't-stat'
+            perm_on (str): permute based on a null distribution of the 'coef' of first-level estimates or the 't-stat' of first-level estimates; default 't-stat'
             rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False
             to_corrs (bool/string): for each first level model estimate a semi-partial or partial correlations instead of betas and perform inference over these partial correlation coefficients. *note* this is different than Lm(); default False
             ztrans_corrs (bool): whether to fisher-z transform (arcsin) first-level correlations before running second-level model. Ignored if to_corrs is False; default True
@@ -169,8 +156,8 @@ class Lm2(object):
             self.sig_type = "bootstrapped"
         else:
             if permute:
-                if perm_on not in ["mean", "t-stat"]:
-                    raise ValueError("perm_on must be 't-stat' or 'mean'")
+                if perm_on not in ["coef", "t-stat"]:
+                    raise ValueError("perm_on must be 't-stat' or 'coef'")
                 self.sig_type = "permutation" + " (" + str(permute) + ")"
                 if permute is True:
                     raise TypeError("permute should 'False' or the number of permutations to perform")
@@ -236,16 +223,20 @@ class Lm2(object):
             results.append(lm.coefs)
             if permute:
                 # sign-flip permutation test for each beta instead to replace p-values
+                if perm_on == 'coef':
+                    return_stat = 'mean'
+                else:
+                    return_stat = 't-stat'
                 seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
                 par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
                 perm_est = par_for(
                     delayed(_permute_sign)(
-                        data=betas[:, i], seed=seeds[j], return_stat=perm_on
+                        data=betas[:, i], seed=seeds[j], return_stat=return_stat
                     )
                     for j in range(permute)
                 )
                 perm_est = np.array(perm_est)
-                if perm_on == "mean":
+                if perm_on == "coef":
                     perm_ps.append(_perm_find(perm_est, betas[:, i].mean()))
                 else:
                     perm_ps.append(_perm_find(perm_est, lm.coefs["T-stat"].values))
@@ -305,12 +296,12 @@ class Lm2(object):
         # self.data['residuals'] = res
 
         # Fit statistics
-        self.rsquared = np.nan
-        self.rsquared = np.nan
-        self.rsquared_adj = np.nan
-        self.logLike = np.nan
-        self.AIC = np.nan
-        self.BIC = np.nan
+        # self.rsquared = np.nan
+        # self.rsquared = np.nan
+        # self.rsquared_adj = np.nan
+        # self.logLike = np.nan
+        # self.AIC = np.nan
+        # self.BIC = np.nan
         self.iscorrs = to_corrs
 
         if summarize:
@@ -319,6 +310,9 @@ class Lm2(object):
     def summary(self):
         """
         Summarize the output of a fitted model.
+
+        Returns:
+            pd.DataFrame: R/statsmodels style summary
 
         """
 
@@ -336,10 +330,6 @@ class Lm2(object):
             "Number of observations: %s\t Groups: %s\n"
             % (self.data.shape[0], {str(self.group): self.data[self.group].nunique()})
         )
-        # print("R^2: %.3f\t R^2_adj: %.3f\n" %
-        #       (self.data.shape[0], self.rsquared, self.rsquared_adj))
-        # print("Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n" %
-        #       (self.logLike, self.AIC, self.BIC))
         print("Fixed effects:\n")
         if self.iscorrs:
             if self.iscorrs == "semi":
@@ -355,6 +345,7 @@ class Lm2(object):
         error_bars="ci",
         ranef=True,
         axlim=None,
+        plot_intercept=True,
         ranef_alpha=0.5,
         coef_fmt="o",
         orient="v",
@@ -369,9 +360,10 @@ class Lm2(object):
             axlim (tuple): lower and upper limit of plot; default min and max of BLUPs
             ranef_alpha (float): opacity of random effect points; default .5
             coef_fmt (str): matplotlib marker style for population coefficients
+            ignore_intercept (bool): whether to plot intercept estimates; default True
 
         Returns:
-            matplotlib axis handle
+            plt.axis: matplotlib axis handle
         """
 
         if not self.fitted:
@@ -380,11 +372,15 @@ class Lm2(object):
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
-        m_fixef = self.coefs.drop("Intercept", axis=0)
+        m_fixef = self.coefs
+
+        if not plot_intercept:
+            m_ranef = m_ranef.drop("Intercept", axis=1)
+            m_fixef = m_fixef.drop("Intercept", axis=0)
 
         if error_bars == "ci":
-            col_lb = m_fixef["Estimate"] - m_fixef["2.5_ci"]
-            col_ub = m_fixef["97.5_ci"] - m_fixef["Estimate"]
+            col_lb = (m_fixef["Estimate"] - m_fixef["2.5_ci"]).values
+            col_ub = (m_fixef["97.5_ci"] - m_fixef["Estimate"]).values
         elif error_bars == "se":
             col_lb, col_ub = m_fixef["SE"], m_fixef["SE"]
 
@@ -448,5 +444,4 @@ class Lm2(object):
 
         ax.set(ylabel="", xlabel="Estimate", xlim=xlim, ylim=ylim)
         sns.despine(top=True, right=True, left=True)
-        plt.tight_layout()
         return ax

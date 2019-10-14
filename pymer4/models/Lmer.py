@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from ..utils import _sig_stars, _perm_find, _return_t, to_ranks_by_group
+from ..utils import _sig_stars, _perm_find, _return_t, _to_ranks_by_group
 
 pandas2ri.activate()
 
@@ -37,17 +37,21 @@ class Lmer(object):
     Attributes:
         fitted (bool): whether model has been fit
         formula (str): model formula
-        data (pandas.core.frame.DataFrame): model copy of input data
+        data (pd.DataFrame): model copy of input data
         grps (dict): groups and number of observations per groups recognized by lmer
+        design_matrix (pd.DataFrame): model design matrix determined by lmer
         AIC (float): model akaike information criterion
         logLike (float): model Log-likelihood
         family (string): model family
-        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
-        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        warnings (list): warnings output from R or Python
+        ranef (pd.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
+        fixef (pd.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
         coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
+        ranef_var (pd.DataFrame): random effects variances
+        ranef_corr(pd.DataFrame): random effects correlations
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
-        model_obj(lmer model): rpy2 lmer model object
+        model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
 
     """
@@ -175,7 +179,7 @@ class Lmer(object):
             force_orthogonal (bool): whether factors in the model should be recoded using polynomial contrasts to ensure valid type-3 SS calculations. If set to True, previous factor specifications will be saved in `model.factors_prev_`; default False
 
         Returns:
-            anova_results (pd.DataFrame): Type 3 ANOVA results
+            pd.DataFrame: Type 3 ANOVA results
         """
 
         if self.factors:
@@ -277,11 +281,11 @@ class Lmer(object):
             rank_group (str): column name to group data on prior to rank conversion
             rank_exclude_cols (list/str): columns in model formula to not apply rank conversion to
             no_warnings (bool): turn off auto-printing warnings messages; warnings are always stored in the .warnings attribute; default False
-            control (str): string containing options to be passed to (g)lmer control. see https://www.rdocumentation.org/packages/lme4/versions/1.1-21/topics/lmerControl
+            control (str): string containing options to be passed to (g)lmer control. See https://bit.ly/2OQONTH for options
             old_optimizer (bool): use the old bobyqa optimizer that was the default in lmer4 <= 1.1_20, i.e. prior to 02/04/2019. This is not compatible with the control setting as it's meant to be a quick shorthand (e.g. to reproduce previous model results). However, the same setting can be manually requested using the control option if preferred. (For optimizer change discussions see: https://bit.ly/2MrP9Nq and https://bit.ly/2Vx5jte )
 
         Returns:
-            DataFrame: R style summary() table
+            pd.DataFrame: R/statsmodels style summary
 
         Examples:
             The following examples demonstrate how to treat variables as categorical factors.
@@ -335,7 +339,7 @@ class Lmer(object):
         if rank:
             if not rank_group:
                 raise ValueError("rank_group must be provided if rank is True")
-            dat = to_ranks_by_group(
+            dat = _to_ranks_by_group(
                 self.data, rank_group, self.formula, rank_exclude_cols
             )
             if factors and (set(factors.keys()) != set(rank_exclude_cols)):
@@ -732,11 +736,11 @@ class Lmer(object):
 
         Args:
             num_datasets (int): number of simulated datasets to generate. Each simulation always generates a dataset that matches the size of the original data
-            use_rfx (bool): match group/cluster means in simulated data?; Default True
+            use_rfx (bool): wehther to match group/cluster means in simulated data
             verbose (bool): whether to print R messages to console
 
         Returns:
-            ndarray: simulated data values
+            np.ndarray: simulated data values
         """
 
         self._set_R_stdout(verbose)
@@ -778,7 +782,7 @@ class Lmer(object):
             verbose (bool): whether to print R messages to console
 
         Returns:
-            ndarray: prediction values
+            np.ndarray: prediction values
 
         """
         self._set_R_stdout(verbose)
@@ -818,6 +822,9 @@ class Lmer(object):
         """
         Summarize the output of a fitted model.
 
+        Returns:
+            pd.DataFrame: R/statsmodels style summary
+
         """
 
         if not self.fitted:
@@ -853,8 +860,10 @@ class Lmer(object):
             verbose (bool): whether to print R messages to the console
 
         Returns:
-            marginal_estimates (pd.Dataframe): unique factor level effects (e.g. means/coefs)
-            marginal_contrasts (pd.DataFrame): contrasts between factor levels
+            Multiple: 
+                - **marginal_estimates** (*pd.Dataframe*): unique factor level effects (e.g. means/coefs)  
+
+                - **marginal_contrasts** (*pd.DataFrame*): contrasts between factor levels
 
         Examples:
 
@@ -912,7 +921,7 @@ class Lmer(object):
                     )
                 elif len(cont) == 1:
                     if grouping_vars:
-                        # Lstrends
+                        # Emtrends; there's a bug for trends where options don't get set by default so an empty list is passed to R, see: https://bit.ly/2VJ9QZM
                         cont = cont[0]
                         if len(grouping_vars) > 1:
                             g1 = grouping_vars[0]
@@ -922,7 +931,7 @@ class Lmer(object):
                                 """
                                 function(model){
                                 suppressMessages(library(emmeans))
-                                out <- lstrends(model,pairwise ~ """
+                                out <- emtrends(model,pairwise ~ """
                                 + g1
                                 + """|"""
                                 + _conditional
@@ -930,7 +939,7 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """')
+                                + """',options=list())
                                 out
                                 }"""
                             )
@@ -939,13 +948,13 @@ class Lmer(object):
                                 """
                                 function(model){
                                 suppressMessages(library(emmeans))
-                                out <- lstrends(model,pairwise ~ """
+                                out <- emtrends(model,pairwise ~ """
                                 + grouping_vars[0]
                                 + """,var='"""
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """')
+                                + """',options=list())
                                 out
                                 }"""
                             )
@@ -1002,45 +1011,90 @@ class Lmer(object):
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
         effname = effect_names[-1]
-        sorted = effect_names[:-1] + ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF"]
-        self.marginal_estimates = self.marginal_estimates.rename(
-            columns={
-                effname: "Estimate",
-                "df": "DF",
-                "lower.CL": "2.5_ci",
-                "upper.CL": "97.5_ci",
-            }
-        )[sorted]
+        sortme = effect_names[:-1] + ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF"]
+
+        # In emmeans (compared to lsmeans) the CI column names change too depending on how many factor variabls are in the model
+        if 'asymp.LCL' in self.marginal_estimates.columns:
+            self.marginal_estimates = self.marginal_estimates.rename(
+                columns={
+                    effname: "Estimate",
+                    "df": "DF",
+                    "asymp.LCL": "2.5_ci",
+                    "asymp.UCL": "97.5_ci",
+                }
+            )[sortme]
+        elif 'lower.CL' in self.marginal_estimates.columns:
+            self.marginal_estimates = self.marginal_estimates.rename(
+                columns={
+                    effname: "Estimate",
+                    "df": "DF",
+                    "lower.CL": "2.5_ci",
+                    "upper.CL": "97.5_ci",
+                }
+            )[sortme]
+        else:
+            raise ValueError(f"Cannot figure out what emmeans is naming marginal CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}")
 
         # Marginal Contrasts
-        self.marginal_contrasts = base.summary(res)[1].rename(
-            columns={
-                "t.ratio": "T-stat",
-                "p.value": "P-val",
-                "estimate": "Estimate",
-                "df": "DF",
-                "contrast": "Contrast",
-            }
-        )
+        self.marginal_contrasts = base.summary(res)[1]
+        # Column names also change depending on the family of the model
+        if self.family == 'gaussian':
+            self.marginal_contrasts = self.marginal_contrasts.rename(
+                columns={
+                    "t.ratio": "T-stat",
+                    "p.value": "P-val",
+                    "estimate": "Estimate",
+                    "df": "DF",
+                    "contrast": "Contrast",
+                }
+            )
+            sorted_names = [
+                "Estimate",
+                "2.5_ci",
+                "97.5_ci",
+                "SE",
+                "DF",
+                "T-stat",
+                "P-val",
+            ]
+        else:
+            self.marginal_contrasts = self.marginal_contrasts.rename(
+                columns={
+                    "z.ratio": "Z-stat",
+                    "p.value": "P-val",
+                    "estimate": "Estimate",
+                    "df": "DF",
+                    "contrast": "Contrast",
+                }
+            )
+            sorted_names = [
+                "Estimate",
+                "2.5_ci",
+                "97.5_ci",
+                "SE",
+                "DF",
+                "Z-stat",
+                "P-val",
+            ]
+
         # Need to make another call to emmeans to get confidence intervals on contrasts
         confs = (
             base.unclass(emmeans.confint_emmGrid(res))[1]
             .iloc[:, -2:]
-            .rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         )
+        # Deal with changing column names again
+        if 'asymp.LCL' in confs.columns:
+            confs = confs.rename(columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"})
+        elif 'lower.CL' in confs.columns:
+            confs = confs.rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
+        else:
+            raise ValueError(f"Cannot figure out what emmeans is naming contrast CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}")
+        
         self.marginal_contrasts = pd.concat([self.marginal_contrasts, confs], axis=1)
         # Resort columns
         effect_names = list(self.marginal_contrasts.columns[:-7])
-        sorted = effect_names + [
-            "Estimate",
-            "2.5_ci",
-            "97.5_ci",
-            "SE",
-            "DF",
-            "T-stat",
-            "P-val",
-        ]
-        self.marginal_contrasts = self.marginal_contrasts[sorted]
+        sortme = effect_names + sorted_names
+        self.marginal_contrasts = self.marginal_contrasts[sortme]
         self.marginal_contrasts["Sig"] = self.marginal_contrasts["P-val"].apply(
             _sig_stars
         )
@@ -1069,11 +1123,11 @@ class Lmer(object):
         error_bars="ci",
         ranef=True,
         axlim=None,
-        intercept=True,
+        plot_intercept=True,
         ranef_alpha=0.5,
         coef_fmt="o",
         orient="v",
-        **kwargs,
+        ranef_idx=0
     ):
         """
         Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). By default display the 95% confidence intervals computed during fitting.
@@ -1082,12 +1136,13 @@ class Lmer(object):
             error_bars (str): one of 'ci' or 'se' to change which error bars are plotted; default 'ci'
             ranef (bool): overlay BLUP estimates on figure; default True
             axlim (tuple): lower and upper limit of plot; default min and max of BLUPs
-            intercept (bool): plot the intercept estimate; default True
+            plot_intercept (bool): plot the intercept estimate; default True
             ranef_alpha (float): opacity of random effect points; default .5
             coef_fmt (str): matplotlib marker style for population coefficients
+            ranef_idx (int): if multiple random effects clusters were specified this value indicates which one should be plotted; uses 0-based indexing; default 0 (first)
 
         Returns:
-            matplotlib axis handle
+            plt.axis: matplotlib axis handle
         """
 
         if not self.fitted:
@@ -1096,24 +1151,18 @@ class Lmer(object):
             raise ValueError("orientation must be 'h' or 'v'")
 
         if isinstance(self.fixef, list):
-            ranef_idx = kwargs.pop("ranef_idx", 0)
-            print(
-                "Multiple random effects clusters specified in model. Plotting the {} one. This can be changed by passing 'ranef_idx = number'".format(
-                    ranef_idx + 1
-                )
-            )
             m_ranef = self.fixef[ranef_idx]
         else:
             m_ranef = self.fixef
         m_fixef = self.coefs
 
-        if not intercept:
+        if not plot_intercept:
             m_ranef = m_ranef.drop("(Intercept)", axis=1)
             m_fixef = m_fixef.drop("(Intercept)", axis=0)
 
         if error_bars == "ci":
-            col_lb = m_fixef["Estimate"] - m_fixef["2.5_ci"]
-            col_ub = m_fixef["97.5_ci"] - m_fixef["Estimate"]
+            col_lb = (m_fixef["Estimate"] - m_fixef["2.5_ci"]).values
+            col_ub = (m_fixef["97.5_ci"] - m_fixef["Estimate"]).values
         elif error_bars == "se":
             col_lb, col_ub = m_fixef["SE"], m_fixef["SE"]
 
@@ -1204,7 +1253,7 @@ class Lmer(object):
             ax (matplotlib.axes.Axes): axis handle for an existing plot; if provided will ensure that random parameter plots appear *behind* all other plot objects.
 
         Returns:
-            matplotlib axis handle
+            plt.axis: matplotlib axis handle
 
         """
 

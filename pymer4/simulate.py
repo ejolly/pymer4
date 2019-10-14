@@ -40,10 +40,11 @@ def simulate_lm(
         seed (int): seed for reproducible random number generation
 
     Returns:
+        Multiple:
+        
+            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef    
 
-        data
-        ground-truth coefficient values
-
+            - **coefs** (*np.array*): ground-truth coefficient values
 
     """
 
@@ -129,9 +130,13 @@ def simulate_lmm(
         seed (int): seed for reproducible random number generation
 
     Returns:
-        data
-        group/cluster level coefficients (i.e. BLUPs)
-        population coefficient values
+        Multiple:
+        
+            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef    
+
+            - **blups** (*pd.DataFrame*): ground-truth group/cluster level coefficients, organized as num_grps x num_coef (i.e. BLUPs)
+            
+            - **coefs** (*np.array*): ground-truth population-level coefficients
 
     """
 
@@ -235,7 +240,7 @@ def easy_multivariate_normal(
         nit (int): number of iterations to search for the nearest positive-semi-definite correlation matrix is the requested correlation matrix is not PSD; default 100
 
     Returns:
-        ndarray: correlated data as num_obs x num_features array
+        np.ndarray: 2d numpy array of correlated data organized as num_obs x num_features
     """
 
     if seed is not None:

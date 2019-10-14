@@ -2,7 +2,6 @@ from __future__ import division
 
 __all__ = [
     "get_resource_path",
-    "boot_func",
     "_check_random_state",
     "_sig_stars",
     "_robust_estimator",
@@ -13,9 +12,12 @@ __all__ = [
     "_ols_group",
     "_corr_group",
     "_perm_find",
-    "to_ranks_by_group",
+    "_to_ranks_by_group",
     "isPSD",
     "nearestPSD",
+    "upper",
+    "R2con",
+    "con2R"
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -26,9 +28,7 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrices
 from scipy.stats import chi2
-from itertools import product
 from rpy2.robjects.packages import importr
-from joblib import Parallel, delayed
 
 base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
@@ -39,53 +39,9 @@ def get_resource_path():
     return join(dirname(__file__), "resources") + sep
 
 
-def boot_func(
-    x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jobs=-1, seed=None
-):
-    """
-    Bootstrap an arbitrary function by resampling from x and y independently or jointly.
-
-    Args:
-        x (list-like): list of values for first group
-        y (list-like): list of values for second group; optional
-        function : function that accepts x or y
-        paired (bool): whether to resample x and y jointly or independently
-
-    Result:
-        results (dict): result of func, and 95% confidence bounds of resampling func
-    """
-
-    if not callable(func):
-        raise TypeError("func must be a valid callable function")
-
-    orig_result = func(x, y, **func_args)
-    if n_boot:
-        random_state = _check_random_state(seed)
-        seeds = random_state.randint(MAX_INT, size=n_boot)
-        par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
-        boots = par_for(
-            delayed(_boot_func)(
-                x, y, func, func_args, paired, **func_args, random_state=seeds[i]
-            )
-            for i in range(n_boot)
-        )
-        ci_u = np.percentile(boots, 97.5, axis=0)
-        ci_l = np.percentile(boots, 2.5, axis=0)
-        return orig_result, (ci_l, ci_u)
-    else:
-        return orig_result
-
-
-def _boot_func(x, y, func, func_args, paired, random_state):
-    """For use in parallel boot_func"""
-    random_state = _check_random_state(random_state)
-    if paired:
-        idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
-        x, y = x[idx], y[idx]
-    else:
-        x = random_state.choice(x, size=x.size, replace=True)
-        y = random_state.choice(y, size=y.size, replace=True)
-    return boot_func(x, y, func, func_args, paired=paired, n_boot=0)
+def _mean_diff(x, y):
+    """For use in plotting of tost_equivalence"""
+    return np.mean(x) - np.mean(y)
 
 
 def _check_random_state(seed):
@@ -300,7 +256,7 @@ def _permute_sign(data, seed, return_stat="mean"):
 
     random_state = np.random.RandomState(seed)
     new_dat = data * random_state.choice([1, -1], len(data))
-    if return_stat == "mean":
+    if return_stat == "ceof":
         return np.mean(new_dat)
     elif return_stat == "t-stat":
         return np.mean(new_dat) / (np.std(new_dat, ddof=1) / np.sqrt(len(new_dat)))
@@ -368,9 +324,9 @@ def _corr_group(dat, formula, group_col, group, rank, corr_type):
     return corrs
 
 
-def to_ranks_by_group(dat, group, formula, exclude_cols=[]):
+def _to_ranks_by_group(dat, group, formula, exclude_cols=[]):
     """
-    Covert predictors to ranks separately for each group for use in rank Lmer. Any columns not in the model formula or in exclude_cols will not be converted to ranks.
+    Covert predictors to ranks separately for each group for use in rank Lmer. Any columns not in the model formula or in exclude_cols will not be converted to ranks. Used by models.Lmer
 
     Args:
         dat (pd.DataFrame): dataframe of data
@@ -412,6 +368,12 @@ def _perm_find(arr, x):
 def isPSD(mat, tol=1e-8):
     """
     Check if matrix is positive-semi-definite by virtue of all its eigenvalues being >= 0. The cholesky decomposition does not work for edge cases because np.linalg.cholesky fails on matrices with exactly 0 valued eigenvalues, whereas in Matlab this is not true, so that method appropriate. Ref: https://goo.gl/qKWWzJ
+
+    Args:
+        mat (np.ndarray): 2d numpy array
+
+    Returns:
+        bool: whether matrix is postive-semi-definite
     """
 
     # We dont assume matrix is Hermitian, i.e. real-valued and symmetric
@@ -420,36 +382,39 @@ def isPSD(mat, tol=1e-8):
     return np.all(e > -tol)
 
 
-def nearestPSD(A, nit=100):
+def nearestPSD(mat, nit=100):
     """
     Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Statsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
 
     Args:
+        mat (np.ndarray): 2d numpy array
         nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
+    Returns:
+        np.ndarray: closest positive-semi-definite 2d numpy array
     """
 
-    n = A.shape[0]
+    n = mat.shape[0]
     W = np.identity(n)
 
-    def _getAplus(A):
-        eigval, eigvec = np.linalg.eig(A)
+    def _getAplus(mat):
+        eigval, eigvec = np.linalg.eig(mat)
         Q = np.matrix(eigvec)
         xdiag = np.matrix(np.diag(np.maximum(eigval, 0)))
         return Q * xdiag * Q.T
 
-    def _getPs(A, W=None):
+    def _getPs(mat, W=None):
         W05 = np.matrix(W ** 0.5)
-        return W05.I * _getAplus(W05 * A * W05) * W05.I
+        return W05.I * _getAplus(W05 * mat * W05) * W05.I
 
-    def _getPu(A, W=None):
-        Aret = np.array(A.copy())
+    def _getPu(mat, W=None):
+        Aret = np.array(mat.copy())
         Aret[W > 0] = np.array(W)[W > 0]
         return np.matrix(Aret)
 
     # W is the matrix used for the norm (assumed to be Identity matrix here)
     # the algorithm should work for any diagonal W
     deltaS = 0
-    Yk = A.copy()
+    Yk = mat.copy()
     for k in range(nit):
         Rk = Yk - deltaS
         Xk = _getPs(Rk, W=W)
@@ -463,7 +428,16 @@ def nearestPSD(A, nit=100):
 
 
 def upper(mat):
-    """Return upper triangle of matrix"""
+    """
+    Return upper triangle of matrix. Useful for grabbing unique values from a symmetric matrix.
+
+    Args:
+        mat (np.ndarray): 2d numpy array
+    
+    Returns:
+        np.array: 1d numpy array of values
+    
+    """
     idx = np.triu_indices_from(mat, k=1)
     return mat[idx]
 
@@ -481,67 +455,19 @@ def _get_params(model):
 
 
 def _lrt(tup):
-    """Likelihood ratio test between 2 models."""
+    """Likelihood ratio test between 2 models. Used by stats.lrt"""
     d = np.abs(2 * (tup[0].logLike - tup[1].logLike))
     return chi2.sf(d, np.abs(tup[0].coefs.shape[0] - tup[1].coefs.shape[0]))
 
 
-def lrt(models):
+def _welch_ingredients(x):
     """
-    WARNING EXPERIMENTAL!
-    Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
-
-    Todo:
-    0) Figure out discrepancy with R result
-    1) Generalize function to perform LRT, or vuong test
-    2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
-    3) Given a single model expand out to all separate term tests
+    Helper function to compute the numerator and denominator for a single group/array for use in Welch's degrees of freedom calculation. Used by stats.welch_dof
     """
 
-    raise NotImplementedError("This function is not yet implemented")
-
-    if not isinstance(models, list):
-        models = [models]
-    if len(models) < 2:
-        raise ValueError("Must have at least 2 models to perform comparison")
-
-    # Get number of coefs for each model
-    all_params = []
-    for m in models:
-        all_params.append(_get_params(m))
-
-    # Sort from fewest params to most
-    all_params = np.array(all_params)
-    idx = np.argsort(all_params)
-    all_params = all_params[idx]
-    models = np.array(models)[idx]
-
-    model_pairs = list(product(models, repeat=2))
-
-    model_pairs = model_pairs[1 : len(models)]
-    s = []
-    for p in model_pairs:
-        s.append(_lrt(p))
-    out = pd.DataFrame()
-    for i, m in enumerate(models):
-        pval = s[i - 1] if i > 0 else np.nan
-        out = out.append(
-            pd.DataFrame(
-                {
-                    "model": m.formula,
-                    "DF": m.coefs.loc["Intercept", "DF"],
-                    "AIC": m.AIC,
-                    "BIC": m.BIC,
-                    "log-likelihood": m.logLike,
-                    "P-val": pval,
-                },
-                index=[0],
-            ),
-            ignore_index=True,
-        )
-    out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
-    out = out[["model", "log-likelihood", "AIC", "BIC", "DF", "P-val", "Sig"]]
-    return out
+    numerator = x.var(ddof=1) / x.size
+    denominator = np.power(x.var(ddof=1) / x.size, 2) / (x.size - 1)
+    return [numerator, denominator]
 
 
 def con2R(arr):
@@ -552,7 +478,7 @@ def con2R(arr):
         arr (np.ndarry): 2d numpy array arranged as contrasts X factor levels
 
     Returns:
-        out (np.ndarray): 2d contrast matrix as expected by R's contrasts() function
+        np.ndarray: 2d contrast matrix as expected by R's contrasts() function
     """
 
     intercept = np.repeat(1.0 / arr.shape[1], arr.shape[1])
@@ -569,7 +495,7 @@ def R2con(arr):
         arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
 
     Returns:
-        out (np.ndarray): 2d array organized as contrasts X factor levels
+        np.ndarray: 2d array organized as contrasts X factor levels
     """
 
     intercept = np.ones((arr.shape[0], 1))
@@ -578,43 +504,4 @@ def R2con(arr):
     return inv
 
 
-def rsquared(y, res, has_constant=True):
-    """
-    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance" 
 
-    Args:
-        y (np.ndarray): 1d array of dependent variable
-        res (np.ndarray): 1d array of residuals
-        has_constant (bool): whether the fitted model included a constant (intercept)
-    
-    Returns:
-        r2: coefficient of determination
-    """
-
-    y_mean = y.mean()
-    rss = np.sum(res ** 2)
-    if has_constant:
-        tss = np.sum((y - y_mean) ** 2)
-    else:
-        tss = np.sum(y ** 2)
-    return 1 - (rss / tss)
-
-
-def rsquared_adj(r, nobs, df_res, has_constant=True):
-    """
-    Compute the adjusted R^2, coefficient of determination. 
-
-    Args:
-        r (float): rsquared value
-        nobs (int): number of observations the model was fit on
-        df_res (int): degrees of freedom of the residuals (nobs - number of model params)
-        has_constant (bool): whether the fitted model included a constant (intercept)
-    
-    Returns:
-        r2_add: adjusted coefficient of determination
-    """
-
-    if has_constant:
-        return 1.0 - (nobs - 1) / df_res * (1.0 - r)
-    else:
-        return 1.0 - nobs / df_res * (1.0 - r)

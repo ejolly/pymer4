@@ -6,8 +6,10 @@ __all__ = [
     "discrete_inverse_logit",
     "cohens_d",
     "perm_test",
+    "boot_func",
     "tost_equivalence",
     "welch_dof",
+    "vif"
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -18,7 +20,15 @@ import pandas as pd
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
-from pymer4.utils import _check_random_state, boot_func
+# from itertools import product
+from pymer4.utils import (
+    _check_random_state,
+    _welch_ingredients,
+    # _get_params,
+    _mean_diff,
+    # _lrt,
+    # _sig_stars,
+)
 from joblib import Parallel, delayed
 
 MAX_INT = np.iinfo(np.int32).max
@@ -69,7 +79,14 @@ def vif(df, has_intercept=True, exclude_intercept=True, tol=5.0, check_only=Fals
 
 
 def discrete_inverse_logit(arr):
-    """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes"""
+    """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes.
+    
+    Args:
+        arr (np.array): 1d numpy array
+    
+    Returns:
+        np.array: transformed values
+    """
     probabilities = expit(arr)
     out = np.random.binomial(1, probabilities)
     return out
@@ -84,16 +101,19 @@ def cohens_d(
     Args:
         x (list-like): array or list of observations from first group
         y (list-like): array or list of observations from second group or second set of observations from the same group; optional
-        paired (bool); whether to treat x any y (if provided) as paired or independent
-        n_boot: number of bootstrap samples to run; set to 0 to skip computing
+        paired (bool): whether to treat x any y (if provided) as paired or independent
+        n_boot (int): number of bootstrap samples to run; set to 0 to skip computing
         equal_var (bool): should we pool standard deviation as in Welch's t-test
-        value (float): a value to see if the effect size is bigger than, i.e. eff size - value will be computed
+        value (float): a value to see if the effect size is bigger than; `eff size - value` will be computed; default 0
         n_jobs (int): number of parallel cores to use for bootstraping; default 1
         seed (int or None): numerical seed for reproducibility of bootstrapping
 
     Returns:
-        effect_size (scaler): cohen's d
-        ci (np.array): bias-corrected bootstrapped confidence intervals
+        Multiple:
+        
+            - **effect_size** (*float*): cohen's d    
+
+            - **ci** (*np.array*): lower and upper bounds of 95% bootstrapped confidence intervals; optional
 
     """
 
@@ -146,6 +166,19 @@ def cohens_d(
         return eff
 
 
+def _cohens_d(x, y, paired, equal_var, value, random_state):
+    """For use in parallel cohens_d"""
+    random_state = _check_random_state(random_state)
+    if paired:
+        idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
+        x, y = x[idx], y[idx]
+    else:
+        x = random_state.choice(x, size=x.size, replace=True)
+        if y is not None:
+            y = random_state.choice(y, size=y.size, replace=True)
+    return cohens_d(x, y, 0, equal_var, value)
+
+
 def perm_test(
     x,
     y=None,
@@ -172,9 +205,13 @@ def perm_test(
         seed (int): for reproducing results
 
     Returns:
-        original_stat (scalar): stat
-        p_val (scalar): permuted p-value
-        perm_dist (np.array): array of permuted statistic; optional
+        Multiple:
+        
+            - **original_stat** (*float*): the original statistic  
+
+            - **perm_p_val** (*float*): the permuted p-value
+
+            - **perm_dist** (*np.array*): array of permuted statistic; optional
 
     """
 
@@ -244,6 +281,8 @@ def perm_test(
             delayed(_perm_test)(x, y, stat, equal_var, random_state=seeds[i])
             for i in range(n_perm)
         )
+        if multi_return:
+            perms = [elem[0] for elem in perms]
 
         denom = float(len(perms)) + 1
 
@@ -261,6 +300,82 @@ def perm_test(
             return original_stat, p, perms
         else:
             return original_stat, p
+
+
+def _perm_test(x, y, stat, equal_var, random_state):
+    """For use in parallel perm_test"""
+    random_state = _check_random_state(random_state)
+    if stat in ["pearsonr", "spearmanr"]:
+        y = random_state.permutation(y)
+    elif stat in ["tstat", "cohensd", "mean"]:
+        if y is None:
+            x = x * random_state.choice([1, -1], len(x))
+        elif isinstance(y, (float, int)):
+            x -= y
+            x = x * random_state.choice([1, -1], len(x))
+        else:
+            shuffled_combined = random_state.permutation(np.hstack([x, y]))
+            x, y = shuffled_combined[: x.size], shuffled_combined[x.size :]
+    elif (stat == "tstat-paired") or (y is None):
+        x = x * random_state.choice([1, -1], len(x))
+
+    return perm_test(x, y, stat, equal_var=equal_var, n_perm=0)
+
+
+def boot_func(
+    x, y=None, func=None, func_args={}, paired=False, n_boot=500, n_jobs=1, seed=None
+):
+    """
+    Bootstrap an arbitrary function by resampling from x and y independently or jointly.
+
+    Args:
+        x (list-like): list of values for first group
+        y (list-like): list of values for second group; optional
+        function (callable): function that accepts x or y
+        paired (bool): whether to resample x and y jointly or independently
+        n_boot (int): number of bootstrap iterations
+        n_jobs (int): number of parallel cores; default 1
+
+    Returns:
+        Multiple:
+        
+            - **original_stat** (*float*): function result with given data
+
+            - **ci** (*np.array*): lower and upper bounds of 95% confidence intervals
+
+    """
+
+    if not callable(func):
+        raise TypeError("func must be a valid callable function")
+
+    orig_result = func(x, y, **func_args)
+    if n_boot:
+        random_state = _check_random_state(seed)
+        seeds = random_state.randint(MAX_INT, size=n_boot)
+        par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+        boots = par_for(
+            delayed(_boot_func)(
+                x, y, func, func_args, paired, **func_args, random_state=seeds[i]
+            )
+            for i in range(n_boot)
+        )
+        ci_u = np.percentile(boots, 97.5, axis=0)
+        ci_l = np.percentile(boots, 2.5, axis=0)
+        return orig_result, (ci_l, ci_u)
+    else:
+        return orig_result
+
+
+def _boot_func(x, y, func, func_args, paired, random_state):
+    """For use in parallel boot_func"""
+    random_state = _check_random_state(random_state)
+    if paired:
+        idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
+        x, y = x[idx], y[idx]
+    else:
+        x = random_state.choice(x, size=x.size, replace=True)
+        y = random_state.choice(y, size=y.size, replace=True)
+    return boot_func(x, y, func, func_args, paired=paired, n_boot=0)
 
 
 def tost_equivalence(
@@ -289,7 +404,7 @@ def tost_equivalence(
         return_dists (bool): optionally return the permuted distributions
 
     Returns:
-        results: a dictionary of results
+        dict: a dictionary of TOST results
 
     """
 
@@ -410,46 +525,17 @@ def tost_equivalence(
     return result
 
 
-def _perm_test(x, y, stat, equal_var, random_state):
-    """For use in parallel perm_test"""
-    random_state = _check_random_state(random_state)
-    if stat in ["pearsonr", "spearmanr"]:
-        y = random_state.permutation(y)
-    elif stat in ["tstat", "cohensd", "mean"]:
-        if y is None:
-            x = x * random_state.choice([1, -1], len(x))
-        elif isinstance(y, (float, int)):
-            x -= y
-            x = x * random_state.choice([1, -1], len(x))
-        else:
-            shuffled_combined = random_state.permutation(np.hstack([x, y]))
-            x, y = shuffled_combined[: x.size], shuffled_combined[x.size :]
-    elif (stat == "tstat-paired") or (y is None):
-        x = x * random_state.choice([1, -1], len(x))
-
-    return perm_test(x, y, stat, equal_var=equal_var, n_perm=0)
-
-
-def _cohens_d(x, y, paired, equal_var, value, random_state):
-    """For use in parallel cohens_d"""
-    random_state = _check_random_state(random_state)
-    if paired:
-        idx = np.random.choice(np.arange(len(x)), size=x.size, replace=True)
-        x, y = x[idx], y[idx]
-    else:
-        x = random_state.choice(x, size=x.size, replace=True)
-        if y is not None:
-            y = random_state.choice(y, size=y.size, replace=True)
-    return cohens_d(x, y, 0, equal_var, value)
-
-
-def _mean_diff(x, y):
-    """For use in plotting of tost_equivalence"""
-    return np.mean(x) - np.mean(y)
-
-
 def welch_dof(x, y):
-    """Compute adjusted dof via Welch-Satterthwaite equation"""
+    """
+    Compute adjusted dof via Welch-Satterthwaite equation
+    
+    Args:
+        x (np.ndarray): 1d numpy array
+        y (np.ndarray): 1d numpy array
+
+    Returns:
+        float: degrees of freedom
+    """
 
     if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
 
@@ -461,12 +547,101 @@ def welch_dof(x, y):
         raise TypeError("Both x and y must be 1d numpy arrays")
 
 
-def _welch_ingredients(x):
+# def lrt(models):
+#     """
+#     WARNING EXPERIMENTAL!
+#     Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
+
+#     Todo:
+#     0) Figure out discrepancy with R result
+#     1) Generalize function to perform LRT, or vuong test
+#     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
+#     3) Given a single model expand out to all separate term tests
+#     """
+
+#     raise NotImplementedError("This function is not yet implemented")
+
+#     if not isinstance(models, list):
+#         models = [models]
+#     if len(models) < 2:
+#         raise ValueError("Must have at least 2 models to perform comparison")
+
+#     # Get number of coefs for each model
+#     all_params = []
+#     for m in models:
+#         all_params.append(_get_params(m))
+
+#     # Sort from fewest params to most
+#     all_params = np.array(all_params)
+#     idx = np.argsort(all_params)
+#     all_params = all_params[idx]
+#     models = np.array(models)[idx]
+
+#     model_pairs = list(product(models, repeat=2))
+
+#     model_pairs = model_pairs[1 : len(models)]
+#     s = []
+#     for p in model_pairs:
+#         s.append(_lrt(p))
+#     out = pd.DataFrame()
+#     for i, m in enumerate(models):
+#         pval = s[i - 1] if i > 0 else np.nan
+#         out = out.append(
+#             pd.DataFrame(
+#                 {
+#                     "model": m.formula,
+#                     "DF": m.coefs.loc["Intercept", "DF"],
+#                     "AIC": m.AIC,
+#                     "BIC": m.BIC,
+#                     "log-likelihood": m.logLike,
+#                     "P-val": pval,
+#                 },
+#                 index=[0],
+#             ),
+#             ignore_index=True,
+#         )
+#     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
+#     out = out[["model", "log-likelihood", "AIC", "BIC", "DF", "P-val", "Sig"]]
+#     return out
+
+
+def rsquared(y, res, has_constant=True):
     """
-    Helper function to compute the numerator and denominator for a single group/array for use in Welch's degrees of freedom calculation.
+    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance" 
+
+    Args:
+        y (np.ndarray): 1d array of dependent variable
+        res (np.ndarray): 1d array of residuals
+        has_constant (bool): whether the fitted model included a constant (intercept)
+    
+    Returns:
+        float: coefficient of determination
     """
 
-    numerator = x.var(ddof=1) / x.size
-    denominator = np.power(x.var(ddof=1) / x.size, 2) / (x.size - 1)
-    return [numerator, denominator]
+    y_mean = y.mean()
+    rss = np.sum(res ** 2)
+    if has_constant:
+        tss = np.sum((y - y_mean) ** 2)
+    else:
+        tss = np.sum(y ** 2)
+    return 1 - (rss / tss)
 
+
+def rsquared_adj(r, nobs, df_res, has_constant=True):
+    """
+    Compute the adjusted R^2, coefficient of determination. 
+
+    Args:
+        r (float): rsquared value
+        nobs (int): number of observations the model was fit on
+        df_res (int): degrees of freedom of the residuals (nobs - number of model params)
+        has_constant (bool): whether the fitted model included a constant (intercept)
+    
+    Returns:
+        float: adjusted coefficient of determination
+    """
+
+    if has_constant:
+        return 1.0 - (nobs - 1) / df_res * (1.0 - r)
+    else:
+        return 1.0 - nobs / df_res * (1.0 - r)

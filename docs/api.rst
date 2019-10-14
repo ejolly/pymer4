@@ -2,7 +2,7 @@ API Reference
 =============
 
 :mod:`pymer4.models`: Model Classes
-===================================
+-----------------------------------
 
 .. autoclass:: pymer4.models.Lmer
     :members:
@@ -10,16 +10,29 @@ API Reference
 .. autoclass:: pymer4.models.Lm
     :members:
 
-:mod:`pymer4.simulate`: Simulation
-==================================
+.. autoclass:: pymer4.models.Lm2
+    :members:
+
+:mod:`pymer4.simulate`: Simulation Functions
+--------------------------------------------
 
 .. automodule:: pymer4.simulate
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`pymer4.utils`: Utilities
-==============================
+
+:mod:`pymer4.stats`: Statistics Functions
+-----------------------------------------
+
+.. automodule:: pymer4.stats
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+:mod:`pymer4.utils`: Utility Functions
+--------------------------------------
 
 .. automodule:: pymer4.utils
     :members:

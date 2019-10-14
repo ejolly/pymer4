@@ -12,15 +12,14 @@ import pandas as pd
 from patsy import dmatrices
 from scipy.stats import t as t_dist
 from joblib import Parallel, delayed
-from ..stats import _welch_ingredients
+from ..stats import rsquared, rsquared_adj
 from ..utils import (
     _sig_stars,
     _chunk_boot_ols_coefs,
     _chunk_perm_ols,
     _ols,
     _perm_find,
-    rsquared,
-    rsquared_adj,
+    _welch_ingredients
 )
 
 
@@ -37,18 +36,18 @@ class Lm(object):
     Attributes:
         fitted (bool): whether model has been fit
         formula (str): model formula
-        data (pandas.core.frame.DataFrame): model copy of input data
-        grps (dict): groups and number of observations per groups recognized by lmer
+        data (pd.DataFrame): model copy of input data
+        design_matrix (pd.DataFrame): model design matrix determined by patsy
         AIC (float): model akaike information criterion
         logLike (float): model Log-likelihood
         family (string): model family
-        ranef (pandas.core.frame.DataFrame/list): cluster-level differences from population parameters, i.e. difference between coefs and fixefs; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
-        fixef (pandas.core.frame.DataFrame/list): cluster-level parameters; returns list if multiple cluster variables are used to specify random effects (e.g. subjects and items)
-        coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
+        warnings (list): warnings output from Python
+        coefs (pd.DataFrame): model summary table of parameters
         resid (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
-        model_obj(lm model): rpy2 lmer model object
-        factors (dict): factors used to fit the model if any
+        estimator (string): 'OLS' or 'WLS' 
+        se_type (string): how standard errors are computed
+        sig_type (string): how inference is performed
 
     """
 
@@ -66,15 +65,15 @@ class Lm(object):
         self.AIC = None
         self.logLike = None
         self.warnings = []
-        self.resid = None
+        self.residuals = None
         self.coefs = None
         self.model_obj = None
-        self.factors = None
         self.ci_type = None
         self.se_type = None
         self.sig_type = None
         self.ranked_data = False
         self.estimator = None
+        self.design_matrix = None
 
     def __repr__(self):
         out = "{}.{}(fitted={}, formula={}, family={})".format(
@@ -119,7 +118,7 @@ class Lm(object):
 
         - 'cluster' : cluster-robust standard errors (see Cameron & Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling "correction" for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs
 
-        Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch's t-test). E.g:
+        Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch's t-test).
 
 
         Args:
@@ -137,20 +136,34 @@ class Lm(object):
             wls_dof_correction (bool): whether to apply Welch-Satterthwaite approximate correction for dof when using weights based on an existing column in the data, ignored otherwise. Set to False to force standard dof calculation
 
         Returns:
-            DataFrame: R style summary() table
+            pd.DataFrame: R/statsmodels style summary
 
         
         Examples:
 
-            Simple regression that estimates a between groups t-test but not assuming equal variances  
+            Simple multiple regression model with parametric assumptions
+
+            >>> model = Lm('DV ~ IV1 + IV2', data=df)
+            >>> model.fit()
+
+            Same as above but with robust standard errors
+
+            >>> model.fit(robust='hc1')
+
+            Same as above but with cluster-robust standard errors. The cluster argument should refer to a column in the dataframe.
+
+            >>> model.fit(robust='cluster', cluster='Group')
+            
+            Simple regression with categorical predictor, i.e. between groups t-test assuming equal variances  
 
             >>> model = Lm('DV ~ Group', data=df)
+            >>> model.fit()
 
-            Have pymer4 compute the between group variances automatically (preferred)  
+            Same as above but don't assume equal variances and have pymer4 compute the between group variances automatically, i.e. WLS (preferred)  
 
             >>> model.fit(weights='Group') 
 
-            Separately compute the variance of each group and use the inverse of that as the weights; dof correction won't be applied because its not trivial to compute  
+            Manually compute the variance of each group and use the inverse of that as the weights. In this case WLS is estimated but dof correction won't be applied because it's not trivial to compute.  
             
             >>> weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
             model.fit(weights=weights)
@@ -371,9 +384,9 @@ class Lm(object):
 
         self.coefs = results
         self.fitted = True
-        self.resid = res
-        self.fits = y.squeeze() - res
-        self.data["fits"] = y.squeeze() - res
+        self.residuals = res
+        self.fits = (y.squeeze() - res).values
+        self.data["fits"] = (y.squeeze() - res).values
         self.data["residuals"] = res
 
         # Fit statistics
@@ -400,6 +413,9 @@ class Lm(object):
         """
         Summarize the output of a fitted model.
 
+        Returns:
+            pd.DataFrame: R/statsmodels style summary
+
         """
 
         if not self.fitted:
@@ -423,18 +439,16 @@ class Lm(object):
         print("Fixed effects:\n")
         return self.coefs.round(3)
 
-    def post_hoc(self):
-        raise NotImplementedError(
-            "Post-hoc tests are not yet implemented for linear models."
-        )
-
-    def to_corrs(self, corr_type="semi", ztrans_corrs=True):
+    def to_corrs(self, corr_type="semi", ztrans_corrs=False):
         """
-        For each predictor (except the intercept), compute the partial or semi-partial correlation of the of the predictor with the dependent variable for different interpretability. This does *not* change how inferences are performed, as they are always performed on the betas, not the correlation coefficients. Semi-partial corrs reflect the correlation between a predictor and the dv accounting for correlations between predictors; they are interpretable in the same way as the original betas. Partial corrs reflect the unique variance a predictor explains in the dv accounting for correlations between predictors *and* what is not explained by other predictors; this value is always >= the semi-partial correlation. Good ref: https://bit.ly/2GNwXh5
-         Returns a pandas Series.
+        Transform fitted model coefficients (excluding the intercept) to partial or semi-partial correlations with dependent variable. The is useful for rescaling coefficients to a correlation scale (-1 to 1) and does **not** change how inferences are performed. Semi-partial correlations are computed as the correlation between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor. They are interpretable in the same way as the original coefficients. Partial correlations reflect the unique variance a predictor explains in the DV accounting for correlations between predictors *and* what is not explained by other predictors; this value is always >= the semi-partial correlation. They are *not* interpretable in the same way as the original coefficients. Partial correlations are computed as the correlations between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor *and* the DV. Good ref: https://bit.ly/2GNwXh5 
 
         Args:
-            ztrans_partial_corrs (bool): whether to fisher z-transform (arctan) partial correlations before reporting them; default True
+            corr_type (string): 'semi' or 'partial'
+            ztrans_partial_corrs (bool): whether to fisher z-transform (arctan) partial correlations before reporting them; default False
+
+        Returns:
+            pd.Series: partial or semi-partial correlations
 
         """
 
@@ -489,10 +503,10 @@ class Lm(object):
         Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). Will automatically use/ignore intercept to make a prediction if it was/was not part of the original fitted model.
 
         Args:
-            data (pandas.core.frame.DataFrame): input data to make predictions on
+            data (pd.DataFrame): input data to make predictions on
 
         Returns:
-            ndarray: prediction values
+            np.ndarray: prediction values
 
         """
 
