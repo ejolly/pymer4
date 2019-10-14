@@ -44,7 +44,7 @@ class Lm2(object):
         warnings (list): warnings output from Python
         fixef (pd.DataFrame): cluster-level parameters
         coefs (pd.DataFrame): model summary table of population parameters
-        resid (numpy.ndarray): model residuals
+        residuals (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
         se_type (string): how standard errors are computed
         sig_type (string): how inference is performed
@@ -70,7 +70,7 @@ class Lm2(object):
         self.AIC = None
         self.logLike = None
         self.warnings = []
-        self.resid = None
+        self.residuals = None
         self.fixef = None
         self.coefs = None
         self.model_obj = None

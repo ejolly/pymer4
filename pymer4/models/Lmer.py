@@ -49,7 +49,7 @@ class Lmer(object):
         coefs (pandas.core.frame.DataFrame/list): model summary table of population parameters
         ranef_var (pd.DataFrame): random effects variances
         ranef_corr(pd.DataFrame): random effects correlations
-        resid (numpy.ndarray): model residuals
+        residuals (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
         model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
@@ -82,7 +82,7 @@ class Lmer(object):
         self.ranef = None
         self.fixef = None
         self.design_matrix = None
-        self.resid = None
+        self.residuals = None
         self.coefs = None
         self.model_obj = None
         self.factors = None
@@ -704,8 +704,10 @@ class Lmer(object):
             out
             }
         """
+        resid_func = robjects.r(rstring)
+        self.residuals = resid_func(self.model_obj)
         try:
-            self.data["residuals"] = copy(self.resid)
+            self.data["residuals"] = copy(self.residuals)
         except ValueError as e:  # NOQA
             print(
                 "**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n"

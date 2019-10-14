@@ -501,7 +501,5 @@ def R2con(arr):
     intercept = np.ones((arr.shape[0], 1))
     mat = np.column_stack([intercept, arr])
     inv = np.linalg.inv(mat)
-    return inv
-
-
+    return inv   
 

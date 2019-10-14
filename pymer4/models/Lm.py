@@ -43,7 +43,7 @@ class Lm(object):
         family (string): model family
         warnings (list): warnings output from Python
         coefs (pd.DataFrame): model summary table of parameters
-        resid (numpy.ndarray): model residuals
+        residuals (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
         estimator (string): 'OLS' or 'WLS' 
         se_type (string): how standard errors are computed
