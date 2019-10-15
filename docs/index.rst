@@ -22,11 +22,13 @@ Additionally :code:`pymer4` can fit various additional regression models with so
 
    Features <features>
    Installation <installation>
+   What's New <new>
    Tutorial <auto_examples/index>
    Lme4 RFX Cheatsheet <rfx_cheatsheet>
    API reference <api>
    Citation <citation>
-   
+   Contributing <contributing>
+
 
 .. raw:: html
 

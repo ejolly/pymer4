@@ -93,9 +93,8 @@ class Lmer(object):
         self.factors_prev_ = None
 
     def __repr__(self):
-        out = "{}.{}(fitted = {}, formula = {}, family = {})".format(
+        out = "{}(fitted = {}, formula = {}, family = {})".format(
             self.__class__.__module__,
-            self.__class__.__name__,
             self.fitted,
             self.formula,
             self.family,

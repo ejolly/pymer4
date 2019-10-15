@@ -81,9 +81,8 @@ class Lm2(object):
         self.iscorrs = False
 
     def __repr__(self):
-        out = "{}.{}(fitted={}, formula={}, family={}, group={})".format(
+        out = "{}(fitted={}, formula={}, family={}, group={})".format(
             self.__class__.__module__,
-            self.__class__.__name__,
             self.fitted,
             self.formula,
             self.family,

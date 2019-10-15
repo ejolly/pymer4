@@ -23,7 +23,7 @@ __all__ = [
 __author__ = ["Eshin Jolly"]
 __license__ = "MIT"
 
-from os.path import dirname, join, sep
+import os 
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
@@ -36,7 +36,7 @@ MAX_INT = np.iinfo(np.int32).max
 
 def get_resource_path():
     """ Get path sample data directory. """
-    return join(dirname(__file__), "resources") + sep
+    return os.path.join(os.path.dirname(__file__), "resources") + os.path.sep
 
 
 def _mean_diff(x, y):
@@ -501,5 +501,27 @@ def R2con(arr):
     intercept = np.ones((arr.shape[0], 1))
     mat = np.column_stack([intercept, arr])
     inv = np.linalg.inv(mat)
-    return inv   
+    return inv
 
+
+def _df_meta_to_arr(df):
+    """Check what kind of data exists in pandas columns or index. If string return as numpy array 'S' type, otherwise regular numpy array.
+    """
+    
+    if len(df.columns):
+        if isinstance(df.columns[0], str):
+            columns = df.columns.values.astype("S")
+        else:
+            columns = df.columns.values
+    else:
+        columns = []
+    
+    if len(df.index):
+        if isinstance(df.index[0], str):
+            index = df.index.values.astype("S")
+        else:
+            index = df.index.values
+    else:
+        index = []
+
+    return columns, index

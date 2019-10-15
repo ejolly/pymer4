@@ -53,7 +53,13 @@ sphinx_gallery_conf = {
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
     "filename_pattern": "/example_", # render files that begin with example_
     "within_subsection_order": FileNameSortKey,
-    "min_reported_time": 600
+    "min_reported_time": 600,
+    "first_notebook_cell": (
+        "# Set the environment such that multiple R processes do not crash the kernel\n"
+        "import os\n"
+        "os.environ['KMP_DUPLICATE_LIB_OK']='True'"
+        "%matplotlib inline"
+    )
 }
 
 autodoc_default_options = {
