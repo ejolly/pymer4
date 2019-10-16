@@ -1,27 +1,44 @@
 Installation
 ============
-:code:`pymer4` since version 0.6.0 is only compatible with Python 3. Versions 0.5.0 and lower will work with Python 2, but will not contain any new features. :code:`pymer4` also requires a working R installation with specific packages installed and it will *not* install R or these packages for you. However, you can follow either option below to easily handle these dependencies.
+.. note::
+    :code:`pymer4` since version 0.6.0 is only compatible with Python 3. Versions 0.5.0 and lower will work with Python 2, but will not contain any new features.
 
-Option 1 (simpler but slower model fitting)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you don't have R installed and you use the Anaconda Python distribution simply run the following commands to have Anaconda install R and the required packages for you. This is fairly painless installation, but model fitting will be slower than if you install R and ``pymer4`` separately and configure them (option 2).
+Prerequisites
+-------------
+:code:`pymer4` requires a working R installation along with three R packages: :code:`lme4`, :code:`lmerTest`, and :code:`emmeans`. Follow either option below to make sure these are installed.
 
-1. ``conda install -c conda-forge r r-base r-lmertest r-emmeans rpy2``
-2. ``pip install pymer4``
-3. Test the installation to see if it's working by running ``python -c "from pymer4.test_install import test_install; test_install()"``
-4. If there are errors follow the guide below
+1. If you already have R/RStudio installed
++++++++++++++++++++++++++++++++++++++++++++++
+Make sure you also have the 3 required R packages which can be installed from within R/RStudio using: 
 
-Option 2 (potentially trickier, but faster model fitting)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This method assumes you already have R installed. If not install first install it from the `R Project website <https://www.r-project.org/>`_. Then complete the following steps:
+    .. code-block:: R
 
-1. If you don't already have them, install the required R packages by running the following command from within R: ``install.packages(c('lme4','lmerTest','emmeans'))``
-2. Install pymer4 by running the following command in a terminal: ``pip install pymer4``
-3. Test the installation to see if it's working by running the following command in a terminal: ``python -c "from pymer4.test_install import test_install; test_install()"``
-4. If there are errors follow the guide below
+        install.packages(c('lme4','lmerTest','emmeans'))
 
-Install issues
-^^^^^^^^^^^^^^
+2. If you don't have R/RStudio installed
++++++++++++++++++++++++++++++++++++++++++++
+It's highly recommended that you install and use the `Anaconda Python distribution <https://www.anaconda.com/distribution/>`_ to manage your Python packages/environment. Anaconda can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:
+
+ .. code-block:: bash
+
+        conda install -c conda-forge r r-base r-lmertest r-emmeans rpy2
+
+Package Installation
+--------------------
+After either option you can pip install :code:`pymer4`
+
+    .. code-block:: bash
+
+        pip install pymer4
+
+You can also test the installation by running the following command in a terminal
+
+    .. code-block:: bash
+
+        python -c "from pymer4.test_install import test_install; test_install()"
+
+Installation Issues
+-------------------
 Some users have issues installing ``pymer4`` on recent versions of macOS. This is due to compiler issues that give ``rpy2`` (a package dependency of ``pymer4``) some issues during install. Here's a fix that should work for that:
 
 1. Install `homebrew <https://brew.sh/>`_ if you don't have it already by running the command at the link (it's a great pacakage manager for macOS). To check if you already have it, do ``which brew`` in your Terminal. If nothing pops up you don't have it.
@@ -44,5 +61,20 @@ Some users have issues installing ``pymer4`` on recent versions of macOS. This i
         export CC= pathYouCopiedInQuotes
         export CFLAGS="-W"
 
-9. Finally install ``rpy2`` using the new compiler you just installed: ``conda install -c conda-forge rpy2`` if you followed Option 1 above or ``pip install rpy2`` if you followed Option 2
+9. Finally install ``rpy2`` using the new compiler you just installed: ``pip install rpy2`` if you have R/RStudio or ``conda install -c conda-forge rpy2`` if you don't.
 10. Now you should be able to ``pip install pymer4`` :)
+
+Kernel Crashes in Jupyter Notebooks/Lab
+---------------------------------------
+Sometimes using ``pymer4`` interactively can cause the Python kernel to crash. This is more likely to happen if you have multiple interactive sessions running simulatenously. One way around this is to put this at the top of your notebook/code:
+
+    .. code-block:: python
+
+        import os
+        os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+Or set the following environment variable prior to launching your interactive sessions:
+
+    .. code-block:: bash
+
+        export KMP_DUPLICATE_LIB_OK=TRUE
