@@ -94,10 +94,7 @@ class Lmer(object):
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
-            self.__class__.__module__,
-            self.fitted,
-            self.formula,
-            self.family,
+            self.__class__.__module__, self.fitted, self.formula, self.family
         )
         return out
 
@@ -238,15 +235,18 @@ class Lmer(object):
 
         if verbose:
             # use the default logging in R
-            rinterface_lib.callbacks.consolewrite_warnerror = consolewrite_warning_backup
+            rinterface_lib.callbacks.consolewrite_warnerror = (
+                consolewrite_warning_backup
+            )
         else:
             # Create a list buffer to catch messages and discard them
             buf = []
-            
+
             def _f(x):
                 buf.append(x)
+
             rinterface_lib.callbacks.consolewrite_warnerror = _f
-    
+
     def fit(
         self,
         conf_int="Wald",
@@ -321,7 +321,9 @@ class Lmer(object):
         self._REML = REML
         self._set_R_stdout(verbose)
         if permute is True:
-            raise TypeError("permute should 'False' or the number of permutations to perform")
+            raise TypeError(
+                "permute should 'False' or the number of permutations to perform"
+            )
 
         if old_optimizer:
             if control:
@@ -382,6 +384,11 @@ class Lmer(object):
             self.model_obj = lmer.glmer(
                 self.formula, data=dat, family=_fam, REML=REML, control=lmc
             )
+        
+        # Store design matrix and get number of IVs for inference
+        stats = importr("stats")
+        self.design_matrix = stats.model_matrix(self.model_obj)
+        num_IV = self.design_matrix.shape[1]
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
@@ -429,195 +436,208 @@ class Lmer(object):
                         print(warning + " \n")
         else:
             self.warnings = []
+        
         # Coefficients, and inference statistics
-        if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
+        if num_IV != 0:
+            if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
 
-            rstring = (
+                rstring = (
+                    """
+                    function(model){
+                    out.coef <- data.frame(unclass(summary(model))$coefficients)
+                    out.ci <- data.frame(confint(model,method='"""
+                    + conf_int
+                    + """',nsim="""
+                    + str(n_boot)
+                    + """))
+                    n <- c(rownames(out.ci))
+                    idx <- max(grep('sig',n))
+                    out.ci <- out.ci[-seq(1:idx),]
+                    out <- cbind(out.coef,out.ci)
+                    list(out,rownames(out))
+                    }
                 """
-                function(model){
-                out.coef <- data.frame(unclass(summary(model))$coefficients)
-                out.ci <- data.frame(confint(model,method='"""
-                + conf_int
-                + """',nsim="""
-                + str(n_boot)
-                + """))
-                n <- c(rownames(out.ci))
-                idx <- max(grep('sig',n))
-                out.ci <- out.ci[-seq(1:idx),]
-                out <- cbind(out.coef,out.ci)
-                list(out,rownames(out))
-                }
-            """
-            )
-            estimates_func = robjects.r(rstring)
-            out_summary, out_rownames = estimates_func(self.model_obj)
-            df = out_summary
-            dfshape = df.shape[1]
-            df.index = out_rownames
+                )
+                estimates_func = robjects.r(rstring)
+                out_summary, out_rownames = estimates_func(self.model_obj)
+                df = out_summary
+                dfshape = df.shape[1]
+                df.index = out_rownames
 
-            # gaussian
-            if dfshape == 7:
-                df.columns = [
-                    "Estimate",
-                    "SE",
-                    "DF",
-                    "T-stat",
-                    "P-val",
-                    "2.5_ci",
-                    "97.5_ci",
-                ]
-                df = df[
-                    ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-                ]
-
-            # gamma, inverse_gaussian
-            elif dfshape == 6:
-                if self.family in ["gamma", "inverse_gaussian"]:
+                # gaussian
+                if dfshape == 7:
                     df.columns = [
                         "Estimate",
                         "SE",
+                        "DF",
                         "T-stat",
                         "P-val",
                         "2.5_ci",
                         "97.5_ci",
                     ]
-                    df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat", "P-val"]]
-                else:
-                    df.columns = [
-                        "Estimate",
-                        "SE",
-                        "Z-stat",
-                        "P-val",
-                        "2.5_ci",
-                        "97.5_ci",
+                    df = df[
+                        ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
                     ]
-                    df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]]
 
-            # Incase lmerTest chokes it won't return p-values
-            elif dfshape == 5 and self.family == "gaussian":
-                if not permute:
-                    warnings.warn(
-                        "MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance..."
-                    )
-                    df.columns = ["Estimate", "SE", "T-stat", "2.5_ci", "97.5_ci"]
-                    df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat"]]
+                # gamma, inverse_gaussian
+                elif dfshape == 6:
+                    if self.family in ["gamma", "inverse_gaussian"]:
+                        df.columns = [
+                            "Estimate",
+                            "SE",
+                            "T-stat",
+                            "P-val",
+                            "2.5_ci",
+                            "97.5_ci",
+                        ]
+                        df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat", "P-val"]]
+                    else:
+                        # poisson
+                        df.columns = [
+                            "Estimate",
+                            "SE",
+                            "Z-stat",
+                            "P-val",
+                            "2.5_ci",
+                            "97.5_ci",
+                        ]
+                        df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]]
 
-        elif self.family == "binomial":
+                # Incase lmerTest chokes it won't return p-values
+                elif dfshape == 5 and self.family == "gaussian":
+                    if not permute:
+                        warnings.warn(
+                            "MODELING FIT WARNING! Check model.warnings!! P-value computation did not occur because lmerTest choked. Possible issue(s): ranefx have too many parameters or too little variance..."
+                        )
+                        df.columns = ["Estimate", "SE", "T-stat", "2.5_ci", "97.5_ci"]
+                        df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat"]]
 
-            rstring = (
+            elif self.family == "binomial":
+
+                rstring = (
+                    """
+                    function(model){
+                    out.coef <- data.frame(unclass(summary(model))$coefficients)
+                    out.ci <- data.frame(confint(model,method='"""
+                    + conf_int
+                    + """',nsim="""
+                    + str(n_boot)
+                    + """))
+                    n <- c(rownames(out.ci))
+                    idx <- max(grep('sig',n))
+                    out.ci <- out.ci[-seq(1:idx),]
+                    out <- cbind(out.coef,out.ci)
+                    odds <- exp(out.coef[1])
+                    colnames(odds) <- "OR"
+                    probs <- data.frame(sapply(out.coef[1],plogis))
+                    colnames(probs) <- "Prob"
+                    odds.ci <- exp(out.ci)
+                    colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
+                    probs.ci <- data.frame(sapply(out.ci,plogis))
+                    colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
+                    out <- cbind(out,odds,odds.ci,probs,probs.ci)
+                    list(out,rownames(out))
+                    }
                 """
-                function(model){
-                out.coef <- data.frame(unclass(summary(model))$coefficients)
-                out.ci <- data.frame(confint(model,method='"""
-                + conf_int
-                + """',nsim="""
-                + str(n_boot)
-                + """))
-                n <- c(rownames(out.ci))
-                idx <- max(grep('sig',n))
-                out.ci <- out.ci[-seq(1:idx),]
-                out <- cbind(out.coef,out.ci)
-                odds <- exp(out.coef[1])
-                colnames(odds) <- "OR"
-                probs <- data.frame(sapply(out.coef[1],plogis))
-                colnames(probs) <- "Prob"
-                odds.ci <- exp(out.ci)
-                colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
-                probs.ci <- data.frame(sapply(out.ci,plogis))
-                colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
-                out <- cbind(out,odds,odds.ci,probs,probs.ci)
-                list(out,rownames(out))
-                }
-            """
-            )
+                )
 
-            estimates_func = robjects.r(rstring)
-            out_summary, out_rownames = estimates_func(self.model_obj)
-            df = out_summary
-            df.index = out_rownames
-
-            df.columns = [
-                "Estimate",
-                "SE",
-                "Z-stat",
-                "P-val",
-                "2.5_ci",
-                "97.5_ci",
-                "OR",
-                "OR_2.5_ci",
-                "OR_97.5_ci",
-                "Prob",
-                "Prob_2.5_ci",
-                "Prob_97.5_ci",
-            ]
-            df = df[
-                [
+                estimates_func = robjects.r(rstring)
+                out_summary, out_rownames = estimates_func(self.model_obj)
+                df = out_summary
+                df.index = out_rownames
+                df.columns = [
                     "Estimate",
+                    "SE",
+                    "Z-stat",
+                    "P-val",
                     "2.5_ci",
                     "97.5_ci",
-                    "SE",
                     "OR",
                     "OR_2.5_ci",
                     "OR_97.5_ci",
                     "Prob",
                     "Prob_2.5_ci",
                     "Prob_97.5_ci",
-                    "Z-stat",
-                    "P-val",
                 ]
-            ]
+                df = df[
+                    [
+                        "Estimate",
+                        "2.5_ci",
+                        "97.5_ci",
+                        "SE",
+                        "OR",
+                        "OR_2.5_ci",
+                        "OR_97.5_ci",
+                        "Prob",
+                        "Prob_2.5_ci",
+                        "Prob_97.5_ci",
+                        "Z-stat",
+                        "P-val",
+                    ]
+                ]
 
-        if permute:
-            perm_dat = dat.copy()
-            dv_var = self.formula.split("~")[0].strip()
-            grp_vars = list(self.grps.keys())
-            perms = []
-            for i in range(permute):
-                perm_dat[dv_var] = perm_dat.groupby(grp_vars)[dv_var].transform(
-                    lambda x: x.sample(frac=1)
-                )
-                if self.family == "gaussian":
-                    perm_obj = lmer.lmer(self.formula, data=perm_dat, REML=REML)
-                else:
-                    perm_obj = lmer.glmer(
-                        self.formula, data=perm_dat, family=_fam, REML=REML
+            if permute:
+                perm_dat = dat.copy()
+                dv_var = self.formula.split("~")[0].strip()
+                grp_vars = list(self.grps.keys())
+                perms = []
+                for i in range(permute):
+                    perm_dat[dv_var] = perm_dat.groupby(grp_vars)[dv_var].transform(
+                        lambda x: x.sample(frac=1)
                     )
-                perms.append(_return_t(perm_obj))
-            perms = np.array(perms)
-            pvals = []
-            for c in range(df.shape[0]):
-                if self.family in ["gaussian", "gamma", "inverse_gaussian"]:
-                    pvals.append(_perm_find(perms[:, c], df["T-stat"][c]))
+                    if self.family == "gaussian":
+                        perm_obj = lmer.lmer(self.formula, data=perm_dat, REML=REML)
+                    else:
+                        perm_obj = lmer.glmer(
+                            self.formula, data=perm_dat, family=_fam, REML=REML
+                        )
+                    perms.append(_return_t(perm_obj))
+                perms = np.array(perms)
+                pvals = []
+                for c in range(df.shape[0]):
+                    if self.family in ["gaussian", "gamma", "inverse_gaussian"]:
+                        pvals.append(_perm_find(perms[:, c], df["T-stat"][c]))
+                    else:
+                        pvals.append(_perm_find(perms[:, c], df["Z-stat"][c]))
+                df["P-val"] = pvals
+                if "DF" in df.columns:
+                    df["DF"] = [permute] * df.shape[0]
+                    df = df.rename(columns={"DF": "Num_perm", "P-val": "Perm-P-val"})
                 else:
-                    pvals.append(_perm_find(perms[:, c], df["Z-stat"][c]))
-            df["P-val"] = pvals
-            if "DF" in df.columns:
-                df["DF"] = [permute] * df.shape[0]
-                df = df.rename(columns={"DF": "Num_perm", "P-val": "Perm-P-val"})
-            else:
-                df["Num_perm"] = [permute] * df.shape[0]
-                df = df.rename(columns={"P-val": "Perm-P-val"})
+                    df["Num_perm"] = [permute] * df.shape[0]
+                    df = df.rename(columns={"P-val": "Perm-P-val"})
 
-        if "P-val" in df.columns:
-            df = df.assign(Sig=df["P-val"].apply(lambda x: _sig_stars(x)))
-        elif "Perm-P-val" in df.columns:
-            df = df.assign(Sig=df["Perm-P-val"].apply(lambda x: _sig_stars(x)))
+            if "P-val" in df.columns:
+                df = df.assign(Sig=df["P-val"].apply(lambda x: _sig_stars(x)))
+            elif "Perm-P-val" in df.columns:
+                df = df.assign(Sig=df["Perm-P-val"].apply(lambda x: _sig_stars(x)))
 
-        if (conf_int == "boot") and (permute is None):
-            # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
-            df = df.drop(columns=["P-val", "Sig"])
-            if "DF" in df.columns:
-                df = df.drop(columns="DF")
-            df["Sig"] = df.apply(
-                lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "", axis=1
+            if (conf_int == "boot") and (permute is None):
+                # We're computing parametrically bootstrapped ci's so it doesn't make sense to use approximation for p-values. Instead remove those from the output and make significant inferences based on whether the bootstrapped ci's cross 0.
+                df = df.drop(columns=["P-val", "Sig"])
+                if "DF" in df.columns:
+                    df = df.drop(columns="DF")
+                df["Sig"] = df.apply(
+                    lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "", axis=1
+                )
+
+            # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
+            if permute:
+                if self.family != 'gaussian':
+                    cols = list(df.columns)
+                    col_order = cols[:-4] + ["Num_perm"] + cols[-4:-2] + [cols[-1]]
+                    df = df[col_order]
+            
+            self.coefs = df
+            # Make sure the design matrix column names match population coefficients
+            self.design_matrix = pd.DataFrame(
+                self.design_matrix, columns=self.coefs.index[:]
             )
+        else:
+            self.coefs = None
+            if permute or conf_int == 'boot':
+                print("**NOTE**: Non-parametric inference only applies to fixed effects and none were estimated\n")
 
-        # if permute:
-        #     # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
-        #     cols = list(df.columns)
-        #     col_order = cols[:-4] + ["Num_perm"] + cols[-4:-2] + [cols[-1]]
-        #     df = df[col_order]
-        self.coefs = df
         self.fitted = True
 
         # Random effect variances and correlations
@@ -651,21 +671,25 @@ class Lmer(object):
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
         if len(fixefs) > 1:
-            f_corrected_order = []
-            for f in fixefs:
-                f_corrected_order.append(
-                    f[
-                        list(self.coefs.index)
-                        + [elem for elem in f.columns if elem not in self.coefs.index]
-                    ]
-                )
-            self.fixef = f_corrected_order
+            if self.coefs is not None:
+                f_corrected_order = []
+                for f in fixefs:
+                    f_corrected_order.append(
+                        f[
+                            list(self.coefs.index)
+                            + [elem for elem in f.columns if elem not in self.coefs.index]
+                        ]
+                    )
+                self.fixef = f_corrected_order
+            else:
+                self.fixef = list(fixefs)
         else:
             self.fixef = fixefs[0]
-            self.fixef = self.fixef[
-                list(self.coefs.index)
-                + [elem for elem in self.fixef.columns if elem not in self.coefs.index]
-            ]
+            if self.coefs is not None:
+                self.fixef = self.fixef[
+                    list(self.coefs.index)
+                    + [elem for elem in self.fixef.columns if elem not in self.coefs.index]
+                ]
 
         # Sort column order to match population coefs
         # This also handles cases in which random slope terms exist in the model without corresponding fixed effects terms, which generates extra columns in this dataframe. By default put those columns *after* the fixed effect columns of interest (i.e. population coefs)
@@ -684,17 +708,9 @@ class Lmer(object):
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = [r for r in ranefs]
+            self.ranef = list(ranefs)
         else:
             self.ranef = ranefs[0]
-
-        # Save the design matrix
-        # Make sure column names match population coefficients
-        stats = importr("stats")
-        self.design_matrix = stats.model_matrix(self.model_obj)
-        self.design_matrix = pd.DataFrame(
-            self.design_matrix, columns=self.coefs.index[:]
-        )
 
         # Model residuals
         rstring = """
@@ -844,11 +860,20 @@ class Lmer(object):
             print("%s\n" % (self.ranef_corr.round(3)))
         else:
             print("No random effect correlations specified\n")
-        print("Fixed effects:\n")
-        return self.coefs.round(3)
+        if self.coefs is None:
+            print("No fixed effects estimated\n")
+            return
+        else:
+            print("Fixed effects:\n")
+            return self.coefs.round(3)
 
     def post_hoc(
-        self, marginal_vars, grouping_vars=None, p_adjust="tukey", summarize=True, verbose=False
+        self,
+        marginal_vars,
+        grouping_vars=None,
+        p_adjust="tukey",
+        summarize=True,
+        verbose=False,
     ):
         """
         Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the emmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/emmeans/emmeans.pdf
@@ -1015,7 +1040,7 @@ class Lmer(object):
         sortme = effect_names[:-1] + ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF"]
 
         # In emmeans (compared to lsmeans) the CI column names change too depending on how many factor variabls are in the model
-        if 'asymp.LCL' in self.marginal_estimates.columns:
+        if "asymp.LCL" in self.marginal_estimates.columns:
             self.marginal_estimates = self.marginal_estimates.rename(
                 columns={
                     effname: "Estimate",
@@ -1024,7 +1049,7 @@ class Lmer(object):
                     "asymp.UCL": "97.5_ci",
                 }
             )[sortme]
-        elif 'lower.CL' in self.marginal_estimates.columns:
+        elif "lower.CL" in self.marginal_estimates.columns:
             self.marginal_estimates = self.marginal_estimates.rename(
                 columns={
                     effname: "Estimate",
@@ -1034,12 +1059,14 @@ class Lmer(object):
                 }
             )[sortme]
         else:
-            raise ValueError(f"Cannot figure out what emmeans is naming marginal CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}")
+            raise ValueError(
+                f"Cannot figure out what emmeans is naming marginal CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}"
+            )
 
         # Marginal Contrasts
         self.marginal_contrasts = base.summary(res)[1]
         # Column names also change depending on the family of the model
-        if self.family == 'gaussian':
+        if self.family == "gaussian":
             self.marginal_contrasts = self.marginal_contrasts.rename(
                 columns={
                     "t.ratio": "T-stat",
@@ -1079,18 +1106,19 @@ class Lmer(object):
             ]
 
         # Need to make another call to emmeans to get confidence intervals on contrasts
-        confs = (
-            base.unclass(emmeans.confint_emmGrid(res))[1]
-            .iloc[:, -2:]
-        )
+        confs = base.unclass(emmeans.confint_emmGrid(res))[1].iloc[:, -2:]
         # Deal with changing column names again
-        if 'asymp.LCL' in confs.columns:
-            confs = confs.rename(columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"})
-        elif 'lower.CL' in confs.columns:
+        if "asymp.LCL" in confs.columns:
+            confs = confs.rename(
+                columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"}
+            )
+        elif "lower.CL" in confs.columns:
             confs = confs.rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         else:
-            raise ValueError(f"Cannot figure out what emmeans is naming contrast CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}")
-        
+            raise ValueError(
+                f"Cannot figure out what emmeans is naming contrast CI columns. Expected 'lower.CL' or 'asymp.LCL', but columns are {self.marginal_estimates.columns}"
+            )
+
         self.marginal_contrasts = pd.concat([self.marginal_contrasts, confs], axis=1)
         # Resort columns
         effect_names = list(self.marginal_contrasts.columns[:-7])
@@ -1128,7 +1156,7 @@ class Lmer(object):
         ranef_alpha=0.5,
         coef_fmt="o",
         orient="v",
-        ranef_idx=0
+        ranef_idx=0,
     ):
         """
         Create a forestplot overlaying estimated coefficients with random effects (i.e. BLUPs). By default display the 95% confidence intervals computed during fitting.

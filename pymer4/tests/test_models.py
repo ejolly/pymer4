@@ -4,7 +4,10 @@ from pymer4.utils import get_resource_path
 import pandas as pd
 import numpy as np
 from scipy.special import logit
+from scipy.stats import ttest_ind
 import os
+
+np.random.seed(10)
 
 os.environ[
     "KMP_DUPLICATE_LIB_OK"
@@ -71,6 +74,21 @@ def test_gaussian_lm():
     # Test permutation
     model.fit(summarize=False, permute=500)
     assert model.sig_type == "permutation (500)"
+
+    # Test WLS
+    df_two_groups = df.query("IV3 in [0.5, 1.0]").reset_index(drop=True)
+    x = df_two_groups.query("IV3 == 0.5").DV.values
+    y = df_two_groups.query("IV3 == 1.0").DV.values
+
+    # Fit new a model using a categorical predictor with unequal variances (WLS)
+    model = Lm("DV ~ IV3", data=df_two_groups)
+    model.fit(summarize=False, weights="IV3")
+    assert model.estimator == "WLS"
+    
+    # Make sure welch's t-test lines up with scipy
+    wls = np.abs(model.coefs.loc["IV3", ["T-stat", "P-val"]].values)
+    scit = np.abs(ttest_ind(x, y, equal_var=False))
+    assert all([np.allclose(a, b) for a, b in zip(wls, scit)])
 
 
 def test_gaussian_lmm():
@@ -150,6 +168,17 @@ def test_logistic_lmm():
         logit(model.data.fits),
     )
 
+    # Test RFX only
+    model = Lmer("DV_l ~ 0 + (IV1|Group)", data=df, family="binomial")
+    model.fit(summarize=False)
+    assert model.fixef.shape == (47, 2)
+
+    model = Lmer("DV_l ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="binomial")
+    model.fit(summarize=False)
+    assert isinstance(model.fixef, list)
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
+
 
 def test_anova():
 
@@ -172,6 +201,17 @@ def test_poisson_lmm():
     assert m.coefs.shape == (2, 7)
     assert "Z-stat" in m.coefs.columns
 
+    # Test RFX only
+    model = Lmer("DV_int ~ 0 + (IV1|Group)", data=df, family="poisson")
+    model.fit(summarize=False)
+    assert model.fixef.shape == (47, 2)
+
+    model = Lmer("DV_int ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="poisson")
+    model.fit(summarize=False)
+    assert isinstance(model.fixef, list)
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
+
 
 def test_gamma_lmm():
 
@@ -183,6 +223,18 @@ def test_gamma_lmm():
     assert m.family == "gamma"
     assert m.coefs.shape == (2, 7)
 
+    # Test RFX only; these work but the optimizer in R typically crashes if the model is especially bad fit so commenting out until a better dataset is acquired
+    
+    # model = Lmer("DV_g ~ 0 + (IV1|Group)", data=df, family="gamma")
+    # model.fit(summarize=False)
+    # assert model.fixef.shape == (47, 2)
+
+    # model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="gamma")
+    # model.fit(summarize=False)
+    # assert isinstance(model.fixef, list)
+    # assert model.fixef[0].shape == (47, 2)
+    # assert model.fixef[1].shape == (3, 2)
+
 
 def test_inverse_gaussian_lmm():
 
@@ -193,6 +245,18 @@ def test_inverse_gaussian_lmm():
     m.fit(summarize=False)
     assert m.family == "inverse_gaussian"
     assert m.coefs.shape == (2, 7)
+
+    # Test RFX only; these work but the optimizer in R typically crashes if the model is especially bad fit so commenting out until a better dataset is acquired
+
+    # model = Lmer("DV_g ~ 0 + (IV1|Group)", data=df, family="inverse_gaussian")
+    # model.fit(summarize=False)
+    # assert model.fixef.shape == (47, 2)
+
+    # model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="inverse_gaussian")
+    # model.fit(summarize=False)
+    # assert isinstance(model.fixef, list)
+    # assert model.fixef[0].shape == (47, 2)
+    # assert model.fixef[1].shape == (3, 2)
 
 
 def test_lmer_opt_passing():
