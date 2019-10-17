@@ -344,7 +344,6 @@ class Lm2(object):
         error_bars="ci",
         ranef=True,
         axlim=None,
-        plot_intercept=True,
         ranef_alpha=0.5,
         coef_fmt="o",
         orient="v",
@@ -359,7 +358,6 @@ class Lm2(object):
             axlim (tuple): lower and upper limit of plot; default min and max of BLUPs
             ranef_alpha (float): opacity of random effect points; default .5
             coef_fmt (str): matplotlib marker style for population coefficients
-            ignore_intercept (bool): whether to plot intercept estimates; default True
 
         Returns:
             plt.axis: matplotlib axis handle
@@ -371,11 +369,7 @@ class Lm2(object):
             raise ValueError("orientation must be 'h' or 'v'")
 
         m_ranef = self.fixef
-        m_fixef = self.coefs
-
-        if not plot_intercept:
-            m_ranef = m_ranef.drop("Intercept", axis=1)
-            m_fixef = m_fixef.drop("Intercept", axis=0)
+        m_fixef = self.coefs.drop("Intercept", axis=0)
 
         if error_bars == "ci":
             col_lb = (m_fixef["Estimate"] - m_fixef["2.5_ci"]).values
