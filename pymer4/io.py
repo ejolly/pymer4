@@ -7,6 +7,7 @@ from rpy2.robjects.packages import importr
 import deepdish as dd
 import pandas as pd
 import warnings
+from tables import NaturalNameWarning
 
 base = importr("base")
 
@@ -51,17 +52,21 @@ def save_model(model, filepath, compression='zlib', **kwargs):
                 if isinstance(v, pd.DataFrame):
                     cols, idx = _df_meta_to_arr(v)
                     vals = v.values
+                    dtypes = v.dtypes.to_dict()
                     data_atts_separated[f"df_cols__{k}"] = cols
                     data_atts_separated[f"df_idx__{k}"] = idx
                     data_atts_separated[f"df_vals__{k}"] = vals
+                    data_atts_separated[f"df_dtypes__{k}"] = dtypes
                 elif isinstance(v, list):
                     for i, elem in enumerate(v):
                         if isinstance(elem, pd.DataFrame):
                             cols, idx = _df_meta_to_arr(elem)
                             vals = elem.values
+                            dtypes = elem.dtypes.to_dict()
                             data_atts_separated[f"list_{i}_cols__{k}"] = cols
                             data_atts_separated[f"list_{i}_idx__{k}"] = idx
                             data_atts_separated[f"list_{i}_vals__{k}"] = vals
+                            data_atts_separated[f"list_{i}_dtypes__{k}"] = dtypes
                         else:
                             raise TypeError(f"Value is list but list item is {type(elem)} not pd.DataFrame")
         
@@ -71,6 +76,7 @@ def save_model(model, filepath, compression='zlib', **kwargs):
         model_atts['data_atts'] = data_atts_separated
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
+            warnings.simplefilter("ignore", category=NaturalNameWarning)
             dd.io.save(filepath, model_atts, compression=compression, **kwargs)
         assert os.path.exists(filepath)
 
@@ -125,15 +131,16 @@ def load_model(filepath):
                     vals_name = f"df_vals__{item_name}"
                     cols_name = f"df_cols__{item_name}"
                     idx_name = f"df_idx__{item_name}"
+                    dtype_name = f"df_dtypes__{item_name}"
                     # Reconstruct the dataframe
                     df = pd.DataFrame(
                         model_atts['data_atts'][vals_name],
                         columns=[e.decode('utf-8') if isinstance(e, bytes) else e for e in model_atts['data_atts'][cols_name]],
                         index=[e.decode('utf-8') if isinstance(e, bytes) else e for e in model_atts['data_atts'][idx_name]]
-                    )
+                    ).astype(model_atts['data_atts'][dtype_name])
                     setattr(model, item_name, df)
                     # Add it to the list of completed items
-                    completed.extend([item_name, vals_name, idx_name])
+                    completed.extend([item_name, vals_name, idx_name, dtype_name])
             # Same idea for list items
             elif k.startswith('list_'):
                 if k not in completed:
@@ -143,12 +150,13 @@ def load_model(filepath):
                     vals_name = f"list_{item_idx}_vals__{item_name}"
                     cols_name = f"list_{item_idx}_cols__{item_name}"
                     idx_name = f"list_{item_idx}_idx__{item_name}"
+                    dtype_name = f"list_{item_idx}_dtypes__{item_name}"
                     # Reconstruct the dataframe
                     df = pd.DataFrame(
                         model_atts['data_atts'][vals_name],
                         columns=[e.decode('utf-8') if isinstance(e, bytes) else e for e in model_atts['data_atts'][cols_name]],
                         index=[e.decode('utf-8') if isinstance(e, bytes) else e for e in model_atts['data_atts'][idx_name]]
-                    )
+                    ).astype(model_atts['data_atts'][dtype_name])
                     # Check if the list already exists if so just append to it
                     if hasattr(model, item_name):
                         current_items = getattr(model, item_name)
@@ -161,7 +169,7 @@ def load_model(filepath):
                     else:
                         setattr(model, item_name, [df])
                     # Add to the list of completed items
-                    completed.extend([item_name, vals_name, idx_name])
+                    completed.extend([item_name, vals_name, idx_name, dtype_name])
         # Now deal with model object in R if needed
         if isinstance(model, Lmer):
             filename = filepath.split('.')[0]
