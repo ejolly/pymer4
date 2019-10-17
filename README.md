@@ -14,4 +14,28 @@ Additionally `pymer4` can fit various additional regression models with some bel
 
 **TL;DR** this package is your new simple Pythonic drop-in replacement for `lm()` or `glmer()` in R.
 
-Tutorial examples, API documentation, and installation instructions can be found at the [documentation site](http://eshinjolly.com/pymer4/).
+For example:
+
+```python
+# Assuming you have a pandas dataframe in tidy/long format
+# with DV and IV columns for dependent/outcome vars and
+# independent/predictor vars 
+
+model = Lmer('DV ~ IV1 + IV2 + (IV+IV2|Group)', data=dataframe)
+
+# Fit and print an R/statsmodels style summary 
+# with t/z-tests, CIs, and p-values
+model.fit()
+
+# Access model attributes
+model.BIC
+model.residuals
+
+# Get fitted parameters
+model.coef # population parameters
+model.fixef # group/cluster estimates (BLUPs)
+model.ranef # group/cluster deviates
+
+```
+
+Check out the [documentation site](http://eshinjolly.com/pymer4/) for detailed tutorial examples, API documentation, and installation instructions!
