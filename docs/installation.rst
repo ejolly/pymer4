@@ -39,7 +39,16 @@ You can also test the installation by running the following command in a termina
 
 Installation Issues
 -------------------
-Some users have issues installing ``pymer4`` on recent versions of macOS. This is due to compiler issues that give ``rpy2`` (a package dependency of ``pymer4``) some issues during install. Here's a fix that should work for that:
+
+Missing R packages
+++++++++++++++++++
+
+If you follow step 2 in the prerequisites above (i.e. let Anaconda install R for you), some users have reported that the ``conda install`` command above sometimes doesn't install everything you need; for example the `matrix <https://cran.r-project.org/web/packages/Matrix/index.html>`_ package. You can fix this by either installing any missing packages from within R directly by first launching R at a terminal using ``R``, then adding the package with ``install.packages("Matrix")`` or by using Anaconda and prepending ``r-`` infront of the *lowercase* name of the package: ``conda install -c conda-forge r-matrix``. 
+
+
+Compiler Issues on macOS
+++++++++++++++++++++++++
+Some of the more cryptic error messages you might encounter on macOS are due to compiler issues that give ``rpy2`` (a package dependency of ``pymer4``) some issues during install. Here's a fix that should work for that:
 
 1. Install `homebrew <https://brew.sh/>`_ if you don't have it already by running the command at the link (it's a great pacakage manager for macOS). To check if you already have it, do ``which brew`` in your Terminal. If nothing pops up you don't have it.
 2. Fix brew permissions: ``sudo chown -R $(whoami) $(brew --prefix)/*`` (this is **necessary** on macOS Sierra or higher (>= macOS 10.12))
