@@ -6,7 +6,14 @@ Pymer4
 .. image:: https://badge.fury.io/py/pymer4.svg
     :target: https://badge.fury.io/py/pymer4
 
+.. image:: https://pepy.tech/badge/pymer4
+  :target: https://pepy.tech/project/pymer4
+
 .. image:: https://img.shields.io/badge/python-3.6%20%7C%203.7-blue
+
+.. raw:: html
+
+  <br />
 
 .. image:: http://joss.theoj.org/papers/10.21105/joss.00862/status.svg
     :target: https://doi.org/10.21105/joss.00862
@@ -14,6 +21,8 @@ Pymer4
 .. image:: https://zenodo.org/badge/90598701.svg
     :target: https://zenodo.org/record/1523205
 
+.. image:: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
+  :target: https://github.com/ejolly/pymer4/issues
 
 :code:`pymer4` is a statistics library for estimating various regression and multi-level models in Python. Love `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This package has got you covered!
 
