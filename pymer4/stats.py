@@ -388,6 +388,7 @@ def tost_equivalence(
     n_perm=1000,
     n_boot=5000,
     plot=False,
+    seed=None,
 ):
     """
     Function to perform equivalence testing using TOST: two-one-sided-tests (Lakens et al, 2018). This works by defining a lower and upper bound of an "equivalence" range for the mean difference between x and y. This is a user-defined range that one might not feel is a particularly meangingful mean difference; conceptually similar to the Bayesian "region of practical equivalence (rope)." Specifically this uses, two one-sided t-tests against and lower and upper seperately to find out whether lower < mean diff < higher. n_perm only controls the permutation for the original two-sided test.
@@ -439,7 +440,7 @@ def tost_equivalence(
     # Just get df calculation from sub-function
     _, df = _calc_stats(x, y, 0, equal_var)
     tstat_orig, pval_orig = perm_test(
-        x, y, stat="tstat", n_perm=n_perm, equal_var=equal_var
+        x, y, stat="tstat", n_perm=n_perm, equal_var=equal_var, seed=seed
     )
     tstat_lower, df = _calc_stats(x, y, lower, equal_var)
     tstat_upper, df = _calc_stats(x, y, upper, equal_var)
@@ -485,7 +486,7 @@ def tost_equivalence(
     result["upper"] = {"m": upper, "t": tstat_upper, "p": pval_upper}
 
     # Effect size bootstrapped
-    d, (dlb, dub) = cohens_d(x, y, n_boot=n_boot, equal_var=equal_var)
+    d, (dlb, dub) = cohens_d(x, y, n_boot=n_boot, equal_var=equal_var, seed=seed)
     result["cohens_d"] = {"m": d, "CI_lb": dlb, "CI_ub": dub}
 
     # Some results text for interpretation
