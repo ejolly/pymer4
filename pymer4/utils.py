@@ -17,13 +17,13 @@ __all__ = [
     "nearestPSD",
     "upper",
     "R2con",
-    "con2R"
+    "con2R",
 ]
 
 __author__ = ["Eshin Jolly"]
 __license__ = "MIT"
 
-import os 
+import os
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
@@ -475,13 +475,27 @@ def con2R(arr):
     Convert user desired contrasts to R-flavored contrast matrix that can be passed directly to lm(). Reference: https://goo.gl/E4Mms2
 
     Args:
-        arr (np.ndarry): 2d numpy array arranged as contrasts X factor levels
+        arr (np.array): 1d or 2d numpy array where each row is a contrast and each column is a factor level
 
     Returns:
         np.ndarray: 2d contrast matrix as expected by R's contrasts() function
     """
 
-    intercept = np.repeat(1.0 / arr.shape[1], arr.shape[1])
+    # Check we're getting the right shapes
+    # 1d array = 1 comparison between 2 levels
+    # 2d array = nrows = ncols - 1; k-1 comparisons for k levels
+    if arr.ndim == 2:
+        if arr.shape[0] != (arr.shape[1] - 1):
+            raise ValueError("2d contrast matrix should have k-1 rows and k columns")
+        else:
+            intercept = np.repeat(1.0 / arr.shape[1], arr.shape[1])
+    elif arr.ndim == 1:
+        if arr.size != 2:
+            raise ValueError("1d contrast array should have 2 elements only")
+        else:
+            intercept = np.repeat(1.0 / arr.size, arr.size)
+    else:
+        raise ValueError("arr must be 1 or 2d")
     mat = np.vstack([intercept, arr])
     inv = np.linalg.inv(mat)[:, 1:]
     return inv
@@ -507,7 +521,7 @@ def R2con(arr):
 def _df_meta_to_arr(df):
     """Check what kind of data exists in pandas columns or index. If string return as numpy array 'S' type, otherwise regular numpy array.
     """
-    
+
     if len(df.columns):
         if isinstance(df.columns[0], str):
             columns = df.columns.values.astype("S")
@@ -515,7 +529,7 @@ def _df_meta_to_arr(df):
             columns = df.columns.values
     else:
         columns = []
-    
+
     if len(df.index):
         if isinstance(df.index[0], str):
             index = df.index.values.astype("S")
