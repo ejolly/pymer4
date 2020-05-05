@@ -265,7 +265,7 @@ class Lmer(object):
         old_optimizer=False,
     ):
         """
-        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
+        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience. When specifying factors make sure to use R's contrast scheme, e.g. 0.5 and -0.5 for a mean difference between two levels **not** 1 and -1. Use con2R from pymer4.utils to generate the appropriate contrast scheme given your desired comparisons.
 
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
