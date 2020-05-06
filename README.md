@@ -8,6 +8,8 @@
 
 # Pymer4
 
+❗️⚠️ **[Contributors wanted](https://github.com/ejolly/pymer4/issues/61)** ⚠️❗️
+
 Pymer4 is a statistics library for estimating various regression and multi-level models in Python. Love [lme4](https://cran.r-project.org/web/packages/lme4/index.html) in R, but prefer to work in the scientific Python ecosystem? This package has got you covered!
 
 `pymer4` provides a clean interface that hides the back-and-forth code required when moving between R and Python. In other words, you can work completely in Python, never having to deal with R, but get (most) of lme4’s goodness. This is accomplished using [rpy2](hhttps://rpy2.github.io/doc/latest/html/index.html/) to interface between langauges.
