@@ -6,6 +6,8 @@ import numpy as np
 from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
+import pytest
+import re
 
 np.random.seed(10)
 
@@ -284,3 +286,27 @@ def test_glmer_opt_passing():
         summarize=False, control="optCtrl = list(FtolAbs=1e-1, FtolRel=1e-1, maxfun=10)"
     )
     assert len(m.warnings) >= 1
+
+
+# all or prune to suit
+# tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
+tests_ = [
+    (test_gaussian_lm2),
+    (test_gaussian_lm),
+    (test_gaussian_lmm),
+    (test_post_hoc),
+    (test_logistic_lmm),
+    (test_anova),
+    (test_poisson_lmm),
+    (test_gamma_lmm),
+    (test_inverse_gaussian_lmm),
+    (test_lmer_opt_passing),
+    (test_glmer_opt_passing),
+]
+@pytest.mark.parametrize("model", tests_)
+def test_Pool(model):
+    from multiprocessing import Pool
+    # squeeze model functions through Pool pickling
+    print("Pool", model.__name__)
+    with Pool(1) as pool:
+        _ = pool.apply(model, [])

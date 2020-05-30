@@ -641,20 +641,24 @@ class Lmer(object):
         self.fitted = True
 
         # Random effect variances and correlations
+        varcor_NAs = ["NA", "N", robjects.NA_Character]
         df = base.data_frame(unsum.rx2("varcor"))
-        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
+
+        ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
         ran_vars.columns = ["Name", "Var", "Std"]
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
+        ran_vars.replace(robjects.NA_Character, "", inplace=True)
 
-        ran_corrs = df.query("(var2 != 'NA') & (var2 != 'N')").drop("vcov", axis=1)
+        ran_corrs = df.query("var2 not in @varcor_NAs").drop("vcov", axis=1)
         if ran_corrs.shape[0] != 0:
             ran_corrs.index = ran_corrs["grp"]
             ran_corrs.drop("grp", axis=1, inplace=True)
             ran_corrs.columns = ["IV1", "IV2", "Corr"]
             ran_corrs.index.name = None
+            ran_corrs.replace(robjects.NA_Character, "", inplace=True)
         else:
             ran_corrs = None
 
