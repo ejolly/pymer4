@@ -291,22 +291,22 @@ def test_glmer_opt_passing():
 # all or prune to suit
 # tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
 tests_ = [
-    (test_gaussian_lm2),
-    (test_gaussian_lm),
-    (test_gaussian_lmm),
-    (test_post_hoc),
-    (test_logistic_lmm),
-    (test_anova),
-    (test_poisson_lmm),
-    (test_gamma_lmm),
-    (test_inverse_gaussian_lmm),
-    (test_lmer_opt_passing),
-    (test_glmer_opt_passing),
+    test_gaussian_lm2,
+    test_gaussian_lm,
+    test_gaussian_lmm,
+    test_post_hoc,
+    test_logistic_lmm,
+    test_anova,
+    test_poisson_lmm,
+    test_gamma_lmm,
+    test_inverse_gaussian_lmm,
+    test_lmer_opt_passing,
+    test_glmer_opt_passing,
 ]
 @pytest.mark.parametrize("model", tests_)
 def test_Pool(model):
-    from multiprocessing import Pool
+    from multiprocessing import get_context
     # squeeze model functions through Pool pickling
     print("Pool", model.__name__)
-    with Pool(1) as pool:
+    with get_context("spawn").Pool(1) as pool:
         _ = pool.apply(model, [])
