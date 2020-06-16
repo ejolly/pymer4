@@ -101,7 +101,7 @@ class Lmer(object):
         )
         return out
 
-    # TODO: Write a test for this function with some sample data to ensure that simple computed contrasts reflect marginal mean differences. This should prevent missed issues in future versions (regression tests)
+    # TODO Write a test for this function with some sample data to ensure that simple computed contrasts reflect marginal mean differences. This should prevent missed issues in future versions (regression tests)
     def _make_factors(self, factor_dict, ordered=False):
         """
         Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts. User can also specific custom contrasts.
@@ -137,7 +137,7 @@ class Lmer(object):
                     raise NotImplementedError(
                         "Currently only manual contrasts specified as a dict of comparisons per factor level work properly"
                     )
-                    # TODO: Figure out how to handle contrasts in this case. Because we're passing the computed contrasts the model directly, we can't rely on R magic to compute the other orthgonal contrasts for us.
+                    # TODO Figure out how to handle contrasts in this case. Because we're passing the computed contrasts the model directly, we can't rely on R magic to compute the other orthgonal contrasts for us.
                     categories = list(levels)
                     contrasts = np.array(levels)
                 cat_type = CategoricalDtype(categories=categories, ordered=True)
@@ -888,7 +888,7 @@ class Lmer(object):
             print("Fixed effects:\n")
             return self.coefs.round(3)
 
-    # TODO: Provide option to to pass lmerTest.limit = N in order to get non Inf dof when number of observations > 3000. Apparently this is a new default in emmeans. This warning is only visible when verbose=True
+    # TODO Provide option to to pass lmerTest.limit = N in order to get non Inf dof when number of observations > 3000. Apparently this is a new default in emmeans. This warning is only visible when verbose=True
     def post_hoc(
         self,
         marginal_vars,
