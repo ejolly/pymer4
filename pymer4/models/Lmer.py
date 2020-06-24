@@ -314,7 +314,7 @@ class Lmer(object):
         # Save params for future calls
         self._permute = permute
         self._conf_int = conf_int
-        self._REML = REML
+        self._REML = REML if self.family == 'gaussian' else False
         self._set_R_stdout(verbose)
         if permute is True:
             raise TypeError(
@@ -385,7 +385,6 @@ class Lmer(object):
                 self.formula,
                 data=dat,
                 family=_fam,
-                REML=REML,
                 control=lmc,
                 contrasts=contrasts,
             )
@@ -544,6 +543,9 @@ class Lmer(object):
                     odds.ci <- exp(out.ci)
                     colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
                     probs.ci <- data.frame(sapply(out.ci,plogis))
+                    if(ncol(probs.ci) == 1){
+                      probs.ci = t(probs.ci)
+                    }
                     colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
                     out <- cbind(out,odds,odds.ci,probs,probs.ci)
                     list(out,rownames(out))
@@ -599,8 +601,7 @@ class Lmer(object):
                         perm_obj = lmer.lmer(self.formula, data=perm_dat, REML=REML)
                     else:
                         perm_obj = lmer.glmer(
-                            self.formula, data=perm_dat, family=_fam, REML=REML
-                        )
+                            self.formula, data=perm_dat, family=_fam)
                     perms.append(_return_t(perm_obj))
                 perms = np.array(perms)
                 pvals = []
