@@ -29,6 +29,9 @@ import pandas as pd
 from patsy import dmatrices
 from scipy.stats import chi2
 from rpy2.robjects.packages import importr
+from rpy2.robjects.conversion import localconverter
+from rpy2.robjects import pandas2ri
+import rpy2.robjects as robjects
 
 base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
@@ -473,7 +476,7 @@ def _welch_ingredients(x):
 def con2R(arr, names=None):
     """
     Convert human-readable contrasts into a form that R requires. Works like the make.contrasts() function from the gmodels package, in that it will auto-solve for the remaining orthogonal k-1 contrasts if fewer than k-1 contrasts are specified.
-    
+                
     Arguments:
         arr (np.ndarray): 1d or 2d numpy array with each row reflecting a unique contrast and each column a factor level
         names (list/np.ndarray): optional list of contrast names which will cast the return object as a dataframe
@@ -482,6 +485,8 @@ def con2R(arr, names=None):
         A 2d numpy array or dataframe useable with the contrasts argument of glmer
     """
 
+    if isinstance(arr, list):
+        arr = np.array(arr)
     if arr.ndim < 2:
         arr = np.atleast_2d(arr)
     elif arr.ndim > 2:
@@ -560,3 +565,10 @@ def _df_meta_to_arr(df):
         index = []
 
     return columns, index
+
+
+def pandas2R(df):
+    """Local conversion of pandas dataframe to R dataframe as recommended by rpy2"""
+    with localconverter(robjects.default_converter + pandas2ri.converter):
+        data = robjects.conversion.py2rpy(df)
+    return data
