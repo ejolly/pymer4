@@ -8,7 +8,7 @@ Main class to wrap R's lme4 library
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
-from rpy2 import rinterface_lib
+from rpy2.rinterface_lib import callbacks
 
 from rpy2.robjects import numpy2ri
 import rpy2.rinterface as rinterface
@@ -35,8 +35,8 @@ stats = importr('stats')
 numpy2ri.activate()
 
 # Make a reference to the default R console writer from rpy2
-consolewrite_warning_backup = rinterface_lib.callbacks.consolewrite_warnerror
-consolewrite_print_backup = rinterface_lib.callbacks.consolewrite_print
+consolewrite_warning_backup = callbacks.consolewrite_warnerror
+consolewrite_print_backup = callbacks.consolewrite_print
 
 
 class Lmer(object):
@@ -281,7 +281,7 @@ class Lmer(object):
 
         if verbose:
             # use the default logging in R
-            rinterface_lib.callbacks.consolewrite_warnerror = (
+            callbacks.consolewrite_warnerror = (
                 consolewrite_warning_backup
             )
         else:
@@ -291,7 +291,7 @@ class Lmer(object):
             def _f(x):
                 buf.append(x)
 
-            rinterface_lib.callbacks.consolewrite_warnerror = _f
+            callbacks.consolewrite_warnerror = _f
 
     def fit(
         self,
