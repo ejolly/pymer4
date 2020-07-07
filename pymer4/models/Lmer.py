@@ -240,7 +240,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = anova(self.model_obj)
+        self.anova_results = pd.DataFrame(anova(self.model_obj))
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
@@ -300,7 +300,6 @@ class Lmer(object):
         factors=None,
         permute=False,
         ordered=False,
-        summarize=True,
         verbose=False,
         REML=True,
         rank=False,
@@ -309,6 +308,7 @@ class Lmer(object):
         no_warnings=False,
         control="",
         old_optimizer=False,
+        **kwargs
     ):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience. Factors should be specified as a dictionary with values as a list or themselves a dictionary of *human readable* contrasts *not* R-style contrast codes as these will be auto-converted for you. See the factors docstring and examples below. After fitting, the .factors attribute will store a reference to the user-specified dictionary. The .contrast_codes model attributes will store the requested comparisons in converted R format.
@@ -319,7 +319,7 @@ class Lmer(object):
             factors (dict): dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast or a dict with keys as factor leves and values as desired comparisons in human readable format See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
-            summarize (bool): whether to print a model summary after fitting; default is True
+            summarize/summary (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
             rank (bool): covert predictors in model formula to ranks by group prior to estimation. Model object will still contain original data not ranked data; default False
@@ -361,6 +361,11 @@ class Lmer(object):
 
         """
 
+        # Alllow summary or summarize for compatibility
+        if 'summary' in kwargs and 'summarize' in kwargs:
+            raise ValueError("You specified both summary and summarize, please prefer summarize")
+        summarize = kwargs.pop('summarize', True)
+        summarize = kwargs.pop('summary', summarize)
         # Save params for future calls
         self._permute = permute
         self._conf_int = conf_int
@@ -734,6 +739,7 @@ class Lmer(object):
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
+        fixefs = [pd.DataFrame(f) for f in fixefs]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []
@@ -754,7 +760,7 @@ class Lmer(object):
             else:
                 self.fixef = list(fixefs)
         else:
-            self.fixef = pd.DataFrame(fixefs[0])
+            self.fixef = fixefs[0]
             if self.coefs is not None:
                 self.fixef = self.fixef[
                     list(self.coefs.index)
@@ -860,7 +866,7 @@ class Lmer(object):
         )
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
-        return sims
+        return pd.DataFrame(sims)
 
     def predict(self, data, use_rfx=False, pred_type="response", verbose=False):
         """
@@ -906,7 +912,7 @@ class Lmer(object):
         )
 
         predict_func = robjects.r(rstring)
-        preds = predict_func(self.model_obj, data)
+        preds = predict_func(self.model_obj, pandas2R(data))
         return preds
 
     def summary(self):
@@ -1106,7 +1112,7 @@ class Lmer(object):
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        self.marginal_estimates = base.summary(res)[0]
+        self.marginal_estimates = pd.DataFrame(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -1138,7 +1144,7 @@ class Lmer(object):
             )
 
         # Marginal Contrasts
-        self.marginal_contrasts = base.summary(res)[1]
+        self.marginal_contrasts = pd.DataFrame(base.summary(res)[1])
         if "t.ratio" in self.marginal_contrasts.columns:
             rename_dict = {
                 "t.ratio": "T-stat",
@@ -1181,7 +1187,8 @@ class Lmer(object):
         self.marginal_contrasts = self.marginal_contrasts.rename(columns=rename_dict)
 
         # Need to make another call to emmeans to get confidence intervals on contrasts
-        confs = base.unclass(emmeans.confint_emmGrid(res))[1].iloc[:, -2:]
+        confs = pd.DataFrame(base.unclass(emmeans.confint_emmGrid(res))[1])
+        confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:
             confs = confs.rename(

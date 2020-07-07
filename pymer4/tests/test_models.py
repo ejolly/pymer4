@@ -120,9 +120,14 @@ def test_gaussian_lmm():
     # Test prediction
     assert np.allclose(model.predict(model.data, use_rfx=True), model.data.fits)
 
-    # Smoketest for simulate
-    model.simulate(2)
-    model.simulate(2, use_rfx=True)
+    # Test simulate
+    out = model.simulate(2)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
+
+    out = model.simulate(2, use_rfx=True)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
 
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
@@ -225,6 +230,8 @@ def test_anova():
     model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=data)
     model.fit(summarize=False)
     out = model.anova()
+    assert out.shape == (3, 7)
+    out = model.anova(force_orthogonal=True)
     assert out.shape == (3, 7)
 
 

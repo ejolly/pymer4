@@ -97,7 +97,6 @@ class Lm2(object):
         permute=False,
         perm_on="t-stat",
         rank=False,
-        summarize=True,
         verbose=False,
         n_boot=500,
         n_jobs=1,
@@ -105,6 +104,7 @@ class Lm2(object):
         to_corrs=False,
         ztrans_corrs=True,
         cluster=None,
+        **kwargs
     ):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='coef') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
@@ -130,6 +130,12 @@ class Lm2(object):
             DataFrame: R style summary() table
 
         """
+
+        # Alllow summary or summarize for compatibility
+        if 'summary' in kwargs and 'summarize' in kwargs:
+            raise ValueError("You specified both summary and summarize, please prefer summarize")
+        summarize = kwargs.pop('summarize', True)
+        summarize = kwargs.pop('summary', summarize)
 
         if robust:
             if isinstance(robust, bool):

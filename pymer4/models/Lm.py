@@ -87,7 +87,6 @@ class Lm(object):
         conf_int="standard",
         permute=False,
         rank=False,
-        summarize=True,
         verbose=False,
         n_boot=500,
         n_jobs=1,
@@ -95,6 +94,7 @@ class Lm(object):
         cluster=None,
         weights=None,
         wls_dof_correction=True,
+        **kwargs
     ):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
@@ -165,6 +165,13 @@ class Lm(object):
             model.fit(weights=weights)
 
         """
+
+        # Alllow summary or summarize for compatibility
+        if 'summary' in kwargs and 'summarize' in kwargs:
+            raise ValueError("You specified both summary and summarize, please prefer summarize")
+        summarize = kwargs.pop('summarize', True)
+        summarize = kwargs.pop('summary', summarize)
+
         if permute and permute < 500:
             w = "Permutation testing < 500 permutations is not recommended"
             warnings.warn(w)
