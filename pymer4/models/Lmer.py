@@ -18,18 +18,25 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from ..utils import _sig_stars, _perm_find, _return_t, _to_ranks_by_group, con2R, pandas2R
+from ..utils import (
+    _sig_stars,
+    _perm_find,
+    _return_t,
+    _to_ranks_by_group,
+    con2R,
+    pandas2R,
+)
 from pandas.api.types import CategoricalDtype
+
+# Import R libraries we need
+base = importr('base')
+stats = importr('stats')
 
 numpy2ri.activate()
 
 # Make a reference to the default R console writer from rpy2
 consolewrite_warning_backup = rinterface_lib.callbacks.consolewrite_warnerror
 consolewrite_print_backup = rinterface_lib.callbacks.consolewrite_print
-
-# Import R functions we need
-base = importr("base")
-stats = importr("stats")
 
 
 class Lmer(object):
@@ -135,8 +142,8 @@ class Lmer(object):
         """
 
         errormsg = f"factors should be specified as a dictionary with values as one of:\n1) a list with factor levels in the desired order for dummy/treatment/polynomial contrasts\n2) a dict with keys as factor levels and values as desired comparisons in human readable format"
-        out = {}
         # We create a copy of data because we need to convert dtypes to categories and then pass them to R. However, resetting categories on the *same* dataframe and passing to R repeatedly (e.g. multiple calls to .fit with different contrasats) does not work as R only uses the 1st category spec. So instead we create a copy and return that copy to get used by .fit
+        out = {}
         df = self.data.copy()
         if not isinstance(factor_dict, dict):
             raise TypeError(errormsg)
@@ -192,10 +199,13 @@ class Lmer(object):
         """
 
         self.factors_prev_ = copy(self.factors)
-        # Create orthogonal polynomial contrasts by just sorted factor levels alphabetically and letting R enumerate the required polynomial contrasts
+        self.contrast_codes_prev_ = copy(self.contrast_codes)
+        # Create orthogonal polynomial contrasts for all factors, by creating a list of unique
+        # factor levels as self._make_factors will handle the rest
         new_factors = {}
-        for k in self.factors.keys():
-            new_factors[k] = sorted(list(map(str, self.data[k].unique())))
+        for factor in self.factors.keys():
+            new_factors[factor] = sorted(list(map(str, self.data[factor].unique())))
+
         self.fit(
             factors=new_factors,
             ordered=True,
@@ -356,6 +366,7 @@ class Lmer(object):
         self._conf_int = conf_int
         self._REML = REML if self.family == "gaussian" else False
         self._set_R_stdout(verbose)
+
         if permute is True:
             raise TypeError(
                 "permute should 'False' or the number of permutations to perform"
@@ -728,14 +739,16 @@ class Lmer(object):
                 f_corrected_order = []
                 for f in fixefs:
                     f_corrected_order.append(
-                        pd.DataFrame(f[
-                            list(self.coefs.index)
-                            + [
-                                elem
-                                for elem in f.columns
-                                if elem not in self.coefs.index
+                        pd.DataFrame(
+                            f[
+                                list(self.coefs.index)
+                                + [
+                                    elem
+                                    for elem in f.columns
+                                    if elem not in self.coefs.index
+                                ]
                             ]
-                        ])
+                        )
                     )
                 self.fixef = f_corrected_order
             else:
@@ -1090,7 +1103,6 @@ class Lmer(object):
 
         func = robjects.r(rstring)
         res = func(self.model_obj)
-        base = importr("base")
         emmeans = importr("emmeans")
 
         # Marginal estimates
