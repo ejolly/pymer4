@@ -1046,7 +1046,7 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list())
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
                                 out
                                 }"""
                             )
@@ -1061,7 +1061,7 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list())
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
                                 out
                                 }"""
                             )
@@ -1086,7 +1086,7 @@ class Lmer(object):
                         + _conditional
                         + """, adjust='"""
                         + p_adjust
-                        + """')
+                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
                         out
                         }"""
                     )
@@ -1100,7 +1100,7 @@ class Lmer(object):
                         + _marginal
                         + """,adjust='"""
                         + p_adjust
-                        + """')
+                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
                         out
                         }"""
                     )
