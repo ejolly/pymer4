@@ -37,7 +37,19 @@ model.residuals
 model.coef # population parameters
 model.fixef # group/cluster estimates (BLUPs)
 model.ranef # group/cluster deviates
-
 ```
 
+## Documentation
+
 Check out the [documentation site](http://eshinjolly.com/pymer4/) for detailed tutorial examples, API documentation, and installation instructions!
+
+## Contributing
+
+Contributions are *always welcome*!  
+If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues) or submit pull requests for additional features or bug fixes. If you do make a pull request, please do so by forking the [development branch](https://github.com/ejolly/pymer4/tree/dev) and taking note of the [contribution guidelines](http://eshinjolly.com/pymer4/contributing.html).
+
+## Contributors
+
+[![](https://github.com/turbach.png?size=50)](https://github.com/turbach) 
+[![](https://github.com/Shotgunosine.png?size=50)](https://github.com/Shotgunosine)
+<a href="https://github.com/arose13"><img src="https://github.com/arose13.png" width="50" height="50" /></a>
