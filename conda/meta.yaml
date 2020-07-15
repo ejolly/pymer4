@@ -12,7 +12,7 @@ build:
     # script: python setup.py install --single-version-externally-managed --record=record.txt
     script: pip install . -vv --no-deps
     # abandoned conda build GIT_BUILD_STRING env variable
-    string: {g{ environ.get("GIT_ABBREV_COMMIT", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
+    string: g{{ environ.get("GIT_ABBREV_COMMIT", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
 
 requirements:
 
