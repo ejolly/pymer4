@@ -39,8 +39,15 @@ if (( $n_tarballs != 1 )); then
     exit -3
 fi
 
+# the tarball name is PATH/PKG-VERSION-ABBREV_COMMIT.tar.bz2 
+# pull out the version and git short commit hash
+splitr=".*${PACKAGE_NAME}-\(.\+\)-\(.\+\)\.tar\.bz2"
+
 # entire version string which may or may not be Major.Minor.Patch
-version=`echo $tarball | sed -n "s/.*${PACKAGE_NAME}-\(.\+\)-.*/\1/p"`
+version=$(echo $tarball | sed -n "s/${sed_splitr}/\1/p")
+
+# git commit short hash prefixed by g, e.g., ga6fd900, mod for release
+abbrev_commit=$(echo $tarball | sed -n "s/${sed_splitr}/\2/p")
 
 # just the numeric Major.Minor.Patch portion of version, possibly empty
 mmp=`echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p"`
@@ -56,9 +63,15 @@ if [[ "${version}" = "$mmp" ]]; then
 	label="pre-release"
     fi
 
-    # a github release tagged vM.N.P uploads to main
+    # github release tagged vM.N.P uploads to main w/ r prefix to the commit short hash
     if [[ $TRAVIS_BRANCH = v"$mmp" ]]; then
 	label="main"
+
+	# rename the conda build tarball as a release, e.g., ga6fd900 -> ra6fd900
+	release_commit=$(echo ${abbrev_commit} | sed -n "s/^g\(.*\)/r\1/p")
+	release_tarball=$(echo ${tarball} | sed -n "s/${abbrev_commit}/${release_commit}/p")
+	mv ${tarball} ${release_tarball}
+	tarball=${release_tarball}
     fi
 fi
 
@@ -73,8 +86,9 @@ ANACONDA_TOKEN=${ANACONDA_TOKEN:-[not_set]}
 conda_cmd="anaconda --token $ANACONDA_TOKEN upload ./**/${PACKAGE_NAME}*.tar.bz2 --label ${label} --skip-existing"
 
 # echo values to the TravisCI log for general info/debugging
-echo "conda meta.yaml version: $version"
 echo "package name: $PACKAGE_NAME"
+echo "conda meta.yaml version: $version"
+echo "github short hash: $abbrev_commit"
 echo "conda-bld: ${bld_prefix}/conda-bld/linux-64"
 echo "tarball: $tarball"
 echo "travis tag: $TRAVIS_TAG"
