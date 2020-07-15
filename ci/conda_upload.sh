@@ -44,13 +44,14 @@ fi
 splitr=".*${PACKAGE_NAME}-\(.\+\)-\(.\+\)\.tar\.bz2"
 
 # entire version string which may or may not be Major.Minor.Patch
-version=`echo $tarball | sed -n "s/${sed_splitr}/\1/p"`
+version=$(echo $tarball | sed -n "s/${splitr}/\1/p")
 
 # git commit short hash prefixed by g, e.g., ga6fd900, mod for release
-abbrev_commit=`echo $tarball | sed -n "s/${sed_splitr}/\2/p"`
+abbrev_commit=$(echo $tarball | sed -n "s/${splitr}/\2/p")
 
 # just the numeric Major.Minor.Patch portion of version, possibly empty
-mmp=`echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p"`
+mmp=$(echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p")
+
 
 # assume this is a dry run, unless version is M.N.P exactly and the
 # TRAVIS_BRANCH is master or a tagged vM.N.P release, in which case,
@@ -68,12 +69,14 @@ if [[ "${version}" = "$mmp" ]]; then
 	label="main"
 
 	# rename the conda build tarball as a release, e.g., ga6fd900 -> ra6fd900
-	release_commit=`echo ${abbrev_commit} | sed -n "s/^g\(.*\)/r\1/p"`
-	release_tarball=`echo ${tarball} | sed -n "s/${abbrev_commit}/${release_commit}/p"`
+	release_commit=$(echo ${abbrev_commit} | sed -n "s/^g\(.*\)/r\1/p")
+	release_tarball=$(echo ${tarball} | sed -n "s/${abbrev_commit}/${release_commit}/p")
+
 	mv ${tarball} ${release_tarball}
 	tarball=${release_tarball}
     fi
 fi
+
 
 # build package binaries for selected platforms
 mkdir -p ${bld_prefix}/conda-convert/linux-64
@@ -89,11 +92,13 @@ conda_cmd="anaconda --token $ANACONDA_TOKEN upload ./**/${PACKAGE_NAME}*.tar.bz2
 echo "package name: $PACKAGE_NAME"
 echo "conda meta.yaml version: $version"
 echo "github short hash: $abbrev_commit"
+echo "travis branch: $TRAVIS_BRANCH"
+echo "travis tag: $TRAVIS_TAG"
 echo "conda-bld: ${bld_prefix}/conda-bld/linux-64"
 echo "tarball: $tarball"
-echo "travis tag: $TRAVIS_TAG"
-echo "travis branch: $TRAVIS_BRANCH"
 echo "conda label: ${label}"
+echo "release short hash: $release_commit" # release strings are empty except for
+echo "release tarball: $release_tarball"   # tagged releases
 echo "conda upload command: ${conda_cmd}"
 echo "platforms:"
 echo "$(ls ./**/${PACKAGE_NAME}*.tar.bz2)"
