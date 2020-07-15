@@ -44,10 +44,10 @@ fi
 splitr=".*${PACKAGE_NAME}-\(.\+\)-\(.\+\)\.tar\.bz2"
 
 # entire version string which may or may not be Major.Minor.Patch
-version=$(echo $tarball | sed -n "s/${sed_splitr}/\1/p")
+version=`echo $tarball | sed -n "s/${sed_splitr}/\1/p"`
 
 # git commit short hash prefixed by g, e.g., ga6fd900, mod for release
-abbrev_commit=$(echo $tarball | sed -n "s/${sed_splitr}/\2/p")
+abbrev_commit=`echo $tarball | sed -n "s/${sed_splitr}/\2/p"`
 
 # just the numeric Major.Minor.Patch portion of version, possibly empty
 mmp=`echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p"`
@@ -68,8 +68,8 @@ if [[ "${version}" = "$mmp" ]]; then
 	label="main"
 
 	# rename the conda build tarball as a release, e.g., ga6fd900 -> ra6fd900
-	release_commit=$(echo ${abbrev_commit} | sed -n "s/^g\(.*\)/r\1/p")
-	release_tarball=$(echo ${tarball} | sed -n "s/${abbrev_commit}/${release_commit}/p")
+	release_commit=`echo ${abbrev_commit} | sed -n "s/^g\(.*\)/r\1/p"`
+	release_tarball=`echo ${tarball} | sed -n "s/${abbrev_commit}/${release_commit}/p"`
 	mv ${tarball} ${release_tarball}
 	tarball=${release_tarball}
     fi
