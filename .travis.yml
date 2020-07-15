@@ -1,4 +1,4 @@
-# requires a current GIT_TOKEN, ANACONDA_TOKEN, PYPI_TOKEN in TravisCI settings
+# requires a valid GIT_TOKEN, ANACONDA_TOKEN, PYPI_TOKEN in TravisCI settings
 env:
   - PACKAGE_NAME: pymer4   # for the conda_upload.sh deploy script
 
