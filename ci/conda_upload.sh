@@ -46,6 +46,9 @@ splitr=".*${PACKAGE_NAME}-\(.\+\)-\(.\+\)\.tar\.bz2"
 # entire version string which may or may not be Major.Minor.Patch
 version=$(echo $tarball | sed -n "s/${splitr}/\1/p")
 
+# git short hash with g or r=release prefix
+abbrev_commit==$(echo $tarball | sed -n "s/${splitr}/\2/p")
+
 # just the numeric Major.Minor.Patch portion of version, possibly empty
 mmp=$(echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p")
 
