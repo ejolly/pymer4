@@ -444,7 +444,7 @@ class Lmer(object):
             )
 
         # Store design matrix and get number of IVs for inference
-        self.design_matrix = pd.DataFrame(stats.model_matrix(self.model_obj))
+        self.design_matrix = pd.DataFrame(base.data_frame(stats.model_matrix(self.model_obj)))
         num_IV = self.design_matrix.shape[1]
 
         if permute and verbose:
@@ -693,9 +693,7 @@ class Lmer(object):
 
             self.coefs = df
             # Make sure the design matrix column names match population coefficients
-            self.design_matrix = pd.DataFrame(
-                self.design_matrix, columns=self.coefs.index[:]
-            )
+            self.design_matrix.columns = self.coefs.index[:]
         else:
             self.coefs = None
             if permute or conf_int == "boot":

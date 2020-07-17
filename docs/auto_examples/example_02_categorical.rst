@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_02_categorical.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_02_categorical.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_02_categorical.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_02_categorical.py:
 
 
 2. Categorical Predictors
@@ -28,6 +30,7 @@ Lm and Lm2 Models
 
     # IV3 is a categorical predictors with 3 levels in the sample data
     df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+
 
 
 
@@ -77,6 +80,7 @@ Dummy-coded/Treatment contrasts
 
 
 
+
 Orthogonal Polynomial Contrasts
 +++++++++++++++++++++++++++++++
 
@@ -118,6 +122,7 @@ Orthogonal Polynomial Contrasts
 
 
 
+
 Sum-to-zero contrasts
 +++++++++++++++++++++
 
@@ -155,6 +160,7 @@ Sum-to-zero contrasts
     Intercept             42.069  39.537   44.602  1.289  561  32.627  0.000  ***
     C(IV3, Sum)[S.0.5]     2.115  -1.467    5.697  1.823  561   1.160  0.247     
     C(IV3, Sum)[S.1.0]     0.652  -2.930    4.234  1.823  561   0.357  0.721     
+
 
 
 
@@ -201,6 +207,7 @@ Scaling/Centering
 
 
 
+
 Please refer to the `patsy documentation <https://patsy.readthedocs.io/en/latest/categorical-coding.html>`_ for more details when working categorical predictors in :code:`Lm` or :code:`Lm2` models.
 
 Lmer Models
@@ -224,6 +231,7 @@ Each of these ways also enables you to easily compute post-hoc comparisons betwe
     # dichotomous DV_l variable and the same categorical predictor (IV3)
     # as before
     model = Lmer('DV_l ~ IV3 + (IV3|Group)', data=df, family='binomial')
+
 
 
 
@@ -280,8 +288,9 @@ First we'll use dummy-coding/treatment contrasts with 1.0 as the reference level
 
                  Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
     (Intercept)    -0.129  -0.419    0.162  0.148  0.879      0.658       1.176  0.468        0.397         0.540  -0.867  0.386    
-    IV30.5          0.129  -0.283    0.540  0.210  1.137      0.753       1.716  0.532        0.430         0.632   0.612  0.541    
-    IV31.5         -0.128  -0.539    0.283  0.210  0.880      0.583       1.327  0.468        0.368         0.570  -0.612  0.541    
+    IV31            0.129  -0.283    0.540  0.210  1.137      0.753       1.716  0.532        0.430         0.632   0.612  0.541    
+    IV32           -0.128  -0.539    0.283  0.210  0.880      0.583       1.327  0.468        0.368         0.570  -0.612  0.541    
+
 
 
 
@@ -323,21 +332,22 @@ Second we'll use orthogonal polynomial contrasts. This is accomplished using the
     Random effects:
 
                   Name    Var    Std
-    Group  (Intercept)  0.000  0.000
-    Group        IV3.L  0.001  0.035
-    Group        IV3.Q  0.032  0.180
+    Group  (Intercept)  0.010  0.098
+    Group       IV31.0  0.060  0.246
+    Group       IV31.5  0.003  0.050
 
-                   IV1    IV2  Corr
-    Group  (Intercept)  IV3.L   NaN
-    Group  (Intercept)  IV3.Q   NaN
-    Group        IV3.L  IV3.Q  -1.0
+                   IV1     IV2  Corr
+    Group  (Intercept)  IV31.0  -1.0
+    Group  (Intercept)  IV31.5  -1.0
+    Group       IV31.0  IV31.5   1.0
 
     Fixed effects:
 
                  Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
     (Intercept)    -0.128  -0.294    0.037  0.085  0.879      0.745       1.038  0.468        0.427         0.509  -1.518  0.129    
-    IV3.L          -0.182  -0.469    0.106  0.147  0.834      0.626       1.112  0.455        0.385         0.526  -1.238  0.216    
-    IV3.Q           0.000  -0.292    0.292  0.149  1.000      0.747       1.339  0.500        0.428         0.572   0.001  1.000    
+    IV31           -0.182  -0.469    0.106  0.147  0.834      0.626       1.112  0.455        0.385         0.526  -1.238  0.216    
+    IV32            0.000  -0.292    0.292  0.149  1.000      0.747       1.339  0.500        0.428         0.572   0.001  1.000    
+
 
 
 
@@ -395,9 +405,10 @@ Custom contrasts
     Fixed effects:
 
                  Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
-    (Intercept)    -0.129  -0.419    0.162  0.148  0.879      0.658       1.176  0.468        0.397         0.540  -0.867  0.386    
-    IV30.5          0.129  -0.283    0.540  0.210  1.137      0.753       1.716  0.532        0.430         0.632   0.612  0.541    
-    IV31.5         -0.128  -0.539    0.283  0.210  0.880      0.583       1.327  0.468        0.368         0.570  -0.612  0.541    
+    (Intercept)    -0.128  -0.294    0.037  0.085  0.879      0.745       1.038  0.468        0.427         0.509  -1.518  0.129    
+    IV31           -0.000  -0.358    0.357  0.182  1.000      0.699       1.430  0.500        0.412         0.588  -0.001  1.000    
+    IV32           -0.182  -0.469    0.106  0.147  0.834      0.626       1.112  0.455        0.385         0.526  -1.238  0.216    
+
 
 
 
@@ -437,6 +448,7 @@ This can be accomplished by creating new columns in your dataframe to test speci
     2      1  20.0     1   0.000000  0.000000  1.5               1
     3      1  20.0     1   9.523810  0.000000  0.5              -1
     4      1  12.5     0   0.000000  0.000000  1.0               0
+
 
 
 
@@ -487,6 +499,7 @@ Now we can use this variable as a continuous predictor without the need for the 
 
 
 
+
 A note on how contrasts in R work
 ---------------------------------
 .. note::
@@ -505,13 +518,13 @@ Specifying multiple custom contrasts in R has always been a point of confusion a
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_02_categorical.py <example_02_categorical.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_02_categorical.ipynb <example_02_categorical.ipynb>`
 

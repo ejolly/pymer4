@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_01_basic_usage.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_01_basic_usage.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_01_basic_usage.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_01_basic_usage.py:
 
 
 1. Basic Usage Guide
@@ -50,6 +52,7 @@ Let's check it out below:
     2      1  20.0     1   0.000000  0.000000  1.5
     3      1  20.0     1   9.523810  0.000000  0.5
     4      1  12.5     0   0.000000  0.000000  1.0
+
 
 
 
@@ -101,6 +104,7 @@ By default the output of :code:`.fit()` has been formated to be a blend of :code
 
 
 
+
 All information about the model as well as data, residuals, estimated coefficients, etc are saved as attributes and can be accessed like this: 
 
 
@@ -125,6 +129,7 @@ All information about the model as well as data, residuals, estimated coefficien
 
 
 
+
 .. code-block:: default
 
 
@@ -143,6 +148,7 @@ All information about the model as well as data, residuals, estimated coefficien
 
     [-3.79994762  6.94860187 -8.32917613  1.19463387 -5.8271851  -6.88457421
       0.40673658  9.77173122 -7.33135842 -7.37107236]
+
 
 
 
@@ -174,6 +180,7 @@ A copy of the dataframe used to estimate the model with added columns for residu
 
 
 
+
 This makes it easy to assess overall model fit visually, for example using seaborn
 
 
@@ -189,8 +196,18 @@ This makes it easy to assess overall model fit visually, for example using seabo
 
 
 .. image:: /auto_examples/images/sphx_glr_example_01_basic_usage_001.png
+    :alt: example 01 basic usage
     :class: sphx-glr-single-img
 
+
+.. rst-class:: sphx-glr-script-out
+
+ Out:
+
+ .. code-block:: none
+
+
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e58a384c0>
 
 
 
@@ -235,6 +252,7 @@ Robust and WLS estimation
 
 
 
+
 .. code-block:: default
 
 
@@ -273,6 +291,7 @@ Robust and WLS estimation
 
 
 
+
 Multi-level models
 ----------------------------
 Fitting a multi-level model works similarly and actually just calls :code:`lmer` or :code:`glmer` in R behind the scenes. The corresponding output is also formatted to be very similar to output of :code:`summary()` in R.
@@ -300,8 +319,6 @@ Fitting a multi-level model works similarly and actually just calls :code:`lmer`
 
  .. code-block:: none
 
-    Model failed to converge with max|grad| = 0.00613968 (tol = 0.002, component 1) 
-
     Formula: DV~IV2+(IV2|Group)
 
     Family: gaussian         Inference: parametric
@@ -313,9 +330,9 @@ Fitting a multi-level model works similarly and actually just calls :code:`lmer`
     Random effects:
 
                      Name      Var     Std
-    Group     (Intercept)  203.441  14.263
+    Group     (Intercept)  203.474  14.264
     Group             IV2    0.136   0.369
-    Residual               121.536  11.024
+    Residual               121.535  11.024
 
                    IV1  IV2   Corr
     Group  (Intercept)  IV2 -0.585
@@ -323,8 +340,9 @@ Fitting a multi-level model works similarly and actually just calls :code:`lmer`
     Fixed effects:
 
                  Estimate  2.5_ci  97.5_ci     SE      DF  T-stat  P-val  Sig
-    (Intercept)    10.301   4.806   15.797  2.804  20.179   3.674  0.001   **
-    IV2             0.682   0.556    0.808  0.064  42.403  10.599  0.000  ***
+    (Intercept)    10.301   4.805   15.797  2.804  20.179   3.674  0.001   **
+    IV2             0.682   0.556    0.808  0.064  42.389  10.598  0.000  ***
+
 
 
 
@@ -348,8 +366,9 @@ Similar to :code:`Lm` models, :code:`Lmer` models save details in model attribut
  .. code-block:: none
 
                   Estimate    2.5_ci    97.5_ci        SE         DF     T-stat         P-val  Sig
-    (Intercept)  10.301100  4.805668  15.796531  2.803843  20.179204   3.673922  1.488319e-03   **
-    IV2           0.682114  0.555978   0.808249  0.064356  42.403409  10.599062  1.705107e-13  ***
+    (Intercept)  10.301072  4.805390  15.796755  2.803971  20.178790   3.673744  1.488978e-03   **
+    IV2           0.682124  0.555968   0.808279  0.064366  42.388551  10.597508  1.720351e-13  ***
+
 
 
 
@@ -373,11 +392,12 @@ Similar to :code:`Lm` models, :code:`Lmer` models save details in model attribut
  .. code-block:: none
 
        (Intercept)       IV2
-    1     4.482146  0.885106
-    2    17.992303  0.622120
-    3     8.707070  0.838036
-    4    10.145435  0.865318
-    5    10.070328  0.182142
+    0     4.481913  0.885171
+    1    17.992555  0.622114
+    2     8.705373  0.838071
+    3    10.142647  0.865350
+    4    10.072354  0.182063
+
 
 
 
@@ -399,11 +419,12 @@ Similar to :code:`Lm` models, :code:`Lmer` models save details in model attribut
  .. code-block:: none
 
        (Intercept)       IV2
-    1    -5.818953  0.202992
-    2     7.691203 -0.059994
-    3    -1.594030  0.155922
-    4    -0.155665  0.183204
-    5    -0.230772 -0.499972
+    0    -5.819160  0.203048
+    1     7.691483 -0.060010
+    2    -1.595700  0.155947
+    3    -0.158426  0.183227
+    4    -0.228718 -0.500060
+
 
 
 
@@ -420,8 +441,18 @@ Similar to :code:`Lm` models, :code:`Lmer` models save details in model attribut
 
 
 .. image:: /auto_examples/images/sphx_glr_example_01_basic_usage_002.png
+    :alt: example 01 basic usage
     :class: sphx-glr-single-img
 
+
+.. rst-class:: sphx-glr-script-out
+
+ Out:
+
+ .. code-block:: none
+
+
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9dd8031e50>
 
 
 
@@ -436,8 +467,18 @@ Plot coefficients for each group/cluster as separate regressions
 
 
 .. image:: /auto_examples/images/sphx_glr_example_01_basic_usage_003.png
+    :alt: example 01 basic usage
     :class: sphx-glr-single-img
 
+
+.. rst-class:: sphx-glr-script-out
+
+ Out:
+
+ .. code-block:: none
+
+
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e3b765400>
 
 
 
@@ -486,6 +527,7 @@ Fitting :code:`Lm2` models are also very similar
 
 
 
+
 Like :code:`Lmer` models, :code:`Lm2` models also store group/cluster level estimates and have some basic plotting functionality
 
 
@@ -516,6 +558,7 @@ Like :code:`Lmer` models, :code:`Lm2` models also store group/cluster level esti
 
 
 
+
 .. code-block:: default
 
 
@@ -526,8 +569,18 @@ Like :code:`Lmer` models, :code:`Lm2` models also store group/cluster level esti
 
 
 .. image:: /auto_examples/images/sphx_glr_example_01_basic_usage_004.png
+    :alt: example 01 basic usage
     :class: sphx-glr-single-img
 
+
+.. rst-class:: sphx-glr-script-out
+
+ Out:
+
+ .. code-block:: none
+
+
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e58bbbd90>
 
 
 
@@ -564,6 +617,7 @@ To persist models you can use the dedicated :code:`save_model` and :code:`load_m
 
 
 
+
 Wrap Up
 -------
 This was a quick overview of the 3 major model classes in :code:`pymer4`. However, it's highly recommended to check out the API to see *all* the features and options that each model class has including things like permutation-based inference (:code:`Lm` and :code:`Lm2` models) and fine-grain control of optimizer and tolerance settings (:code:`Lmer` models). 
@@ -579,13 +633,13 @@ This was a quick overview of the 3 major model classes in :code:`pymer4`. Howeve
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_01_basic_usage.py <example_01_basic_usage.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_01_basic_usage.ipynb <example_01_basic_usage.ipynb>`
 

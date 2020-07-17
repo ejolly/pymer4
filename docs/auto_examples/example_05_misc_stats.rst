@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_05_misc_stats.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_05_misc_stats.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_05_misc_stats.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_05_misc_stats.py:
 
 
 5. Additional Statistics Functions
@@ -49,6 +51,7 @@ Permutation Tests
 
 
 
+
 .. code-block:: default
 
 
@@ -68,6 +71,7 @@ Permutation Tests
  .. code-block:: none
 
     (0.04469246924692469, 0.6786427145708582)
+
 
 
 
@@ -108,6 +112,7 @@ Bootstrap Comparisons
 
 
 
+
 TOST Equivalence Tests
 ----------------------
 :code:`pymer4` also has experimental support for `two-one-sided equivalence tests <https://bit.ly/33wsB5i/>`_.
@@ -131,6 +136,7 @@ TOST Equivalence Tests
 
 
 .. image:: /auto_examples/images/sphx_glr_example_05_misc_stats_001.png
+    :alt: example 05 misc stats
     :class: sphx-glr-single-img
 
 
@@ -156,6 +162,7 @@ TOST Equivalence Tests
 
 
 
+
 .. _sphx_glr_download_auto_examples_example_05_misc_stats.py:
 
 
@@ -166,13 +173,13 @@ TOST Equivalence Tests
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_05_misc_stats.py <example_05_misc_stats.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_05_misc_stats.ipynb <example_05_misc_stats.ipynb>`
 
