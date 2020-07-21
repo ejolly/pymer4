@@ -11,6 +11,7 @@
 
 # Import numpy and set random number generator
 import numpy as np
+
 np.random.seed(10)
 # Import stats functions
 from pymer4.stats import perm_test
@@ -19,7 +20,7 @@ from pymer4.stats import perm_test
 x = np.random.normal(loc=2, size=100)
 y = np.random.normal(loc=2.5, size=100)
 
-# Between groups t-test. The first value is the t-stat and the 
+# Between groups t-test. The first value is the t-stat and the
 # second is the permuted p-value
 result = perm_test(x, y, stat="tstat", n_perm=500, n_jobs=1)
 print(result)
@@ -46,7 +47,7 @@ def med_diff(x, y):
 
 
 # Between groups median test with resampling
-# The first value is the median difference and the 
+# The first value is the median difference and the
 # second is the lower and upper 95% confidence interval
 result = boot_func(x, y, func=med_diff)
 print(result)
@@ -66,4 +67,3 @@ result = tost_equivalence(x, y, lower, upper, plot=True)
 # Print the results dictionary nicely
 for k, v in result.items():
     print(f"{k}: {v}\n")
-

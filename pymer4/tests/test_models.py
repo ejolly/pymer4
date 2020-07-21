@@ -143,24 +143,24 @@ def test_contrasts():
     )
     grand_mean = grouped_means.mean()
 
-    con1 = grouped_means['V1'] - grouped_means['IPS']
-    con2 = grouped_means['AG'] - grouped_means['IPS']
-    intercept = grouped_means['IPS']
-       
+    con1 = grouped_means["V1"] - grouped_means["IPS"]
+    con2 = grouped_means["AG"] - grouped_means["IPS"]
+    intercept = grouped_means["IPS"]
+
     # Treatment contrasts with non-alphabetic order
     model.fit(factors={"ROI": ["IPS", "V1", "AG"]}, summarize=False)
-    
+
     assert np.allclose(model.coefs.loc["(Intercept)", "Estimate"], intercept)
     assert np.allclose(model.coefs.iloc[1, 0], con1)
     assert np.allclose(model.coefs.iloc[2, 0], con2)
-    
+
     # Polynomial contrasts
     model.fit(factors={"ROI": ["IPS", "V1", "AG"]}, ordered=True, summarize=False)
-    
+
     assert np.allclose(model.coefs.loc["(Intercept)", "Estimate"], grand_mean)
-    assert np.allclose(model.coefs.iloc[1, 0], 0.870744) # From R
-    assert np.allclose(model.coefs.iloc[2, 0], 0.609262) # From R
-    
+    assert np.allclose(model.coefs.iloc[1, 0], 0.870744)  # From R
+    assert np.allclose(model.coefs.iloc[2, 0], 0.609262)  # From R
+
     # Custom contrasts
     model.fit(factors={"ROI": {"AG": 1, "IPS": -0.5, "V1": -0.5}}, summarize=False)
 

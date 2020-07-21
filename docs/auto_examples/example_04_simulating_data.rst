@@ -35,8 +35,10 @@ Let's generate 500 observations, with coefficient values of: 1.2, -40.1, and 3. 
 
     # Import the simulation function
     from pymer4.simulate import simulate_lm
+
     # Also fix the random number generator for reproducibility
     import numpy as np
+
     np.random.seed(10)
 
     data, b = simulate_lm(
@@ -340,12 +342,9 @@ Check coefficient recovery
 
     from pymer4.models import Lmer
 
-    model = Lmer('DV ~ IV1+IV2+IV3 + (1|Group)', data=data)
+    model = Lmer("DV ~ IV1+IV2+IV3 + (1|Group)", data=data)
     model.fit(summarize=False)
     print(model.coefs.loc[:, "Estimate"])
-
-
-
 
 
 

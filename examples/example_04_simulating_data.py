@@ -23,8 +23,10 @@
 
 # Import the simulation function
 from pymer4.simulate import simulate_lm
+
 # Also fix the random number generator for reproducibility
 import numpy as np
+
 np.random.seed(10)
 
 data, b = simulate_lm(
@@ -101,9 +103,6 @@ print(group_data.apply(lambda grp: grp.iloc[:, 1:-1].corr()))
 # Check coefficient recovery
 from pymer4.models import Lmer
 
-model = Lmer('DV ~ IV1+IV2+IV3 + (1|Group)', data=data)
+model = Lmer("DV ~ IV1+IV2+IV3 + (1|Group)", data=data)
 model.fit(summarize=False)
 print(model.coefs.loc[:, "Estimate"])
-
-
-

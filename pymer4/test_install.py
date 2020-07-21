@@ -16,4 +16,3 @@ def test_install():
         print("Pymer4 installation working successfully!")
     except Exception as e:
         print("Error! {}".format(e))
-

@@ -15,15 +15,15 @@
 .. note::
   ANOVAs and post-hoc tests are only available for :code:`Lmer` models estimated using the :code:`factors` argument of :code:`model.fit()` and rely on implementations in R
 
-In the previous tutorial where we looked at categorical predictors, behind the scenes :code:`pymer4` was using the :code:`factor` functionality in R. This means the output of :code:`model.fit()` looks a lot like :code:`summary()` in R applied to a model with categorical predictors. But what if we want to compute an F-test across *all levels* of our categorical predictor? 
+In the previous tutorial where we looked at categorical predictors, behind the scenes :code:`pymer4` was using the :code:`factor` functionality in R. This means the output of :code:`model.fit()` looks a lot like :code:`summary()` in R applied to a model with categorical predictors. But what if we want to compute an F-test across *all levels* of our categorical predictor?
 
-:code:`pymer4` makes this easy to do, and makes it easy to ensure Type III sums of squares infereces are valid. It also makes it easy to follow up omnibus tests with post-hoc pairwise comparisons. 
+:code:`pymer4` makes this easy to do, and makes it easy to ensure Type III sums of squares infereces are valid. It also makes it easy to follow up omnibus tests with post-hoc pairwise comparisons.
 
 ANOVA tables and orthogonal contrasts
 -------------------------------------
 Because ANOVA is just regression, :code:`pymer4` can estimate ANOVA tables with F-results using the :code:`.anova()` method on a fitted model. This will compute a Type-III SS table given the coding scheme provided when the model was initially fit. Based on the distribution of data across factor levels and the specific coding-scheme used, this may produce invalid Type-III SS computations. For this reason the :code:`.anova()` method has a :code:`force-orthogonal=True` argument that will reparameterize and refit the model using orthogonal polynomial contrasts prior to computing an ANOVA table.
 
-Here we first estimate a mode with dummy-coded categories and suppress the summary output of :code:`.fit()`. Then we use :code:`.anova()` to examine the F-test results. 
+Here we first estimate a mode with dummy-coded categories and suppress the summary output of :code:`.fit()`. Then we use :code:`.anova()` to examine the F-test results.
 
 
 .. code-block:: default
@@ -36,16 +36,14 @@ Here we first estimate a mode with dummy-coded categories and suppress the summa
     from pymer4.models import Lmer
 
     # IV3 is a categorical predictors with 3 levels in the sample data
-    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
 
-    # # We're going to fit a multi-level regression using the 
+    # # We're going to fit a multi-level regression using the
     # categorical predictor (IV3) which has 3 levels
-    model = Lmer('DV ~ IV3 + (1|Group)', data=df)
+    model = Lmer("DV ~ IV3 + (1|Group)", data=df)
 
     # Using dummy-coding; suppress summary output
-    model.fit(factors={
-        'IV3': ['1.0', '0.5', '1.5']
-    }, summarize=False)
+    model.fit(factors={"IV3": ["1.0", "0.5", "1.5"]}, summarize=False)
 
     # Get ANOVA table
     print(model.anova())
@@ -68,7 +66,7 @@ Here we first estimate a mode with dummy-coded categories and suppress the summa
 
 
 
-Type III SS inferences will only be valid if data are fully balanced across levels or if contrasts between levels are orthogonally coded and sum to 0. Below we tell :code:`pymer4` to respecify our contrasts to ensure this before estimating the ANOVA. :code:`pymer4` also saves the last set of contrasts used priory to forcing orthogonality. 
+Type III SS inferences will only be valid if data are fully balanced across levels or if contrasts between levels are orthogonally coded and sum to 0. Below we tell :code:`pymer4` to respecify our contrasts to ensure this before estimating the ANOVA. :code:`pymer4` also saves the last set of contrasts used priory to forcing orthogonality.
 
 Because the sample data is balanced across factor levels and there are not interaction terms, in this case orthogonal contrast coding doesn't change the results.
 
@@ -76,7 +74,7 @@ Because the sample data is balanced across factor levels and there are not inter
 .. code-block:: default
 
 
-    # Get ANOVA table, but this time force orthogonality 
+    # Get ANOVA table, but this time force orthogonality
     # for valid SS III inferences
     # In this case the data are balanced so nothing changes
     print(model.anova(force_orthogonal=True))
@@ -105,7 +103,7 @@ Because the sample data is balanced across factor levels and there are not inter
 
     # Checkout current contrast scheme (for first contrast)
     # Notice how it's simply a linear contrast across levels
-    print(model.factors) 
+    print(model.factors)
 
 
 
@@ -126,7 +124,7 @@ Because the sample data is balanced across factor levels and there are not inter
 .. code-block:: default
 
 
-    # Checkout previous contrast scheme 
+    # Checkout previous contrast scheme
     # which was a treatment contrast with 1.0
     # as the reference level
     print(model.factors_prev_)
@@ -148,7 +146,7 @@ Because the sample data is balanced across factor levels and there are not inter
 
 Marginal estimates and post-hoc comparisons
 -------------------------------------------
-:code:`pymer4` leverages the :code:`emmeans` package in order to compute marginal estimates ("cell means" in ANOVA lingo) and pair-wise comparisons of models that contain categorical terms and/or interactions. This can be performed by using the :code:`.post_hoc()` method on fitted models. Let's see an example: 
+:code:`pymer4` leverages the :code:`emmeans` package in order to compute marginal estimates ("cell means" in ANOVA lingo) and pair-wise comparisons of models that contain categorical terms and/or interactions. This can be performed by using the :code:`.post_hoc()` method on fitted models. Let's see an example:
 
 First we'll quickly create a second categorical IV to demo with and estimate a 3x3 ANOVA to get main effects and the interaction.
 
@@ -156,21 +154,21 @@ First we'll quickly create a second categorical IV to demo with and estimate a 3
 .. code-block:: default
 
 
-    # Fix the random number generator 
+    # Fix the random number generator
     # for reproducibility
     import numpy as np
+
     np.random.seed(10)
 
     # Create a new categorical variable with 3 levels
-    df = df.assign(IV4=np.random.choice(['1', '2', '3'], size=df.shape[0]))
+    df = df.assign(IV4=np.random.choice(["1", "2", "3"], size=df.shape[0]))
 
     # Estimate model with orthogonal polynomial contrasts
-    model = Lmer('DV ~ IV4*IV3 + (1|Group)', data=df)
-    model.fit(factors={
-        'IV4': ['1', '2', '3'],
-        'IV3': ['1.0', '0.5', '1.5']},
+    model = Lmer("DV ~ IV4*IV3 + (1|Group)", data=df)
+    model.fit(
+        factors={"IV4": ["1", "2", "3"], "IV3": ["1.0", "0.5", "1.5"]},
         ordered=True,
-        summarize=False
+        summarize=False,
     )
     # Get ANOVA table
     # We can ignore the note in the output because
@@ -206,7 +204,9 @@ Compare each level of IV3 to each other level of IV3, *within* each level of IV4
 
 
     # Compute post-hoc tests
-    marginal_estimates, comparisons = model.post_hoc(marginal_vars='IV3', grouping_vars='IV4')
+    marginal_estimates, comparisons = model.post_hoc(
+        marginal_vars="IV3", grouping_vars="IV4"
+    )
 
     # "Cell" means of the ANOVA
     print(marginal_estimates)
@@ -277,7 +277,9 @@ Compare each unique IV3,IV4 "cell mean" to every other IV3,IV4 "cell mean" and u
 
 
     # Compute post-hoc tests
-    marginal_estimates, comparisons = model.post_hoc(marginal_vars=['IV3', 'IV4'], p_adjust='fdr')
+    marginal_estimates, comparisons = model.post_hoc(
+        marginal_vars=["IV3", "IV4"], p_adjust="fdr"
+    )
 
     # Pairwise comparisons
     print(comparisons)
@@ -343,14 +345,13 @@ First let's get the ANOVA table
 
 .. code-block:: default
 
-    model = Lmer('DV ~ IV2*IV3*IV4 + (1|Group)', data=df)
+    model = Lmer("DV ~ IV2*IV3*IV4 + (1|Group)", data=df)
     # Only need to polynomial contrasts for IV3 and IV4
     # because IV2 is continuous
-    model.fit(factors={
-        'IV4': ['1', '2', '3'],
-        'IV3': ['1.0', '0.5', '1.5']},
+    model.fit(
+        factors={"IV4": ["1", "2", "3"], "IV3": ["1.0", "0.5", "1.5"]},
         ordered=True,
-        summarize=False
+        summarize=False,
     )
 
     # Get ANOVA table
@@ -380,16 +381,16 @@ First let's get the ANOVA table
 
 
 
-Now we can compute the pairwise difference in slopes 
+Now we can compute the pairwise difference in slopes
 
 
 .. code-block:: default
 
 
     # Compute post-hoc tests with bonferroni correction
-    marginal_estimates, comparisons = model.post_hoc(marginal_vars='IV2',
-                                        grouping_vars=['IV3', 'IV4'],
-                                        p_adjust='bonf')
+    marginal_estimates, comparisons = model.post_hoc(
+        marginal_vars="IV2", grouping_vars=["IV3", "IV4"], p_adjust="bonf"
+    )
 
     # Pairwise comparisons
     print(comparisons)

@@ -167,10 +167,12 @@ class Lm(object):
         """
 
         # Alllow summary or summarize for compatibility
-        if 'summary' in kwargs and 'summarize' in kwargs:
-            raise ValueError("You specified both summary and summarize, please prefer summarize")
-        summarize = kwargs.pop('summarize', True)
-        summarize = kwargs.pop('summary', summarize)
+        if "summary" in kwargs and "summarize" in kwargs:
+            raise ValueError(
+                "You specified both summary and summarize, please prefer summarize"
+            )
+        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summary", summarize)
 
         if permute and permute < 500:
             w = "Permutation testing < 500 permutations is not recommended"

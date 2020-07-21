@@ -13,13 +13,7 @@ import seaborn as sns
 from patsy import dmatrices
 from joblib import Parallel, delayed
 from .Lm import Lm
-from ..utils import (
-    _sig_stars,
-    _permute_sign,
-    _ols_group,
-    _corr_group,
-    _perm_find
-)
+from ..utils import _sig_stars, _permute_sign, _ols_group, _corr_group, _perm_find
 
 
 class Lm2(object):
@@ -104,7 +98,7 @@ class Lm2(object):
         to_corrs=False,
         ztrans_corrs=True,
         cluster=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Fit a variety of second-level OLS models; all 1st-level models are standard OLS. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs, which will resample with replacement from the first level regression estimates and uses these CIs to perform inference unless permutation tests are requested. Permutation testing  will perform a one-sample sign-flipped permutation test on the estimates directly (perm_on='coef') or the t-statistic (perm_on='t-stat'). Permutation is a bit different than Lm which always permutes based on the t-stat.
@@ -132,10 +126,12 @@ class Lm2(object):
         """
 
         # Alllow summary or summarize for compatibility
-        if 'summary' in kwargs and 'summarize' in kwargs:
-            raise ValueError("You specified both summary and summarize, please prefer summarize")
-        summarize = kwargs.pop('summarize', True)
-        summarize = kwargs.pop('summary', summarize)
+        if "summary" in kwargs and "summarize" in kwargs:
+            raise ValueError(
+                "You specified both summary and summarize, please prefer summarize"
+            )
+        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summary", summarize)
 
         if robust:
             if isinstance(robust, bool):
@@ -165,7 +161,9 @@ class Lm2(object):
                     raise ValueError("perm_on must be 't-stat' or 'coef'")
                 self.sig_type = "permutation" + " (" + str(permute) + ")"
                 if permute is True:
-                    raise TypeError("permute should 'False' or the number of permutations to perform")
+                    raise TypeError(
+                        "permute should 'False' or the number of permutations to perform"
+                    )
             else:
                 self.sig_type = "parametric"
 
@@ -228,10 +226,10 @@ class Lm2(object):
             results.append(lm.coefs)
             if permute:
                 # sign-flip permutation test for each beta instead to replace p-values
-                if perm_on == 'coef':
-                    return_stat = 'mean'
+                if perm_on == "coef":
+                    return_stat = "mean"
                 else:
-                    return_stat = 't-stat'
+                    return_stat = "t-stat"
                 seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
                 par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
                 perm_est = par_for(

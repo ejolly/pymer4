@@ -13,7 +13,7 @@
 ====================
 
 :code:`pymer4` comes with sample data for testing purposes which we'll utilize for most of the tutorials.
-This sample data has: 
+This sample data has:
 
 - Two kinds of dependent variables: *DV* (continuous), *DV_l* (dichotomous)
 - Three kinds of independent variables: *IV1* (continuous), *IV2* (continuous), *IV3* (categorical)
@@ -33,7 +33,7 @@ Let's check it out below:
     from pymer4.utils import get_resource_path
 
     # Load and checkout sample data
-    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     print(df.head())
 
 
@@ -58,9 +58,9 @@ Let's check it out below:
 
 Standard regression models
 ------------------------------------
-Fitting a standard regression model is accomplished using the :code:`Lm` model class in :code:`pymer4`. All we need to do is initialize a model with a formula, some data, and call its :code:`.fit()` method. 
+Fitting a standard regression model is accomplished using the :code:`Lm` model class in :code:`pymer4`. All we need to do is initialize a model with a formula, some data, and call its :code:`.fit()` method.
 
-By default the output of :code:`.fit()` has been formated to be a blend of :code:`summary()` in R and :code:`.summary()` from `statsmodels <http://www.statsmodels.org/dev/index.html/>`_. This includes metadata about the model, data, and overall fit as well as estimates and inference results of model terms.  
+By default the output of :code:`.fit()` has been formated to be a blend of :code:`summary()` in R and :code:`.summary()` from `statsmodels <http://www.statsmodels.org/dev/index.html/>`_. This includes metadata about the model, data, and overall fit as well as estimates and inference results of model terms.
 
 
 .. code-block:: default
@@ -70,7 +70,7 @@ By default the output of :code:`.fit()` has been formated to be a blend of :code
     from pymer4.models import Lm
 
     # Initialize model using 2 predictors and sample data
-    model = Lm('DV ~ IV1 + IV2', data=df)
+    model = Lm("DV ~ IV1 + IV2", data=df)
 
     # Fit it
     print(model.fit())
@@ -105,7 +105,7 @@ By default the output of :code:`.fit()` has been formated to be a blend of :code
 
 
 
-All information about the model as well as data, residuals, estimated coefficients, etc are saved as attributes and can be accessed like this: 
+All information about the model as well as data, residuals, estimated coefficients, etc are saved as attributes and can be accessed like this:
 
 
 .. code-block:: default
@@ -189,8 +189,9 @@ This makes it easy to assess overall model fit visually, for example using seabo
 
     # import dataviz
     import seaborn as sns
+
     # plot model predicted values against true values
-    sns.regplot(x='fits', y='DV', data=model.data, fit_reg=True)
+    sns.regplot(x="fits", y="DV", data=model.data, fit_reg=True)
 
 
 
@@ -207,7 +208,7 @@ This makes it easy to assess overall model fit visually, for example using seabo
  .. code-block:: none
 
 
-    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e58a384c0>
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f8b548f56a0>
 
 
 
@@ -220,7 +221,7 @@ Robust and WLS estimation
 
 
     # Refit previous model using robust standard errors
-    print(model.fit(robust='hc1'))
+    print(model.fit(robust="hc1"))
 
 
 
@@ -260,8 +261,8 @@ Robust and WLS estimation
     df_two_groups = df.query("IV3 in [0.5, 1.0]").reset_index(drop=True)
 
     # Fit new a model using a categorical predictor with unequal variances (WLS)
-    model = Lm('DV ~ IV3', data=df_two_groups)
-    print(model.fit(weights='IV3'))
+    model = Lm("DV ~ IV3", data=df_two_groups)
+    print(model.fit(weights="IV3"))
 
 
 
@@ -304,7 +305,7 @@ Fitting a multi-level model works similarly and actually just calls :code:`lmer`
     from pymer4.models import Lmer
 
     # Initialize model instance using 1 predictor with random intercepts and slopes
-    model = Lmer('DV ~ IV2 + (IV2|Group)', data=df)
+    model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
 
     # Fit it
     print(model.fit())
@@ -346,7 +347,7 @@ Fitting a multi-level model works similarly and actually just calls :code:`lmer`
 
 
 
-Similar to :code:`Lm` models, :code:`Lmer` models save details in model attributes and have additional methods that can be called using the same syntax as described above. 
+Similar to :code:`Lm` models, :code:`Lmer` models save details in model attributes and have additional methods that can be called using the same syntax as described above.
 
 
 .. code-block:: default
@@ -452,7 +453,7 @@ Similar to :code:`Lm` models, :code:`Lmer` models save details in model attribut
  .. code-block:: none
 
 
-    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9dd8031e50>
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f8b80294880>
 
 
 
@@ -461,7 +462,7 @@ Plot coefficients for each group/cluster as separate regressions
 
 .. code-block:: default
 
-    model.plot('IV2', plot_ci=True, ylabel='predicted DV')
+    model.plot("IV2", plot_ci=True, ylabel="predicted DV")
 
 
 
@@ -478,7 +479,7 @@ Plot coefficients for each group/cluster as separate regressions
  .. code-block:: none
 
 
-    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e3b765400>
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f8b401b1310>
 
 
 
@@ -496,7 +497,7 @@ Fitting :code:`Lm2` models are also very similar
     from pymer4.models import Lm2
 
     # This time we use the 'group' argument when initializing the model
-    model = Lm2('DV ~ IV2', group='Group', data=df)
+    model = Lm2("DV ~ IV2", group="Group", data=df)
 
     # Fit it
     print(model.fit())
@@ -534,7 +535,7 @@ Like :code:`Lmer` models, :code:`Lm2` models also store group/cluster level esti
 .. code-block:: default
 
 
-    # Get group level coefficients, just the first 5 
+    # Get group level coefficients, just the first 5
     print(model.fixef.head(5))
 
 
@@ -580,7 +581,7 @@ Like :code:`Lmer` models, :code:`Lm2` models also store group/cluster level esti
  .. code-block:: none
 
 
-    <matplotlib.axes._subplots.AxesSubplot object at 0x7f9e58bbbd90>
+    <matplotlib.axes._subplots.AxesSubplot object at 0x7f8b55251c70>
 
 
 
@@ -596,11 +597,12 @@ To persist models you can use the dedicated :code:`save_model` and :code:`load_m
 
     # Import functions
     from pymer4.io import save_model, load_model
+
     # Save the Lm2 model above
-    save_model(model, 'mymodel.h5')
+    save_model(model, "mymodel.h5")
     # Load it back up
-    model = load_model('mymodel.h5')
-    # Check that it looks the same 
+    model = load_model("mymodel.h5")
+    # Check that it looks the same
     print(model)
 
 
@@ -620,7 +622,7 @@ To persist models you can use the dedicated :code:`save_model` and :code:`load_m
 
 Wrap Up
 -------
-This was a quick overview of the 3 major model classes in :code:`pymer4`. However, it's highly recommended to check out the API to see *all* the features and options that each model class has including things like permutation-based inference (:code:`Lm` and :code:`Lm2` models) and fine-grain control of optimizer and tolerance settings (:code:`Lmer` models). 
+This was a quick overview of the 3 major model classes in :code:`pymer4`. However, it's highly recommended to check out the API to see *all* the features and options that each model class has including things like permutation-based inference (:code:`Lm` and :code:`Lm2` models) and fine-grain control of optimizer and tolerance settings (:code:`Lmer` models).
 
 
 .. _sphx_glr_download_auto_examples_example_01_basic_usage.py:

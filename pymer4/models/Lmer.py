@@ -29,8 +29,8 @@ from ..utils import (
 from pandas.api.types import CategoricalDtype
 
 # Import R libraries we need
-base = importr('base')
-stats = importr('stats')
+base = importr("base")
+stats = importr("stats")
 
 numpy2ri.activate()
 
@@ -281,9 +281,7 @@ class Lmer(object):
 
         if verbose:
             # use the default logging in R
-            callbacks.consolewrite_warnerror = (
-                consolewrite_warning_backup
-            )
+            callbacks.consolewrite_warnerror = consolewrite_warning_backup
         else:
             # Create a list buffer to catch messages and discard them
             buf = []
@@ -308,7 +306,7 @@ class Lmer(object):
         no_warnings=False,
         control="",
         old_optimizer=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience. Factors should be specified as a dictionary with values as a list or themselves a dictionary of *human readable* contrasts *not* R-style contrast codes as these will be auto-converted for you. See the factors docstring and examples below. After fitting, the .factors attribute will store a reference to the user-specified dictionary. The .contrast_codes model attributes will store the requested comparisons in converted R format.
@@ -362,10 +360,12 @@ class Lmer(object):
         """
 
         # Alllow summary or summarize for compatibility
-        if 'summary' in kwargs and 'summarize' in kwargs:
-            raise ValueError("You specified both summary and summarize, please prefer summarize")
-        summarize = kwargs.pop('summarize', True)
-        summarize = kwargs.pop('summary', summarize)
+        if "summary" in kwargs and "summarize" in kwargs:
+            raise ValueError(
+                "You specified both summary and summarize, please prefer summarize"
+            )
+        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summary", summarize)
         # Save params for future calls
         self._permute = permute
         self._conf_int = conf_int
@@ -444,8 +444,12 @@ class Lmer(object):
             )
 
         # Store design matrix and get number of IVs for inference
-        self.design_matrix = pd.DataFrame(base.data_frame(stats.model_matrix(self.model_obj)))
-        num_IV = self.design_matrix.shape[1]
+        design_matrix = stats.model_matrix(self.model_obj)
+        if design_matrix:
+            self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+            num_IV = self.design_matrix.shape[1]
+        else:
+            num_IV = 0
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
@@ -881,6 +885,10 @@ class Lmer(object):
 
         """
         self._set_R_stdout(verbose)
+        if self.design_matrix is None:
+            raise ValueError(
+                "No fixed effects were estimated so prediction is not possible!"
+            )
         required_cols = self.design_matrix.columns[1:]
         if not all([col in data.columns for col in required_cols]):
             raise ValueError("Column names do not match all fixed effects model terms!")
@@ -1375,6 +1383,10 @@ class Lmer(object):
         if isinstance(self.fixef, list) or isinstance(self.ranef, list):
             raise NotImplementedError(
                 "Plotting can currently only handle models with 1 random effect grouping variable!"
+            )
+        if self.design_matrix is None:
+            raise ValueError(
+                "No fixed effects were estimated so prediction is not possible!"
             )
         if not ax:
             f, ax = plt.subplots(1, 1, figsize=figsize)

@@ -12,7 +12,7 @@
 2. Categorical Predictors
 =========================
 
-The syntax for handling categorical predictors is **different** between standard regression models/two-stage-models (i.e. :code:`Lm` and :code:`Lm2`) and multi-level models (:code:`Lmer`) in :code:`pymer4`. This is because formula parsing is passed to R for :code:`Lmer` models, but handled by Python for other models. 
+The syntax for handling categorical predictors is **different** between standard regression models/two-stage-models (i.e. :code:`Lm` and :code:`Lm2`) and multi-level models (:code:`Lmer`) in :code:`pymer4`. This is because formula parsing is passed to R for :code:`Lmer` models, but handled by Python for other models.
 
 Lm and Lm2 Models
 -----------------
@@ -29,7 +29,7 @@ Lm and Lm2 Models
     from pymer4.models import Lm
 
     # IV3 is a categorical predictors with 3 levels in the sample data
-    df = pd.read_csv(os.path.join(get_resource_path(), 'sample_data.csv'))
+    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
 
 
 
@@ -47,7 +47,7 @@ Dummy-coded/Treatment contrasts
 
     # Estimate a model using Treatment contrasts (dummy-coding)
     # with '1.0' as the reference level
-    # This is the default of the C() function 
+    # This is the default of the C() function
     model = Lm("DV ~ C(IV3, levels=[1.0, 0.5, 1.5])", data=df)
     print(model.fit())
 
@@ -88,9 +88,9 @@ Orthogonal Polynomial Contrasts
 .. code-block:: default
 
 
-    # Patsy can do this using the Poly argument to the 
+    # Patsy can do this using the Poly argument to the
     # C() function
-    model = Lm('DV ~ C(IV3, Poly)', data=df)
+    model = Lm("DV ~ C(IV3, Poly)", data=df)
     print(model.fit())
 
 
@@ -131,7 +131,7 @@ Sum-to-zero contrasts
 
 
     # Similar to before but with the Sum argument
-    model = Lm('DV ~ C(IV3, Sum)', data=df)
+    model = Lm("DV ~ C(IV3, Sum)", data=df)
     print(model.fit())
 
 
@@ -172,7 +172,7 @@ Scaling/Centering
 
 
     # Moderation with IV2, but centering IV2 first
-    model = Lm('DV ~ center(IV2) * C(IV3, Sum)', data=df)
+    model = Lm("DV ~ center(IV2) * C(IV3, Sum)", data=df)
     print(model.fit())
 
 
@@ -218,7 +218,7 @@ Lmer Models
 - Orthogonal polynomial contrasts in which each model term is a polynomial contrast across factor levels (e.g. linear, quadratic, cubic, etc)
 - Custom contrasts for each level of a factor, which should be provided in the manner expected by R.
 
-To make re-parameterizing models easier, factor codings are passed as a dictionary to the :code:`factors` argument of a model's :code:`.fit()`. This obviates the need for adjusting data-frame properties as in R. Note that this is **different** from :code:`Lm` and :code:`Lm2` models above which expect factor codings in their formulae (because patsy does). 
+To make re-parameterizing models easier, factor codings are passed as a dictionary to the :code:`factors` argument of a model's :code:`.fit()`. This obviates the need for adjusting data-frame properties as in R. Note that this is **different** from :code:`Lm` and :code:`Lm2` models above which expect factor codings in their formulae (because patsy does).
 
 Each of these ways also enables you to easily compute post-hoc comparisons between factor levels, as well as interactions between continuous predictors and each factor level. See tutorial 3 for more on post-hoc tests.
 
@@ -227,10 +227,11 @@ Each of these ways also enables you to easily compute post-hoc comparisons betwe
 
 
     from pymer4.models import Lmer
-    # We're going to fit a multi-level logistic regression using the 
+
+    # We're going to fit a multi-level logistic regression using the
     # dichotomous DV_l variable and the same categorical predictor (IV3)
     # as before
-    model = Lmer('DV_l ~ IV3 + (IV3|Group)', data=df, family='binomial')
+    model = Lmer("DV_l ~ IV3 + (IV3|Group)", data=df, family="binomial")
 
 
 
@@ -241,15 +242,13 @@ Each of these ways also enables you to easily compute post-hoc comparisons betwe
 
 Dummy-coding factors
 ++++++++++++++++++++
-First we'll use dummy-coding/treatment contrasts with 1.0 as the reference level. This will compute two coefficients: 0.5 > 1.0 and 1.5 > 1.0. 
+First we'll use dummy-coding/treatment contrasts with 1.0 as the reference level. This will compute two coefficients: 0.5 > 1.0 and 1.5 > 1.0.
 
 
 .. code-block:: default
 
 
-    print(model.fit(factors={
-        'IV3': ['1.0', '0.5', '1.5']
-    }))
+    print(model.fit(factors={"IV3": ["1.0", "0.5", "1.5"]}))
 
 
 
@@ -286,10 +285,12 @@ First we'll use dummy-coding/treatment contrasts with 1.0 as the reference level
 
     Fixed effects:
 
-                 Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
-    (Intercept)    -0.129  -0.419    0.162  0.148  0.879      0.658       1.176  0.468        0.397         0.540  -0.867  0.386    
-    IV31            0.129  -0.283    0.540  0.210  1.137      0.753       1.716  0.532        0.430         0.632   0.612  0.541    
-    IV32           -0.128  -0.539    0.283  0.210  0.880      0.583       1.327  0.468        0.368         0.570  -0.612  0.541    
+                 Estimate  2.5_ci  97.5_ci     SE     OR  ...  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val  Sig
+    (Intercept)    -0.129  -0.419    0.162  0.148  0.879  ...        0.397         0.540  -0.867  0.386     
+    IV31            0.129  -0.283    0.540  0.210  1.137  ...        0.430         0.632   0.612  0.541     
+    IV32           -0.128  -0.539    0.283  0.210  0.880  ...        0.368         0.570  -0.612  0.541     
+
+    [3 rows x 13 columns]
 
 
 
@@ -302,10 +303,7 @@ Second we'll use orthogonal polynomial contrasts. This is accomplished using the
 .. code-block:: default
 
 
-    print(model.fit(factors={
-        'IV3': ['0.5', '1.0', '1.5']},
-        ordered=True
-    ))
+    print(model.fit(factors={"IV3": ["0.5", "1.0", "1.5"]}, ordered=True))
 
 
 
@@ -343,17 +341,19 @@ Second we'll use orthogonal polynomial contrasts. This is accomplished using the
 
     Fixed effects:
 
-                 Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
-    (Intercept)    -0.128  -0.294    0.037  0.085  0.879      0.745       1.038  0.468        0.427         0.509  -1.518  0.129    
-    IV31           -0.182  -0.469    0.106  0.147  0.834      0.626       1.112  0.455        0.385         0.526  -1.238  0.216    
-    IV32            0.000  -0.292    0.292  0.149  1.000      0.747       1.339  0.500        0.428         0.572   0.001  1.000    
+                 Estimate  2.5_ci  97.5_ci     SE     OR  ...  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val  Sig
+    (Intercept)    -0.128  -0.294    0.037  0.085  0.879  ...        0.427         0.509  -1.518  0.129     
+    IV31           -0.182  -0.469    0.106  0.147  0.834  ...        0.385         0.526  -1.238  0.216     
+    IV32            0.000  -0.292    0.292  0.149  1.000  ...        0.428         0.572   0.001  1.000     
+
+    [3 rows x 13 columns]
 
 
 
 
 Custom contrasts
 ++++++++++++++++
-:code:`Lmer` models can also take custom factor contrasts based on how they are expected by R (see the note at the end of this tutorial for how contrasts work in R). Remember that there can be at most k-1 model terms representing any k level factor without over-parameterizing a model. If you specify a custom contrast, R will generate set of orthogonal contrasts for the rest of your model terms. 
+:code:`Lmer` models can also take custom factor contrasts based on how they are expected by R (see the note at the end of this tutorial for how contrasts work in R). Remember that there can be at most k-1 model terms representing any k level factor without over-parameterizing a model. If you specify a custom contrast, R will generate set of orthogonal contrasts for the rest of your model terms.
 
 
 .. code-block:: default
@@ -362,9 +362,7 @@ Custom contrasts
     # Compare level '1.0' to the mean of levels '0.5' and '1.5'
     # and let R determine the second contrast orthogonal to it
 
-    print(model.fit(factors={
-        'IV3': {'1.0': 1, '0.5': -.5, '1.5': -.5}
-    }))
+    print(model.fit(factors={"IV3": {"1.0": 1, "0.5": -0.5, "1.5": -0.5}}))
 
 
 
@@ -404,10 +402,12 @@ Custom contrasts
 
     Fixed effects:
 
-                 Estimate  2.5_ci  97.5_ci     SE     OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
-    (Intercept)    -0.128  -0.294    0.037  0.085  0.879      0.745       1.038  0.468        0.427         0.509  -1.518  0.129    
-    IV31           -0.000  -0.358    0.357  0.182  1.000      0.699       1.430  0.500        0.412         0.588  -0.001  1.000    
-    IV32           -0.182  -0.469    0.106  0.147  0.834      0.626       1.112  0.455        0.385         0.526  -1.238  0.216    
+                 Estimate  2.5_ci  97.5_ci     SE     OR  ...  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val  Sig
+    (Intercept)    -0.128  -0.294    0.037  0.085  0.879  ...        0.427         0.509  -1.518  0.129     
+    IV31           -0.000  -0.358    0.357  0.182  1.000  ...        0.412         0.588  -0.001  1.000     
+    IV32           -0.182  -0.469    0.106  0.147  0.834  ...        0.385         0.526  -1.238  0.216     
+
+    [3 rows x 13 columns]
 
 
 
@@ -423,13 +423,7 @@ This can be accomplished by creating new columns in your dataframe to test speci
 
 
     # Create a new column in the dataframe with a custom (linear) contrast
-    df = df.assign(
-        IV3_custom_lin=df['IV3'].map({
-            0.5: -1,
-            1.0: 0,
-            1.5: 1
-        })
-    )
+    df = df.assign(IV3_custom_lin=df["IV3"].map({0.5: -1, 1.0: 0, 1.5: 1}))
     print(df.head())
 
 
@@ -459,7 +453,9 @@ Now we can use this variable as a continuous predictor without the need for the 
 
 
     # Estimate model
-    model = Lmer('DV_l ~ IV3_custom_lin + (IV3_custom_lin|Group)', data=df, family='binomial')
+    model = Lmer(
+        "DV_l ~ IV3_custom_lin + (IV3_custom_lin|Group)", data=df, family="binomial"
+    )
     print(model.fit())
 
 
@@ -493,9 +489,11 @@ Now we can use this variable as a continuous predictor without the need for the 
 
     Fixed effects:
 
-                    Estimate  2.5_ci  97.5_ci     SE    OR  OR_2.5_ci  OR_97.5_ci   Prob  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val Sig
-    (Intercept)       -0.128  -0.294    0.037  0.085  0.88      0.745       1.038  0.468        0.427         0.509  -1.517  0.129    
-    IV3_custom_lin    -0.128  -0.331    0.075  0.104  0.88      0.718       1.077  0.468        0.418         0.519  -1.239  0.215    
+                    Estimate  2.5_ci  97.5_ci     SE    OR  ...  Prob_2.5_ci  Prob_97.5_ci  Z-stat  P-val  Sig
+    (Intercept)       -0.128  -0.294    0.037  0.085  0.88  ...        0.427         0.509  -1.517  0.129     
+    IV3_custom_lin    -0.128  -0.331    0.075  0.104  0.88  ...        0.418         0.519  -1.239  0.215     
+
+    [2 rows x 13 columns]
 
 
 

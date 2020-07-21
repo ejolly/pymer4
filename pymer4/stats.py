@@ -9,7 +9,7 @@ __all__ = [
     "boot_func",
     "tost_equivalence",
     "welch_dof",
-    "vif"
+    "vif",
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -20,6 +20,7 @@ import pandas as pd
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
+
 # from itertools import product
 from pymer4.utils import (
     _check_random_state,
