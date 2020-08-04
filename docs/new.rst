@@ -13,7 +13,7 @@ Historically :code:`pymer4` versioning was a bit all over the place but has sett
 - **New feature:** addition of :code:`pymer4.io` module for saving and loading models to disk
 - **New feature:** addition of :code:`Lm2` models that can perform multi-level modeling by first estimating a separate regression for each group and then performing inference on those estimates. Can perform inference on first-level semi-partial and partial correlation coefficients instead of betas too.
 - **New feature:** All model classes now have the ability to rank transform data prior to estimation, see the rank argument of their respective :code:`.fit()` methods.
-- **New features for :code:`Lm` models:** 
+- **New features for Lm models:** 
     - :code:`Lm` models can transform coefficients to partial or semi-partial correlation coefficients
     - :code:`Lm` models can also perform weight-least-squares (WLS) regression given the weights argument to :code:`.fit()`, with optional dof correction via Satterthwaite approximation. This is useful for categorical (e.g. group) comparison where one does not want to assume equal variance between groups (e.g. Welch's t-test). This remains an experimental feature
     - :code:`Lm` models can compute hc1 and hc2 robust standard errors

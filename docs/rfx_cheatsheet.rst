@@ -17,7 +17,7 @@ Because :code:`Lmer` models just call the :code:`lme4` package in R behind the s
     #Random intercepts and slopes (without their correlation)
     (1 | Group) + (0 + Variable | Group)
 
-    #Same as above only if Variable is *continuous* and not a factor
+    #Same as above but will not separate factors (see: https://rdrr.io/cran/lme4/man/expandDoubleVerts.html)
     (Variable || Group)
 
     #Random intercept and slope for more than one variable (and their correlations)
