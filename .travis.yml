@@ -37,6 +37,7 @@ after_success:
 before_deploy:
   # install necessary packages and refresh the docs before deployment
   - conda install sphinx sphinx_bootstrap_theme sphinx-gallery -c conda-forge
+  - cd docs && make clean && make html
 
 deploy:
 

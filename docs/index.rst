@@ -26,15 +26,17 @@ Pymer4
 
 :code:`pymer4` is a statistics library for estimating various regression and multi-level models in Python. Love `lme4  <https://cran.r-project.org/web/packages/lme4/index.html>`_ in R, but prefer to work in the scientific Python ecosystem? This package has got you covered!
 
-:code:`pymer4` provides a clean interface that hides the back-and-forth code required when moving between R and Python. In other words, you can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. This is accomplished using `rpy2 <hhttps://rpy2.github.io/doc/latest/html/index.html/>`_ to interface between langauges.
+:code:`pymer4` provides a clean interface that hides the back-and-forth code required when moving between R and Python. In other words, you can work completely in Python, never having to deal with R, but get (most) of lme4's goodness. This is accomplished using `rpy2 <https://rpy2.github.io/doc/latest/html/index.html/>`_ to interface between langauges.
 
 Additionally :code:`pymer4` can fit various additional regression models with some bells, such as robust standard errors, and two-stage regression (summary statistics) models. See the features page for more information.  
 
 **TL;DR** This package is your new *simple* Pythonic drop-in replacement for :code:`lm()` or :code:`glmer()` in R.
 
+For an example of what's possible check out the tutorials or `this blog post <https://eshinjolly.com/2019/02/18/rep_measures/>`_ comparing different modeling strategies for clustered/repeated-measures data.
+
 .. raw:: html
 
-  <div class="col-md-6">
+  <div class="col-md-12">
     <div class="panel panel-default">
       <div class="panel-heading">
         <h3 class="panel-title">Contents</h3>
@@ -60,3 +62,17 @@ Additionally :code:`pymer4` can fit various additional regression models with so
     </div>
   </div>
 
+Publications
+++++++++++++
+:code:`pymer4` has been used to analyze data is several publications including but not limited to:
+
+- Jolly, E., Sadhukha, S., & Chang, L.J. (in press). Custom-molded headcases have limited efficacy in reducing head motion during naturalistic fMRI expreiments. *NeuroImage*. 
+- Sharon, G., Cruz, N. J., Kang, D. W., et al. (2019). Human gut microbiota from autism spectrum disorder promote behavioral symptoms in mice. *Cell*, 177(6), 1600-1618.
+- Urbach, T. P., DeLong, K. A., Chan, W. H., & Kutas, M. (2020). An exploratory data analysis of word form prediction during word-by-word reading. *Proceedings of the National Academy of Sciences*, 117(34), 20483-20494.
+- Chen, P. H. A., Cheong, J. H., Jolly, E., Elhence, H., Wager, T. D., & Chang, L. J. (2019). Socially transmitted placebo effects. *Nature Human Behaviour*, 3(12), 1295-1305.
+
+Citing
+++++++
+If you use :code:`pymer4` in your own work, please cite:  
+
+Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. *Journal of Open Source Software*, 3(31), 862, https://doi.org/10.21105/joss.00862
