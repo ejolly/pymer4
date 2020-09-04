@@ -37,7 +37,7 @@ after_success:
 before_deploy:
   # install necessary packages and refresh the docs before deployment
   - conda install sphinx sphinx_bootstrap_theme sphinx-gallery -c conda-forge
-  - cd docs && make clean && make html
+  - cd docs && make clean && make html && cd .. && pwd
 
 deploy:
 
@@ -46,7 +46,7 @@ deploy:
     skip_cleanup: true
     keep-history: false
     github_token: $GITHUB_TOKEN  # from github, set in TravisCI settings
-    local_dir: docs/_build/html
+    local_dir: ./docs/_build/html
     on:
       branch: master
       # all_branches: true  # testing only
