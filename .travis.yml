@@ -40,13 +40,16 @@ before_deploy:
 
 deploy:
 
-  # allow any commit to master to refresh the docs on gh-pages
+  # allow any commit to master or dev to refresh the docs on gh-pages
   - provider: pages
     skip_cleanup: true
+    keep-history: false
     github_token: $GITHUB_TOKEN  # from github, set in TravisCI settings
+    local_dir: docs/_build/html
     on:
-      # branch: master
-      all_branches: true  # testing only
+      branch: master
+      # all_branches: true  # testing only
+      # condition: $TRAVIS_BRANCH =~ ^(master)$|^(dev)$
 
   # this script manages conda package uploads. It routes routine
   # master commits to the pre-release label and manual github releases
