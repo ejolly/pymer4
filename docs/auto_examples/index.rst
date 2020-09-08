@@ -23,13 +23,14 @@ Usage examples:
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="1">
+    <div class="sphx-glr-thumbcontainer" tooltip="1. Basic Usage Guide">
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_01_basic_usage_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_01_basic_usage_thumb.png
+     :alt: 1. Basic Usage Guide
 
-        :ref:`sphx_glr_auto_examples_example_01_basic_usage.py`
+     :ref:`sphx_glr_auto_examples_example_01_basic_usage.py`
 
 .. raw:: html
 
@@ -43,13 +44,14 @@ Usage examples:
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="2">
+    <div class="sphx-glr-thumbcontainer" tooltip="2. Categorical Predictors">
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_02_categorical_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_02_categorical_thumb.png
+     :alt: 2. Categorical Predictors
 
-        :ref:`sphx_glr_auto_examples_example_02_categorical.py`
+     :ref:`sphx_glr_auto_examples_example_02_categorical.py`
 
 .. raw:: html
 
@@ -63,13 +65,14 @@ Usage examples:
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="3">
+    <div class="sphx-glr-thumbcontainer" tooltip="3. ANOVA tables and post-hoc comparisons">
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_03_posthoc_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_03_posthoc_thumb.png
+     :alt: 3. ANOVA tables and post-hoc comparisons
 
-        :ref:`sphx_glr_auto_examples_example_03_posthoc.py`
+     :ref:`sphx_glr_auto_examples_example_03_posthoc.py`
 
 .. raw:: html
 
@@ -87,9 +90,10 @@ Usage examples:
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_04_simulating_data_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_04_simulating_data_thumb.png
+     :alt: 4. Simulating Data
 
-        :ref:`sphx_glr_auto_examples_example_04_simulating_data.py`
+     :ref:`sphx_glr_auto_examples_example_04_simulating_data.py`
 
 .. raw:: html
 
@@ -103,13 +107,14 @@ Usage examples:
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="5">
+    <div class="sphx-glr-thumbcontainer" tooltip="5. Additional Statistics Functions">
 
 .. only:: html
 
-    .. figure:: /auto_examples/images/thumb/sphx_glr_example_05_misc_stats_thumb.png
+ .. figure:: /auto_examples/images/thumb/sphx_glr_example_05_misc_stats_thumb.png
+     :alt: 5. Additional Statistics Functions
 
-        :ref:`sphx_glr_auto_examples_example_05_misc_stats.py`
+     :ref:`sphx_glr_auto_examples_example_05_misc_stats.py`
 
 .. raw:: html
 
@@ -122,7 +127,7 @@ Usage examples:
    /auto_examples/example_05_misc_stats
 .. raw:: html
 
-    <div style='clear:both'></div>
+    <div class="sphx-glr-clear"></div>
 
 
 
@@ -132,15 +137,15 @@ Usage examples:
     :class: sphx-glr-footer-gallery
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
-    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/Esh/Documents/Python/Cosan/pymer4/docs/auto_examples/auto_examples_python.zip>`
+    :download:`Download all examples in Python source code: auto_examples_python.zip <//Users/Esh/Documents/pypackages/pymer4/docs/auto_examples/auto_examples_python.zip>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
-    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/Esh/Documents/Python/Cosan/pymer4/docs/auto_examples/auto_examples_jupyter.zip>`
+    :download:`Download all examples in Jupyter notebooks: auto_examples_jupyter.zip <//Users/Esh/Documents/pypackages/pymer4/docs/auto_examples/auto_examples_jupyter.zip>`
 
 
 .. only:: html

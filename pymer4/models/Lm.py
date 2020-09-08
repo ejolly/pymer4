@@ -19,7 +19,7 @@ from ..utils import (
     _chunk_perm_ols,
     _ols,
     _perm_find,
-    _welch_ingredients
+    _welch_ingredients,
 )
 
 
@@ -45,7 +45,7 @@ class Lm(object):
         coefs (pd.DataFrame): model summary table of parameters
         residuals (numpy.ndarray): model residuals
         fits (numpy.ndarray): model fits/predictions
-        estimator (string): 'OLS' or 'WLS' 
+        estimator (string): 'OLS' or 'WLS'
         se_type (string): how standard errors are computed
         sig_type (string): how inference is performed
 
@@ -77,11 +77,7 @@ class Lm(object):
 
     def __repr__(self):
         out = "{}(fitted={}, formula={}, family={})".format(
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.fitted,
-            self.formula,
-            self.family,
+            self.__class__.__module__, self.fitted, self.formula, self.family,
         )
         return out
 
@@ -91,7 +87,6 @@ class Lm(object):
         conf_int="standard",
         permute=False,
         rank=False,
-        summarize=True,
         verbose=False,
         n_boot=500,
         n_jobs=1,
@@ -99,11 +94,12 @@ class Lm(object):
         cluster=None,
         weights=None,
         wls_dof_correction=True,
+        **kwargs
     ):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
 
-        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata's robust routine. Of the choices below, 'hc1' or 'hc3' are amongst the more popular.  
+        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata's robust routine. Of the choices below, 'hc1' or 'hc3' are amongst the more popular.
         Robust estimators include:
 
         - 'hc0': Huber (1967) original sandwich estimator
@@ -154,27 +150,38 @@ class Lm(object):
 
             >>> model.fit(robust='cluster', cluster='Group')
             
-            Simple regression with categorical predictor, i.e. between groups t-test assuming equal variances  
+            Simple regression with categorical predictor, i.e. between groups t-test assuming equal variances
 
             >>> model = Lm('DV ~ Group', data=df)
             >>> model.fit()
 
-            Same as above but don't assume equal variances and have pymer4 compute the between group variances automatically, i.e. WLS (preferred)  
+            Same as above but don't assume equal variances and have pymer4 compute the between group variances automatically, i.e. WLS (preferred).
 
-            >>> model.fit(weights='Group') 
+            >>> model.fit(weights='Group')
 
-            Manually compute the variance of each group and use the inverse of that as the weights. In this case WLS is estimated but dof correction won't be applied because it's not trivial to compute.  
+            Manually compute the variance of each group and use the inverse of that as the weights. In this case WLS is estimated but dof correction won't be applied because it's not trivial to compute.
             
             >>> weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
             model.fit(weights=weights)
 
         """
+
+        # Alllow summary or summarize for compatibility
+        if "summary" in kwargs and "summarize" in kwargs:
+            raise ValueError(
+                "You specified both summary and summarize, please prefer summarize"
+            )
+        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summary", summarize)
+
         if permute and permute < 500:
             w = "Permutation testing < 500 permutations is not recommended"
             warnings.warn(w)
             self.warnings.append(w)
         elif permute is True:
-            raise TypeError("permute should 'False' or the number of permutations to perform")
+            raise TypeError(
+                "permute should 'False' or the number of permutations to perform"
+            )
         if robust:
             if isinstance(robust, bool):
                 robust = "hc1"
@@ -441,7 +448,7 @@ class Lm(object):
 
     def to_corrs(self, corr_type="semi", ztrans_corrs=False):
         """
-        Transform fitted model coefficients (excluding the intercept) to partial or semi-partial correlations with dependent variable. The is useful for rescaling coefficients to a correlation scale (-1 to 1) and does **not** change how inferences are performed. Semi-partial correlations are computed as the correlation between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor. They are interpretable in the same way as the original coefficients. Partial correlations reflect the unique variance a predictor explains in the DV accounting for correlations between predictors *and* what is not explained by other predictors; this value is always >= the semi-partial correlation. They are *not* interpretable in the same way as the original coefficients. Partial correlations are computed as the correlations between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor *and* the DV. Good ref: https://bit.ly/2GNwXh5 
+        Transform fitted model coefficients (excluding the intercept) to partial or semi-partial correlations with dependent variable. The is useful for rescaling coefficients to a correlation scale (-1 to 1) and does **not** change how inferences are performed. Semi-partial correlations are computed as the correlation between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor. They are interpretable in the same way as the original coefficients. Partial correlations reflect the unique variance a predictor explains in the DV accounting for correlations between predictors *and* what is not explained by other predictors; this value is always >= the semi-partial correlation. They are *not* interpretable in the same way as the original coefficients. Partial correlations are computed as the correlations between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor *and* the DV. Good ref: https://bit.ly/2GNwXh5
 
         Args:
             corr_type (string): 'semi' or 'partial'

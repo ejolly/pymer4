@@ -6,14 +6,16 @@ import numpy as np
 from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
+import pytest
+import seaborn as sns
+
+# import re
 
 np.random.seed(10)
 
 os.environ[
     "KMP_DUPLICATE_LIB_OK"
-] = (
-    "True"
-)  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
+] = "True"  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
 
 
 def test_gaussian_lm2():
@@ -84,7 +86,7 @@ def test_gaussian_lm():
     model = Lm("DV ~ IV3", data=df_two_groups)
     model.fit(summarize=False, weights="IV3")
     assert model.estimator == "WLS"
-    
+
     # Make sure welch's t-test lines up with scipy
     wls = np.abs(model.coefs.loc["IV3", ["T-stat", "P-val"]].values)
     scit = np.abs(ttest_ind(x, y, equal_var=False))
@@ -118,12 +120,52 @@ def test_gaussian_lmm():
     # Test prediction
     assert np.allclose(model.predict(model.data, use_rfx=True), model.data.fits)
 
-    # Smoketest for simulate
-    model.simulate(2)
-    model.simulate(2, use_rfx=True)
+    # Test simulate
+    out = model.simulate(2)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
+
+    out = model.simulate(2, use_rfx=True)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
 
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
+
+
+def test_contrasts():
+    df = sns.load_dataset("gammas").rename(columns={"BOLD signal": "bold"})
+    grouped_means = df.groupby("ROI")["bold"].mean()
+    model = Lmer("bold ~ ROI + (1|subject)", data=df)
+
+    custom_contrast = grouped_means["AG"] - np.mean(
+        [grouped_means["IPS"], grouped_means["V1"]]
+    )
+    grand_mean = grouped_means.mean()
+
+    con1 = grouped_means["V1"] - grouped_means["IPS"]
+    con2 = grouped_means["AG"] - grouped_means["IPS"]
+    intercept = grouped_means["IPS"]
+
+    # Treatment contrasts with non-alphabetic order
+    model.fit(factors={"ROI": ["IPS", "V1", "AG"]}, summarize=False)
+
+    assert np.allclose(model.coefs.loc["(Intercept)", "Estimate"], intercept)
+    assert np.allclose(model.coefs.iloc[1, 0], con1)
+    assert np.allclose(model.coefs.iloc[2, 0], con2)
+
+    # Polynomial contrasts
+    model.fit(factors={"ROI": ["IPS", "V1", "AG"]}, ordered=True, summarize=False)
+
+    assert np.allclose(model.coefs.loc["(Intercept)", "Estimate"], grand_mean)
+    assert np.allclose(model.coefs.iloc[1, 0], 0.870744)  # From R
+    assert np.allclose(model.coefs.iloc[2, 0], 0.609262)  # From R
+
+    # Custom contrasts
+    model.fit(factors={"ROI": {"AG": 1, "IPS": -0.5, "V1": -0.5}}, summarize=False)
+
+    assert np.allclose(model.coefs.loc["(Intercept)", "Estimate"], grand_mean)
+    assert np.allclose(model.coefs.iloc[1, 0], custom_contrast)
 
 
 def test_post_hoc():
@@ -189,6 +231,8 @@ def test_anova():
     model.fit(summarize=False)
     out = model.anova()
     assert out.shape == (3, 7)
+    out = model.anova(force_orthogonal=True)
+    assert out.shape == (3, 7)
 
 
 def test_poisson_lmm():
@@ -224,7 +268,7 @@ def test_gamma_lmm():
     assert m.coefs.shape == (2, 7)
 
     # Test RFX only; these work but the optimizer in R typically crashes if the model is especially bad fit so commenting out until a better dataset is acquired
-    
+
     # model = Lmer("DV_g ~ 0 + (IV1|Group)", data=df, family="gamma")
     # model.fit(summarize=False)
     # assert model.fixef.shape == (47, 2)
@@ -284,3 +328,30 @@ def test_glmer_opt_passing():
         summarize=False, control="optCtrl = list(FtolAbs=1e-1, FtolRel=1e-1, maxfun=10)"
     )
     assert len(m.warnings) >= 1
+
+
+# all or prune to suit
+# tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
+tests_ = [
+    test_gaussian_lm2,
+    test_gaussian_lm,
+    test_gaussian_lmm,
+    test_post_hoc,
+    test_logistic_lmm,
+    test_anova,
+    test_poisson_lmm,
+    test_gamma_lmm,
+    test_inverse_gaussian_lmm,
+    test_lmer_opt_passing,
+    test_glmer_opt_passing,
+]
+
+
+@pytest.mark.parametrize("model", tests_)
+def test_Pool(model):
+    from multiprocessing import get_context
+
+    # squeeze model functions through Pool pickling
+    print("Pool", model.__name__)
+    with get_context("spawn").Pool(1) as pool:
+        _ = pool.apply(model, [])

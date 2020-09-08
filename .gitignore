@@ -5,7 +5,6 @@
 build/*
 docs/_build/
 docs/modules/
-*.ipynb
 .cache/*
 .imdone/*
 dist/*
@@ -14,4 +13,5 @@ dist/*
 .pytest_cache/*
 **/__pycache__
 dev/
-.vscode
+.coverage
+.vscode/settings.json

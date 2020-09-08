@@ -34,6 +34,10 @@ Multi-level models
 - Easy model predictions on new data
 - Easy generation of new data from a fitted model
 - Optional permuted p-value computation via within cluster permutation testing (experimental)
+- **note** that :code:`Lmer`'s usage of :code:`coef`, :code:`fixef`, and :code:`ranef` differs a bit from R:
+- :code:`coef` = :code:`summary(model)` in R, i.e. "top level" estimates, i.e. the summary output of the model that can be used to make predictions on new datasets and on which inference (i.e. p-values) are computed
+- :code:`fixef` = :code:`coef(model)` in R, i.e. "group/cluster" level *fixed effects,* conceptually similar to coefficients obtained from running a seperate :code:`Lm` (:code:`lm` in R) for each group/cluster
+- :code:`ranef` = :code:`ranef(model)` in R, i.e. "group/cluster" level *random effects,* deviance of each cluster with respect to "top level" estimates 
 
 Other Features
 --------------

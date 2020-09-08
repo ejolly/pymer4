@@ -8,20 +8,35 @@ Main class to wrap R's lme4 library
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
-from rpy2.robjects import pandas2ri
-from rpy2 import rinterface_lib
+from rpy2.rinterface_lib import callbacks
+
+from rpy2.robjects import numpy2ri
+import rpy2.rinterface as rinterface
 import warnings
+import traceback
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from ..utils import _sig_stars, _perm_find, _return_t, _to_ranks_by_group
+from ..utils import (
+    _sig_stars,
+    _perm_find,
+    _return_t,
+    _to_ranks_by_group,
+    con2R,
+    pandas2R,
+)
+from pandas.api.types import CategoricalDtype
 
-pandas2ri.activate()
+# Import R libraries we need
+base = importr("base")
+stats = importr("stats")
+
+numpy2ri.activate()
 
 # Make a reference to the default R console writer from rpy2
-consolewrite_warning_backup = rinterface_lib.callbacks.consolewrite_warnerror
-consolewrite_print_backup = rinterface_lib.callbacks.consolewrite_print
+consolewrite_warning_backup = callbacks.consolewrite_warnerror
+consolewrite_print_backup = callbacks.consolewrite_print
 
 
 class Lmer(object):
@@ -86,11 +101,13 @@ class Lmer(object):
         self.coefs = None
         self.model_obj = None
         self.factors = None
+        self.contrast_codes = None
         self.ranked_data = False
         self.marginal_estimates = None
         self.marginal_contrasts = None
         self.sig_type = None
         self.factors_prev_ = None
+        self.contrasts = None
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -103,50 +120,78 @@ class Lmer(object):
         Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts. User can also specific custom contrasts.
 
         Args:
-            factor_dict: (dict) dictionary with column names specified as keys, and lists of unique values to treat as factor levels
-            ordered: (bool) whether to interpret factor_dict values as dummy-coded (1st list item is reference level) or as polynomial contrasts (linear contrast specified by ordered of list items)
+            factor_dict: (dict) dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast; a dict with keys as factor leves and values as desired comparisons in human readable format
+            ordered: (bool) whether to interpret factor_dict values as dummy-coded (1st list item is reference level) or as polynomial contrasts (linear contrast specified by ordered of list items); ignored if factor_dict values are not a list
 
         Returns:
             pandas.core.frame.DataFrame: copy of original data with factorized columns
+        
+        Examples:
+
+            Dummy/treatment contrasts with 'A' as the reference level and other contrasts as 'B'-'A' and 'C'-'A'
+
+            >>> _make_factors(factor_dict={'factor': ['A','B','C']})
+
+            Same as above but a linear contrast (and automatically computed quadratic contrast) of A < B < C
+
+            >>> _make_factors(factor_dict={'factor': ['A','B','C']}, ordered=True)
+
+            Custom contrast of 'A' - mean('B', 'C')
+
+            >>> _make_factors(factor_dict={'factor': {'A': 1, 'B': -0.5, 'C': -0.5}})
         """
-        if ordered:
-            rstring = """
-                function(df,f,lv){
-                df[,f] <- factor(df[,f],lv,ordered=T)
-                df
-                }
-            """
-        else:
-            rstring = """
-                function(df,f,lv){
-                df[,f] <- factor(df[,f],lv,ordered=F)
-                df
-                }
-            """
 
-        c_rstring = """
-            function(df,f,c){
-            contrasts(df[,f]) <- c(c)
-            df
-            }
-            """
+        errormsg = "factors should be specified as a dictionary with values as one of:\n1) a list with factor levels in the desired order for dummy/treatment/polynomial contrasts\n2) a dict with keys as factor levels and values as desired comparisons in human readable format"
+        # We create a copy of data because we need to convert dtypes to categories and then pass them to R. However, resetting categories on the *same* dataframe and passing to R repeatedly (e.g. multiple calls to .fit with different contrasats) does not work as R only uses the 1st category spec. So instead we create a copy and return that copy to get used by .fit
+        out = {}
+        df = self.data.copy()
+        if not isinstance(factor_dict, dict):
+            raise TypeError(errormsg)
+        for factor, contrasts in factor_dict.items():
+            # First convert to a string type because R needs string based categories
+            df[factor] = df[factor].apply(str)
 
-        factorize = robjects.r(rstring)
-        contrastize = robjects.r(c_rstring)
-        df = copy(self.data)
-        for k in factor_dict.keys():
-            df[k] = df[k].astype(str)
+            # Treatment/poly contrasts
+            if isinstance(contrasts, list):
+                # Ensure that all factor levels are accounted for
+                if not all([e in contrasts for e in df[factor].unique()]):
+                    raise ValueError(
+                        "Not all factor levels are specified in the desired contrast"
+                    )
+                # Define and apply a pandas categorical type in the same order as requested, which will get converted to the right factor levels in R
+                cat = CategoricalDtype(contrasts)
+                df[factor] = df[factor].astype(cat)
 
-        r_df = df
-        for k, v in factor_dict.items():
-            if isinstance(v, list):
-                r_df = factorize(r_df, k, v)
-            elif isinstance(v, dict):
-                levels = list(v.keys())
-                contrasts = np.array(list(v.values()))
-                r_df = factorize(r_df, k, levels)
-                r_df = contrastize(r_df, k, contrasts)
-        return r_df
+                if ordered:
+                    # Polynomial contrasts
+                    con_codes = np.array(stats.contr_poly(len(contrasts)))
+                else:
+                    # Treatment/dummy contrasts
+                    con_codes = np.array(stats.contr_treatment(len(contrasts)))
+
+                out[factor] = con_codes
+
+            # Custom contrasts (human readable)
+            elif isinstance(contrasts, dict):
+                factor_levels = list(contrasts.keys())
+                cons = list(contrasts.values())
+                # Ensure that all factor levels are accounted for
+                if not all([e in factor_levels for e in df[factor].unique()]):
+                    raise ValueError(
+                        "Not all factor levels are specified in the desired contrast"
+                    )
+                # Define and apply categorical type in the same order as requested
+                cat = CategoricalDtype(factor_levels)
+                df[factor] = df[factor].astype(cat)
+                # Compute desired contrasts in R format along with addition k - 1 contrasts not specified
+                con_codes = con2R(cons)
+                out[factor] = con_codes
+
+            else:
+                raise TypeError(errormsg)
+        self.factors = factor_dict
+        self.contrast_codes = out
+        return robjects.ListVector(out), df
 
     def _refit_orthogonal(self):
         """
@@ -154,10 +199,13 @@ class Lmer(object):
         """
 
         self.factors_prev_ = copy(self.factors)
-        # Create orthogonal polynomial contrasts by just sorted factor levels alphabetically and letting R enumerate the required polynomial contrasts
+        self.contrast_codes_prev_ = copy(self.contrast_codes)
+        # Create orthogonal polynomial contrasts for all factors, by creating a list of unique
+        # factor levels as self._make_factors will handle the rest
         new_factors = {}
-        for k in self.factors.keys():
-            new_factors[k] = sorted(list(map(str, self.data[k].unique())))
+        for factor in self.factors.keys():
+            new_factors[factor] = sorted(list(map(str, self.data[factor].unique())))
+
         self.fit(
             factors=new_factors,
             ordered=True,
@@ -192,7 +240,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = anova(self.model_obj)
+        self.anova_results = pd.DataFrame(anova(self.model_obj))
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
@@ -220,24 +268,20 @@ class Lmer(object):
             )
         return self.anova_results
 
-    def _get_ngrps(self):
+    def _get_ngrps(self, unsum, base):
         """Get the groups information from the model as a dictionary
         """
-        rstring = "function(model){data.frame(unclass(summary(model))$ngrps)}"
-        get_ngrps = robjects.r(rstring)
-        res = get_ngrps(self.model_obj)
-        if len(res.columns) != 1:
-            raise Exception("Appears there's been another rpy2 or lme4 api change.")
-        self.grps = res.to_dict()[res.columns[0]]
+        # This works for 2 grouping factors
+        ns = unsum.rx2("ngrps")
+        names = base.names(self.model_obj.slots["flist"])
+        self.grps = dict(zip(names, ns))
 
     def _set_R_stdout(self, verbose):
         """Adjust whether R prints to the console (often as a duplicate) based on the verbose flag of a method call. Reference to rpy2 interface here: https://bit.ly/2MsrufO"""
 
         if verbose:
             # use the default logging in R
-            rinterface_lib.callbacks.consolewrite_warnerror = (
-                consolewrite_warning_backup
-            )
+            callbacks.consolewrite_warnerror = consolewrite_warning_backup
         else:
             # Create a list buffer to catch messages and discard them
             buf = []
@@ -245,7 +289,7 @@ class Lmer(object):
             def _f(x):
                 buf.append(x)
 
-            rinterface_lib.callbacks.consolewrite_warnerror = _f
+            callbacks.consolewrite_warnerror = _f
 
     def fit(
         self,
@@ -254,7 +298,6 @@ class Lmer(object):
         factors=None,
         permute=False,
         ordered=False,
-        summarize=True,
         verbose=False,
         REML=True,
         rank=False,
@@ -263,17 +306,18 @@ class Lmer(object):
         no_warnings=False,
         control="",
         old_optimizer=False,
+        **kwargs,
     ):
         """
-        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience.
+        Main method for fitting model object. Will modify the model's data attribute to add columns for residuals and fits for convenience. Factors should be specified as a dictionary with values as a list or themselves a dictionary of *human readable* contrasts *not* R-style contrast codes as these will be auto-converted for you. See the factors docstring and examples below. After fitting, the .factors attribute will store a reference to the user-specified dictionary. The .contrast_codes model attributes will store the requested comparisons in converted R format. Note that Lmer estimate naming conventions differs a bit from R: Lmer.coefs = summary(model); Lmer.fixefs = coefs(model); Lmer.ranef = ranef(model)
 
         Args:
             conf_int (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot' (parametric bootstrap)
             n_boot (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
-            factors (dict): Keys should be column names in data to treat as factors. Values should either be a list containing unique variable levels if dummy-coding or polynomial coding is desired. Otherwise values should be another dictionary with unique variable levels as keys and desired contrast values (as specified in R!) as keys. See examples below
+            factors (dict): dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast or a dict with keys as factor leves and values as desired comparisons in human readable format See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
             ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
-            summarize (bool): whether to print a model summary after fitting; default is True
+            summarize/summary (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
             rank (bool): covert predictors in model formula to ranks by group prior to estimation. Model object will still contain original data not ranked data; default False
@@ -315,11 +359,19 @@ class Lmer(object):
 
         """
 
+        # Alllow summary or summarize for compatibility
+        if "summary" in kwargs and "summarize" in kwargs:
+            raise ValueError(
+                "You specified both summary and summarize, please prefer summarize"
+            )
+        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summary", summarize)
         # Save params for future calls
         self._permute = permute
         self._conf_int = conf_int
-        self._REML = REML
+        self._REML = REML if self.family == "gaussian" else False
         self._set_R_stdout(verbose)
+
         if permute is True:
             raise TypeError(
                 "permute should 'False' or the number of permutations to perform"
@@ -333,10 +385,11 @@ class Lmer(object):
             else:
                 control = "optimizer='bobyqa'"
         if factors:
-            dat = self._make_factors(factors, ordered)
-            self.factors = factors
+            contrasts, dat = self._make_factors(factors, ordered)
         else:
+            contrasts = rinterface.NULL
             dat = self.data
+
         if rank:
             if not rank_group:
                 raise ValueError("rank_group must be provided if rank is True")
@@ -354,24 +407,25 @@ class Lmer(object):
                 self.sig_type = "permutation" + " (" + str(permute) + ")"
             else:
                 self.sig_type = "parametric"
+
+        data = pandas2R(dat)
+
         if self.family == "gaussian":
             _fam = "gaussian"
             if verbose:
                 print(
-                    "Fitting linear model using lmer with "
-                    + conf_int
-                    + " confidence intervals...\n"
+                    f"Fitting linear model using lmer with {conf_int} confidence intervals...\n"
                 )
 
             lmer = importr("lmerTest")
             lmc = robjects.r(f"lmerControl({control})")
-            self.model_obj = lmer.lmer(self.formula, data=dat, REML=REML, control=lmc)
+            self.model_obj = lmer.lmer(
+                self.formula, data=data, REML=REML, control=lmc, contrasts=contrasts
+            )
         else:
             if verbose:
                 print(
-                    "Fitting generalized linear model using glmer (family {}) with "
-                    + conf_int
-                    + " confidence intervals...\n".format(self.family)
+                    f"Fitting generalized linear model using glmer (family {self.family}) with {conf_int} confidence intervals...\n"
                 )
             lmer = importr("lme4")
             if self.family == "inverse_gaussian":
@@ -382,17 +436,19 @@ class Lmer(object):
                 _fam = self.family
             lmc = robjects.r(f"glmerControl({control})")
             self.model_obj = lmer.glmer(
-                self.formula, data=dat, family=_fam, REML=REML, control=lmc
+                self.formula, data=data, family=_fam, control=lmc, contrasts=contrasts,
             )
-        
+
         # Store design matrix and get number of IVs for inference
-        stats = importr("stats")
-        self.design_matrix = stats.model_matrix(self.model_obj)
-        num_IV = self.design_matrix.shape[1]
+        design_matrix = stats.model_matrix(self.model_obj)
+        if design_matrix:
+            self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+            num_IV = self.design_matrix.shape[1]
+        else:
+            num_IV = 0
 
         if permute and verbose:
             print("Using {} permutations to determine significance...".format(permute))
-        base = importr("base")
 
         summary = base.summary(self.model_obj)
         unsum = base.unclass(summary)
@@ -401,10 +457,11 @@ class Lmer(object):
 
         # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
         try:
-            self._get_ngrps()
-        except AttributeError:
+            self._get_ngrps(unsum, base)
+        except Exception as e:  # NOQA
+            print(traceback.format_exc())
             raise Exception(
-                "You appear to have an old version of rpy2, upgrade to >3.0"
+                "The rpy2, lme4, or lmerTest API appears to have changed again. Please file a bug report at https://github.com/ejolly/pymer4/issues with your R, Python, rpy2, lme4, and lmerTest versions and the OS you're running pymer4 on. Apologies."
             )
 
         self.AIC = unsum.rx2("AICtab")[0]
@@ -436,7 +493,7 @@ class Lmer(object):
                         print(warning + " \n")
         else:
             self.warnings = []
-        
+
         # Coefficients, and inference statistics
         if num_IV != 0:
             if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
@@ -460,7 +517,7 @@ class Lmer(object):
                 )
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = out_summary
+                df = pd.DataFrame(out_summary)
                 dfshape = df.shape[1]
                 df.index = out_rownames
 
@@ -490,7 +547,9 @@ class Lmer(object):
                             "2.5_ci",
                             "97.5_ci",
                         ]
-                        df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat", "P-val"]]
+                        df = df[
+                            ["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat", "P-val"]
+                        ]
                     else:
                         # poisson
                         df.columns = [
@@ -501,7 +560,9 @@ class Lmer(object):
                             "2.5_ci",
                             "97.5_ci",
                         ]
-                        df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]]
+                        df = df[
+                            ["Estimate", "2.5_ci", "97.5_ci", "SE", "Z-stat", "P-val"]
+                        ]
 
                 # Incase lmerTest chokes it won't return p-values
                 elif dfshape == 5 and self.family == "gaussian":
@@ -534,6 +595,9 @@ class Lmer(object):
                     odds.ci <- exp(out.ci)
                     colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
                     probs.ci <- data.frame(sapply(out.ci,plogis))
+                    if(ncol(probs.ci) == 1){
+                      probs.ci = t(probs.ci)
+                    }
                     colnames(probs.ci) <- c("Prob_2.5_ci","Prob_97.5_ci")
                     out <- cbind(out,odds,odds.ci,probs,probs.ci)
                     list(out,rownames(out))
@@ -543,7 +607,7 @@ class Lmer(object):
 
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = out_summary
+                df = pd.DataFrame(out_summary)
                 df.index = out_rownames
                 df.columns = [
                     "Estimate",
@@ -588,9 +652,7 @@ class Lmer(object):
                     if self.family == "gaussian":
                         perm_obj = lmer.lmer(self.formula, data=perm_dat, REML=REML)
                     else:
-                        perm_obj = lmer.glmer(
-                            self.formula, data=perm_dat, family=_fam, REML=REML
-                        )
+                        perm_obj = lmer.glmer(self.formula, data=perm_dat, family=_fam)
                     perms.append(_return_t(perm_obj))
                 perms = np.array(perms)
                 pvals = []
@@ -618,43 +680,54 @@ class Lmer(object):
                 if "DF" in df.columns:
                     df = df.drop(columns="DF")
                 df["Sig"] = df.apply(
-                    lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "", axis=1
+                    lambda row: "*" if row["2.5_ci"] * row["97.5_ci"] > 0 else "",
+                    axis=1,
                 )
 
             # Because all models except lmm have no DF column make sure Num_perm gets put in the right place
             if permute:
-                if self.family != 'gaussian':
+                if self.family != "gaussian":
                     cols = list(df.columns)
                     col_order = cols[:-4] + ["Num_perm"] + cols[-4:-2] + [cols[-1]]
                     df = df[col_order]
-            
+
             self.coefs = df
             # Make sure the design matrix column names match population coefficients
-            self.design_matrix = pd.DataFrame(
-                self.design_matrix, columns=self.coefs.index[:]
-            )
+            self.design_matrix.columns = self.coefs.index[:]
         else:
             self.coefs = None
-            if permute or conf_int == 'boot':
-                print("**NOTE**: Non-parametric inference only applies to fixed effects and none were estimated\n")
+            if permute or conf_int == "boot":
+                print(
+                    "**NOTE**: Non-parametric inference only applies to fixed effects and none were estimated\n"
+                )
 
         self.fitted = True
 
         # Random effect variances and correlations
-        df = base.data_frame(unsum.rx2("varcor"))
-        ran_vars = df.query("(var2 == 'NA') | (var2 == 'N')").drop("var2", axis=1)
+        varcor_NAs = ["NA", "N", robjects.NA_Character]  # NOQA
+        df = pd.DataFrame(base.data_frame(unsum.rx2("varcor")))
+
+        ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
         ran_vars.columns = ["Name", "Var", "Std"]
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
+        ran_vars = ran_vars.applymap(
+            lambda x: np.nan if x == robjects.NA_Character else x
+        )
+        ran_vars.replace(np.nan, "", inplace=True)
 
-        ran_corrs = df.query("(var2 != 'NA') & (var2 != 'N')").drop("vcov", axis=1)
+        ran_corrs = df.query("var2 not in @varcor_NAs").drop("vcov", axis=1)
         if ran_corrs.shape[0] != 0:
             ran_corrs.index = ran_corrs["grp"]
             ran_corrs.drop("grp", axis=1, inplace=True)
             ran_corrs.columns = ["IV1", "IV2", "Corr"]
             ran_corrs.index.name = None
+            ran_corrs = ran_corrs.applymap(
+                lambda x: np.nan if x == robjects.NA_Character else x
+            )
+            ran_corrs.replace(np.nan, "", inplace=True)
         else:
             ran_corrs = None
 
@@ -670,15 +743,22 @@ class Lmer(object):
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
+        fixefs = [pd.DataFrame(f) for f in fixefs]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []
                 for f in fixefs:
                     f_corrected_order.append(
-                        f[
-                            list(self.coefs.index)
-                            + [elem for elem in f.columns if elem not in self.coefs.index]
-                        ]
+                        pd.DataFrame(
+                            f[
+                                list(self.coefs.index)
+                                + [
+                                    elem
+                                    for elem in f.columns
+                                    if elem not in self.coefs.index
+                                ]
+                            ]
+                        )
                     )
                 self.fixef = f_corrected_order
             else:
@@ -688,7 +768,11 @@ class Lmer(object):
             if self.coefs is not None:
                 self.fixef = self.fixef[
                     list(self.coefs.index)
-                    + [elem for elem in self.fixef.columns if elem not in self.coefs.index]
+                    + [
+                        elem
+                        for elem in self.fixef.columns
+                        if elem not in self.coefs.index
+                    ]
                 ]
 
         # Sort column order to match population coefs
@@ -708,9 +792,9 @@ class Lmer(object):
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = list(ranefs)
+            self.ranef = [pd.DataFrame(e) for e in ranefs]
         else:
-            self.ranef = ranefs[0]
+            self.ranef = pd.DataFrame(ranefs[0])
 
         # Model residuals
         rstring = """
@@ -720,7 +804,7 @@ class Lmer(object):
             }
         """
         resid_func = robjects.r(rstring)
-        self.residuals = resid_func(self.model_obj)
+        self.residuals = np.array(resid_func(self.model_obj))
         try:
             self.data["residuals"] = copy(self.residuals)
         except ValueError as e:  # NOQA
@@ -786,7 +870,7 @@ class Lmer(object):
         )
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
-        return sims
+        return pd.DataFrame(sims)
 
     def predict(self, data, use_rfx=False, pred_type="response", verbose=False):
         """
@@ -803,6 +887,10 @@ class Lmer(object):
 
         """
         self._set_R_stdout(verbose)
+        if self.design_matrix is None:
+            raise ValueError(
+                "No fixed effects were estimated so prediction is not possible!"
+            )
         required_cols = self.design_matrix.columns[1:]
         if not all([col in data.columns for col in required_cols]):
             raise ValueError("Column names do not match all fixed effects model terms!")
@@ -832,7 +920,7 @@ class Lmer(object):
         )
 
         predict_func = robjects.r(rstring)
-        preds = predict_func(self.model_obj, data)
+        preds = predict_func(self.model_obj, pandas2R(data))
         return preds
 
     def summary(self):
@@ -867,6 +955,7 @@ class Lmer(object):
             print("Fixed effects:\n")
             return self.coefs.round(3)
 
+    # TODO Provide option to to pass lmerTest.limit = N in order to get non Inf dof when number of observations > 3000. Apparently this is a new default in emmeans. This warning is only visible when verbose=True
     def post_hoc(
         self,
         marginal_vars,
@@ -886,8 +975,8 @@ class Lmer(object):
             verbose (bool): whether to print R messages to the console
 
         Returns:
-            Multiple: 
-                - **marginal_estimates** (*pd.Dataframe*): unique factor level effects (e.g. means/coefs)  
+            Multiple:
+                - **marginal_estimates** (*pd.Dataframe*): unique factor level effects (e.g. means/coefs)
 
                 - **marginal_contrasts** (*pd.DataFrame*): contrasts between factor levels
 
@@ -965,7 +1054,7 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list())
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
                                 out
                                 }"""
                             )
@@ -980,7 +1069,7 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list())
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
                                 out
                                 }"""
                             )
@@ -1005,7 +1094,7 @@ class Lmer(object):
                         + _conditional
                         + """, adjust='"""
                         + p_adjust
-                        + """')
+                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
                         out
                         }"""
                     )
@@ -1019,7 +1108,7 @@ class Lmer(object):
                         + _marginal
                         + """,adjust='"""
                         + p_adjust
-                        + """')
+                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
                         out
                         }"""
                     )
@@ -1028,11 +1117,10 @@ class Lmer(object):
 
         func = robjects.r(rstring)
         res = func(self.model_obj)
-        base = importr("base")
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        self.marginal_estimates = base.summary(res)[0]
+        self.marginal_estimates = pd.DataFrame(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -1064,18 +1152,15 @@ class Lmer(object):
             )
 
         # Marginal Contrasts
-        self.marginal_contrasts = base.summary(res)[1]
-        # Column names also change depending on the family of the model
-        if self.family == "gaussian":
-            self.marginal_contrasts = self.marginal_contrasts.rename(
-                columns={
-                    "t.ratio": "T-stat",
-                    "p.value": "P-val",
-                    "estimate": "Estimate",
-                    "df": "DF",
-                    "contrast": "Contrast",
-                }
-            )
+        self.marginal_contrasts = pd.DataFrame(base.summary(res)[1])
+        if "t.ratio" in self.marginal_contrasts.columns:
+            rename_dict = {
+                "t.ratio": "T-stat",
+                "p.value": "P-val",
+                "estimate": "Estimate",
+                "df": "DF",
+                "contrast": "Contrast",
+            }
             sorted_names = [
                 "Estimate",
                 "2.5_ci",
@@ -1085,16 +1170,14 @@ class Lmer(object):
                 "T-stat",
                 "P-val",
             ]
-        else:
-            self.marginal_contrasts = self.marginal_contrasts.rename(
-                columns={
-                    "z.ratio": "Z-stat",
-                    "p.value": "P-val",
-                    "estimate": "Estimate",
-                    "df": "DF",
-                    "contrast": "Contrast",
-                }
-            )
+        elif "z.ratio" in self.marginal_contrasts.columns:
+            rename_dict = {
+                "z.ratio": "Z-stat",
+                "p.value": "P-val",
+                "estimate": "Estimate",
+                "df": "DF",
+                "contrast": "Contrast",
+            }
             sorted_names = [
                 "Estimate",
                 "2.5_ci",
@@ -1104,9 +1187,16 @@ class Lmer(object):
                 "Z-stat",
                 "P-val",
             ]
+        else:
+            raise ValueError(
+                f"Cannot figure out what emmeans is naming contrast means columns. Expected 't.ratio' or 'z.ratio', but columns are: {self.marginal_contrasts.columns}"
+            )
+
+        self.marginal_contrasts = self.marginal_contrasts.rename(columns=rename_dict)
 
         # Need to make another call to emmeans to get confidence intervals on contrasts
-        confs = base.unclass(emmeans.confint_emmGrid(res))[1].iloc[:, -2:]
+        confs = pd.DataFrame(base.unclass(emmeans.confint_emmGrid(res))[1])
+        confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:
             confs = confs.rename(
@@ -1295,6 +1385,10 @@ class Lmer(object):
         if isinstance(self.fixef, list) or isinstance(self.ranef, list):
             raise NotImplementedError(
                 "Plotting can currently only handle models with 1 random effect grouping variable!"
+            )
+        if self.design_matrix is None:
+            raise ValueError(
+                "No fixed effects were estimated so prediction is not possible!"
             )
         if not ax:
             f, ax = plt.subplots(1, 1, figsize=figsize)

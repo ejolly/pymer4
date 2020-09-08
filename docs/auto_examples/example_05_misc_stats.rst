@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_05_misc_stats.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_05_misc_stats.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_05_misc_stats.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_05_misc_stats.py:
 
 
 5. Additional Statistics Functions
@@ -21,6 +23,7 @@ Permutation Tests
 
     # Import numpy and set random number generator
     import numpy as np
+
     np.random.seed(10)
     # Import stats functions
     from pymer4.stats import perm_test
@@ -29,7 +32,7 @@ Permutation Tests
     x = np.random.normal(loc=2, size=100)
     y = np.random.normal(loc=2.5, size=100)
 
-    # Between groups t-test. The first value is the t-stat and the 
+    # Between groups t-test. The first value is the t-stat and the
     # second is the permuted p-value
     result = perm_test(x, y, stat="tstat", n_perm=500, n_jobs=1)
     print(result)
@@ -45,6 +48,7 @@ Permutation Tests
  .. code-block:: none
 
     (-3.529814975986372, 0.001996007984031936)
+
 
 
 
@@ -71,6 +75,7 @@ Permutation Tests
 
 
 
+
 Bootstrap Comparisons
 ----------------------
 :code:`pymer4` can compute a bootstrap comparison using any arbitrary function that takes as input either one or two 1d numpy arrays, and returns a single value.
@@ -89,7 +94,7 @@ Bootstrap Comparisons
 
 
     # Between groups median test with resampling
-    # The first value is the median difference and the 
+    # The first value is the median difference and the
     # second is the lower and upper 95% confidence interval
     result = boot_func(x, y, func=med_diff)
     print(result)
@@ -105,6 +110,7 @@ Bootstrap Comparisons
  .. code-block:: none
 
     (-0.4928648709628707, (-0.8719792375122976, -0.09680478598285287))
+
 
 
 
@@ -129,8 +135,8 @@ TOST Equivalence Tests
 
 
 
-
 .. image:: /auto_examples/images/sphx_glr_example_05_misc_stats_001.png
+    :alt: example 05 misc stats
     :class: sphx-glr-single-img
 
 
@@ -156,6 +162,7 @@ TOST Equivalence Tests
 
 
 
+
 .. _sphx_glr_download_auto_examples_example_05_misc_stats.py:
 
 
@@ -166,13 +173,13 @@ TOST Equivalence Tests
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_05_misc_stats.py <example_05_misc_stats.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_05_misc_stats.ipynb <example_05_misc_stats.ipynb>`
 

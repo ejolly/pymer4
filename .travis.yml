@@ -1,16 +1,74 @@
-langauge: python
-python: "3.6"
+# requires a valid GIT_TOKEN, ANACONDA_TOKEN, PYPI_TOKEN in TravisCI settings
+env:
+  - PACKAGE_NAME: pymer4   # for the conda_upload.sh deploy script
+
+language: minimal
+
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  # b.c conda build GIT_BUILD_STR works (or not) in mysterious ways ...
+  # pfx g means ordinary commit, r means github tagged vM.N.P release
+  - if [[ $TRAVIS_TAG =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then pfx=r; else pfx=g; fi
+  - export GIT_ABBREV_COMMIT=${pfx}$(git log --full-history --abbrev-commit --oneline -n 1 | awk '{print $1}')
+  - echo "git commit $GIT_ABBREV_COMMIT"
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
+  - source $HOME/miniconda/etc/profile.d/conda.sh && conda activate
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
+  - conda info -a
+
 install:
-- conda create -n testenv python=3.6 pip pytest
-- source activate testenv
-- conda install -c conda-forge r-base=3.6.1 r-lme4=1.1_21 r-lmertest=3.1_0 r-emmeans=1.3.5.1 rpy2=3.1.0 "cffi<1.13"
-- pip install -r requirements.txt
-- python setup.py install
+  - conda install -q conda-build conda-verify
+  - conda build conda -c defaults -c conda-forge
+  - conda create --name pymer4_env pymer4 -c local -c defaults -c conda-forge
+  - conda activate pymer4_env  # run pytests in conda env
+  - conda install black pytest-cov
+  - conda list
+  - lscpu
+  - python -c 'import numpy; numpy.show_config()'
+
 script:
-- py.test
+  - black --check --verbose .
+  - pytest --cov=pymer4
+
+after_success:
+  - conda install codecov && codecov
+
+before_deploy:
+  # install necessary packages and refresh the docs before deployment
+  - conda install sphinx sphinx_bootstrap_theme sphinx-gallery -c conda-forge
+  - cd docs && make clean && make html && cd .. && pwd
+
+deploy:
+
+  # allow any commit to master or dev to refresh the docs on gh-pages
+  - provider: pages
+    skip_cleanup: true
+    keep-history: false
+    github_token: $GITHUB_TOKEN  # from github, set in TravisCI settings
+    local_dir: ./docs/_build/html
+    on:
+      branch: master
+      # all_branches: true  # testing only
+      # condition: $TRAVIS_BRANCH =~ ^(master)$|^(dev)$
+
+  # this script manages conda package uploads. It routes routine
+  # master commits to the pre-release label and manual github releases
+  # tagged vM.N.P to the main label.
+  - provider: script
+    skip_cleanup: true
+    script: bash ./ci/conda_upload.sh
+    on:
+      all_branches: true  # always dry-run the script
+
+  # only upload manual github releases tagged vM.N.P to PyPI
+  # so M.N.P on Anaconda Cloud channel/label/main == PyPI
+  - provider: pypi
+    skip_cleanup: true
+    user: "__token__"
+    password: $PYPI_TOKEN
+    on:
+      branch: master
+      tags: true
+      condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$
+

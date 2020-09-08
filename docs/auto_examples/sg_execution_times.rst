@@ -5,10 +5,16 @@
 
 Computation times
 =================
-**00:04.041** total execution time for **auto_examples** files:
+**00:11.920** total execution time for **auto_examples** files:
 
-- **00:04.041**: :ref:`sphx_glr_auto_examples_example_01_basic_usage.py` (``example_01_basic_usage.py``)
-- **00:00.000**: :ref:`sphx_glr_auto_examples_example_02_categorical.py` (``example_02_categorical.py``)
-- **00:00.000**: :ref:`sphx_glr_auto_examples_example_03_posthoc.py` (``example_03_posthoc.py``)
-- **00:00.000**: :ref:`sphx_glr_auto_examples_example_04_simulating_data.py` (``example_04_simulating_data.py``)
-- **00:00.000**: :ref:`sphx_glr_auto_examples_example_05_misc_stats.py` (``example_05_misc_stats.py``)
++-------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_05_misc_stats.py` (``example_05_misc_stats.py``)           | 00:04.245 | 0.0 MB |
++-------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_02_categorical.py` (``example_02_categorical.py``)         | 00:02.812 | 0.0 MB |
++-------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_01_basic_usage.py` (``example_01_basic_usage.py``)         | 00:02.487 | 0.0 MB |
++-------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_03_posthoc.py` (``example_03_posthoc.py``)                 | 00:01.915 | 0.0 MB |
++-------------------------------------------------------------------------------------------------+-----------+--------+
+| :ref:`sphx_glr_auto_examples_example_04_simulating_data.py` (``example_04_simulating_data.py``) | 00:00.461 | 0.0 MB |
++-------------------------------------------------------------------------------------------------+-----------+--------+

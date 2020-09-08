@@ -2,6 +2,24 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.1
+-----
+- **Pymer4 will be on conda as of this release!**
+    - install with :code:`conda install -c ejolly -c defaults -c conda-forge pymer4`
+    - This should make installation much easier
+    - Big thanks to `Tom Urbach <https://turbach.github.io/toms_kutaslab_website/>`_ for assisting with this!
+- **Bug fixes:**  
+    - design matrix now handles rfx only models properly
+    - compatibility with the latest version of pandas and rpy2 (as of 08/20)
+    - :code:`Lmer.residuals` now save as numpy array rather than :code:`R FloatVector`
+- **New features:**  
+    - :code:`stats.tost_equivalence` now takes a :code:`seed` argument for reproducibility
+- **Result Altering Change:**
+    - Custom contrasts in :code:`Lmer` models are now expected to be specified in *human readable* format. This should be more intuitive for most users and is often what users expect from R itself, even though that's not what it actually does! R expects custom contrasts passed to the :code:`contrasts()` function to be the *inverse* of the desired contrasts. See `this vignette <https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html>`_ for more info. 
+    - In :code:`Pymer4`, specifying the following contrasts: :code:`model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))` will estimate the difference between A and the mean of B and C as one would expect. Behind the scenes, :code:`Pymer4` is performing the inversion operation automatically for R. 
+- Lots of other devops changes to make testing, bug-fixing, development, future releases and overall maintenance much easier. Much of this work has been off-loaded to automated testing and deployment via Travis CI.
+
+
 0.7.0
 -----
 - **dropped support for versions of** :code:`rpy2 < 3.0`
@@ -13,7 +31,7 @@ Historically :code:`pymer4` versioning was a bit all over the place but has sett
 - **New feature:** addition of :code:`pymer4.io` module for saving and loading models to disk
 - **New feature:** addition of :code:`Lm2` models that can perform multi-level modeling by first estimating a separate regression for each group and then performing inference on those estimates. Can perform inference on first-level semi-partial and partial correlation coefficients instead of betas too.
 - **New feature:** All model classes now have the ability to rank transform data prior to estimation, see the rank argument of their respective :code:`.fit()` methods.
-- **New features for :code:`Lm` models:** 
+- **New features for Lm models:** 
     - :code:`Lm` models can transform coefficients to partial or semi-partial correlation coefficients
     - :code:`Lm` models can also perform weight-least-squares (WLS) regression given the weights argument to :code:`.fit()`, with optional dof correction via Satterthwaite approximation. This is useful for categorical (e.g. group) comparison where one does not want to assume equal variance between groups (e.g. Welch's t-test). This remains an experimental feature
     - :code:`Lm` models can compute hc1 and hc2 robust standard errors

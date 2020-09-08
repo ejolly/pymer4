@@ -1,10 +1,12 @@
-.. note::
-    :class: sphx-glr-download-link-note
+.. only:: html
 
-    Click :ref:`here <sphx_glr_download_auto_examples_example_04_simulating_data.py>` to download the full example code
-.. rst-class:: sphx-glr-example-title
+    .. note::
+        :class: sphx-glr-download-link-note
 
-.. _sphx_glr_auto_examples_example_04_simulating_data.py:
+        Click :ref:`here <sphx_glr_download_auto_examples_example_04_simulating_data.py>`     to download the full example code
+    .. rst-class:: sphx-glr-example-title
+
+    .. _sphx_glr_auto_examples_example_04_simulating_data.py:
 
 
 4. Simulating Data
@@ -33,8 +35,10 @@ Let's generate 500 observations, with coefficient values of: 1.2, -40.1, and 3. 
 
     # Import the simulation function
     from pymer4.simulate import simulate_lm
+
     # Also fix the random number generator for reproducibility
     import numpy as np
+
     np.random.seed(10)
 
     data, b = simulate_lm(
@@ -66,6 +70,7 @@ Let's generate 500 observations, with coefficient values of: 1.2, -40.1, and 3. 
 
 
 
+
 Here are some checks you might do to make sure the data were correctly generated:
 
 Check the means of predictors
@@ -92,6 +97,7 @@ Check the means of predictors
 
 
 
+
 Check correlations between predictors
 
 
@@ -113,6 +119,7 @@ Check correlations between predictors
     IV1  1.000000 -0.013148 -0.010051
     IV2 -0.013148  1.000000 -0.051630
     IV3 -0.010051 -0.051630  1.000000
+
 
 
 
@@ -142,6 +149,7 @@ Check coefficient recovery
     IV2         -40.001760
     IV3           2.859270
     Name: Estimate, dtype: float64
+
 
 
 
@@ -175,6 +183,7 @@ You have the option of being as general or specific as you like when generating 
     2 -1.630406 -1.527920  0.199663 -1.006917  0.062326 -0.190250
     3 -0.315245  0.424936 -0.171909 -0.144126  1.227489  0.078798
     4  1.911261  1.242033 -0.811868  0.446330  0.356810 -0.437578
+
 
 
 
@@ -237,6 +246,7 @@ Here's an example generating 5000 observations, organized as 100 groups with 50 
 
 
 
+
 Again here are some checks you might do to make sure the data were correctly generated (by default lmm data will generally be a bit noisier due to within and across group/cluster variance; see the API for how to customize this):
 
 
@@ -245,6 +255,7 @@ Again here are some checks you might do to make sure the data were correctly gen
 
     # Group the data before running checks
     group_data = data.groupby("Group")
+
 
 
 
@@ -287,6 +298,7 @@ Check mean of predictors within each group
 
 
 
+
 Check correlations between predictors within each group
 
 
@@ -322,6 +334,7 @@ Check correlations between predictors within each group
 
 
 
+
 Check coefficient recovery
 
 
@@ -329,12 +342,9 @@ Check coefficient recovery
 
     from pymer4.models import Lmer
 
-    model = Lmer('DV ~ IV1+IV2+IV3 + (1|Group)', data=data)
+    model = Lmer("DV ~ IV1+IV2+IV3 + (1|Group)", data=data)
     model.fit(summarize=False)
     print(model.coefs.loc[:, "Estimate"])
-
-
-
 
 
 
@@ -354,6 +364,7 @@ Check coefficient recovery
 
 
 
+
 .. _sphx_glr_download_auto_examples_example_04_simulating_data.py:
 
 
@@ -364,13 +375,13 @@ Check coefficient recovery
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-python
 
      :download:`Download Python source code: example_04_simulating_data.py <example_04_simulating_data.py>`
 
 
 
-  .. container:: sphx-glr-download
+  .. container:: sphx-glr-download sphx-glr-download-jupyter
 
      :download:`Download Jupyter notebook: example_04_simulating_data.ipynb <example_04_simulating_data.ipynb>`
 

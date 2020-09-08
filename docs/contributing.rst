@@ -1,12 +1,22 @@
 Contributing
 ============
-Maintaining this package is tricky because of its inter-language operability. In particular this requires keeping up with API changes to Python packages (e.g. pandas), R packages (e.g. lmerTest) as well as changes in rpy2 (which tend to break between versions), the interface package between them. For these reasons contributions are **always** welcome! Feel free to ask questions, make suggestions, or contribute changes/additions on `github <https://github.com/ejolly/pymer4/>`_. If you do so, here are some general guidelines for structuring contributions:
+Maintaining this package is tricky because of its inter-language operability. In particular this requires keeping up with API changes to Python packages (e.g. pandas), R packages (e.g. lmerTest) as well as changes in rpy2 (which tend to break between versions), the interface package between them. For these reasons contributions are **always** welcome! Checkout the `development roadmap on Trello <https://trello.com/b/gGKmeAJ4>`_. Also note the diagram below which illustrates how code development cycles work and how automated deployment is handled through Travis CI. This workflow makes it much easier to ensure that a stable version of :code:`pymer4` is always available on conda and pypi, while a development version is available on the conda pre-release label and github master branch. Feel free to ask questions, make suggestions, or contribute changes/additions on `github <https://github.com/ejolly/pymer4/>`_. If you do so, here are some general guidelines for structuring contributions
+
+.. image:: pymer4_dev_cycle.jpeg
+    :width: 800
 
 Code Guidelines
 ---------------
 Please fork and make pull requests from the `development branch <https://github.com/ejolly/pymer4/tree/dev/>`_ on github. This branch will usually have additions and bug fixes not in master and is easier to integrate with contributions.
 
-Please use the `black <https://black.readthedocs.io/en/stable/>`_ code formatter for styling code.
+Please use the `black <https://black.readthedocs.io/en/stable/>`_ code formatter for styling code. Any easy way to check if code is formatted properly is to use a `git pre-commit hook <https://githooks.com/>`_. After installing black, just create a file called :code:`.git/hooks/pre-commit` and put the following inside:
+
+    .. code-block:: bash
+
+        #!/bin/sh
+        black --check .    
+
+This will prevent the use of the :code:`git commit` command if black notes any files that have not been formatted. Just format those files and you should be able to proceed with the commit!
 
 Please use `google style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html/>`_ for documenting all functions, methods, and classes.
 

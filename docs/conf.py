@@ -15,6 +15,7 @@ import sys
 import os
 import sphinx_bootstrap_theme
 from sphinx_gallery.sorting import FileNameSortKey
+
 sys.path.insert(0, os.path.abspath(os.path.pardir))
 import pymer4
 
@@ -51,7 +52,7 @@ extensions = [
 sphinx_gallery_conf = {
     "examples_dirs": "../examples",  # path to your example scripts
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
-    "filename_pattern": "/example_", # render files that begin with example_
+    "filename_pattern": "/example_",  # render files that begin with example_
     "within_subsection_order": FileNameSortKey,
     "min_reported_time": 600,
     "first_notebook_cell": (
@@ -59,12 +60,10 @@ sphinx_gallery_conf = {
         "import os\n"
         "os.environ['KMP_DUPLICATE_LIB_OK']='True'"
         "%matplotlib inline"
-    )
+    ),
 }
 
-autodoc_default_options = {
-    'ignore-module-all': True
-}
+autodoc_default_options = {"ignore-module-all": True}
 
 # Sphinx Napolean settings
 napoleon_use_ivar = True
@@ -88,7 +87,8 @@ master_doc = "index"
 # General information about the project.
 project = u"pymer4"
 import time
-copyright = u'2017-{}, Eshin Jolly'.format(time.strftime("%Y"))
+
+copyright = u"2017-{}, Eshin Jolly".format(time.strftime("%Y"))
 author = u"Eshin Jolly"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -140,11 +140,9 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 #
 html_theme_options = {
     # Navigation bar title. (Default: ``project`` value)
-    'navbar_title': "Pymer4",
-
+    "navbar_title": "Pymer4",
     # Tab name for entire site. (Default: "Site")
-    'navbar_site_name': "Nav",
-
+    "navbar_site_name": "Nav",
     # A list of tuples containing pages or urls to link to.
     # Valid tuples should be in the following forms:
     #    (name, page)                 # a link to a page
@@ -152,25 +150,20 @@ html_theme_options = {
     #    (name, "http://example.com", True) # arbitrary absolute url
     # Note the "1" or "True" value above as the third argument to indicate
     # an arbitrary url.
-    'navbar_links': [
+    "navbar_links": [
         ("Tutorial", "auto_examples/index.html", 1),
         ("API", "api"),
-        ("Github", "https://github.com/ejolly/pymer4", True)
+        ("Github", "https://github.com/ejolly/pymer4", True),
     ],
-
     # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': False,
-
+    "navbar_sidebarrel": False,
     # Render the current pages TOC in the navbar. (Default: true)
-    'navbar_pagenav': True,
-
+    "navbar_pagenav": True,
     # Tab name for the current pages TOC. (Default: "Page")
-    'navbar_pagenav_name': "TOC",
-
+    "navbar_pagenav_name": "TOC",
     # Global TOC depth for "site" navbar tab. (Default: 1)
     # Switching to -1 shows all levels.
-    'globaltoc_depth': 1,
-
+    "globaltoc_depth": 1,
     # Include hidden TOCs in Site navbar?
     #
     # Note: If this is "false", you cannot have mixed ``:hidden:`` and
@@ -178,20 +171,16 @@ html_theme_options = {
     # will break.
     #
     # Values: "true" (default) or "false"
-    'globaltoc_includehidden': "true",
-
+    "globaltoc_includehidden": "true",
     # HTML navbar class (Default: "navbar") to attach to <div> element.
     # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar navbar-inverse",
-
+    "navbar_class": "navbar navbar-inverse",
     # Fix navigation bar to top of page?
     # Values: "true" (default) or "false"
-    'navbar_fixed_top': "true",
-
+    "navbar_fixed_top": "true",
     # Location of link to source.
     # Options are "nav" (default), "footer" or anything else to exclude.
-    'source_link_position': "",
-
+    "source_link_position": "",
     # Bootswatch (http://bootswatch.com/) theme.
     #
     # Options are nothing (default) or the name of a valid theme
@@ -204,11 +193,10 @@ html_theme_options = {
     # - Bootstrap 2: https://bootswatch.com/2
     # - Bootstrap 3: https://bootswatch.com/3
     # http://loose-bits.com/2013/04/10/sphinx-bootstrap-theme-bootswatch.html
-    'bootswatch_theme': "united",
-
+    "bootswatch_theme": "united",
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
-    'bootstrap_version': "3",
+    "bootstrap_version": "3",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

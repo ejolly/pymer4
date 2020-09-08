@@ -3,12 +3,71 @@ Installation
 .. note::
     :code:`pymer4` since version 0.6.0 is only compatible with Python 3. Versions 0.5.0 and lower will work with Python 2, but will not contain any new features.
 
+Using Anaconda (recommended)
+----------------------------
+
+For the latest stable release (recommended)
++++++++++++++++++++++++++++++++++++++++++++
+
+:code:`pymer4` has some dependecies that can only be resolved using `conda-forge <https://conda-forge.org/>`_ (e.g. recent version of :code:`rpy2`). For this reason you may want to install it into a separate conda environment to avoid conflicts with any existing packages you have installed:
+
+    .. code-block:: bash
+
+        conda create --name pymer4 -c ejolly -c defaults -c conda-forge pymer4
+        conda activate pymer4 (to active this new environment)
+
+Otherwise you can install into an existing environment with:
+
+    .. code-block:: bash
+
+        conda install -c ejolly -c defaults -c conda-forge pymer4
+
+.. note::
+    Both commands above try to resolve dependencies without using conda-forge, unless absolutely necessary (i.e. lowest priority). This is why it's the last channel specified in the command.
+    
+If you are already using pacakges from conda-forge in your environment and prefer to use it for all dependecies simply omit the :code:`defaults` channel:
+
+    .. code-block:: bash
+
+        conda install -c ejolly -c conda-forge pymer4
+
+For the latest development release
+++++++++++++++++++++++++++++++++++
+
+Simply use either command above and substitute :code:`ejolly` for :code:`ejolly/label/pre-release`, i.e.
+
+    .. code-block:: bash
+
+        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4
+
+For previous stable or development releases
++++++++++++++++++++++++++++++++++++++++++++
+
+Simple use either command above and specify the version e.g.
+
+    .. code-block:: bash
+
+        conda install -c ejolly -c defaults -c conda-forge pymer4=0.7.2
+
+Or
+
+    .. code-block:: bash
+
+        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4=0.7.3.dev2
+
+
+Using pip
+---------
+
+.. warning::
+    It's strongly advised to use the conda install method above because of how notoriously finicky it can be to install :code:`rpy2` on various platforms. I recommend only following the directions below if you're comfortable with :code:`pip` and the command line or prefer not to use Anaconda.
+
 Prerequisites
--------------
++++++++++++++
 :code:`pymer4` requires a working R installation along with three R packages: :code:`lme4`, :code:`lmerTest`, and :code:`emmeans`. Follow either option below to make sure these are installed.
 
 1. If you already have R/RStudio installed
-+++++++++++++++++++++++++++++++++++++++++++++
+##########################################
 Make sure you also have the 3 required R packages which can be installed from within R/RStudio using: 
 
     .. code-block:: R
@@ -16,22 +75,33 @@ Make sure you also have the 3 required R packages which can be installed from wi
         install.packages(c('lme4','lmerTest','emmeans'))
 
 2. If you don't have R/RStudio installed
-+++++++++++++++++++++++++++++++++++++++++++
-It's highly recommended that you install and use the `Anaconda Python distribution <https://www.anaconda.com/distribution/>`_ to manage your Python packages/environment. Anaconda can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:
+########################################
+The `Anaconda Python distribution <https://www.anaconda.com/distribution/>`_ can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:
 
  .. code-block:: bash
 
         conda install -c conda-forge r r-base r-lmertest r-emmeans rpy2
 
-Package Installation
---------------------
+For the latest stable release
++++++++++++++++++++++++++++++
 After either option you can pip install :code:`pymer4`
 
     .. code-block:: bash
 
         pip install pymer4
 
-You can also test the installation by running the following command in a terminal
+For the latest development release
+++++++++++++++++++++++++++++++++++
+Install via github:
+
+    .. code-block:: bash
+
+        pip install git+https://github.com/ejolly/pymer4.git
+
+
+Making sure the install worked
+------------------------------
+You can test the installation by running the following command in a terminal
 
     .. code-block:: bash
 
@@ -39,6 +109,8 @@ You can also test the installation by running the following command in a termina
 
 Installation Issues
 -------------------
+
+If you have installed via :code:`pip` it's recommended you try the :code:`conda` method described above prior to raising an issue on github. Otherwise the following solutions may help. 
 
 Missing R packages
 ++++++++++++++++++
