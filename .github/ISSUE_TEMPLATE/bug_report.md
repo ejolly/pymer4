@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Please raise issues using the following guidelines
-title: ''
+title: 'Issue with...'
 labels: bug
 assignees: ''
 
@@ -28,6 +28,10 @@ A clear and concise description of what the bug is, specifically:
 Debugging pip installation issues is unfortunately infeasible because of how finicky `rpy2` can be on various platforms. For this reason please try [installing via Anaconda](http://eshinjolly.com/pymer4/installation.html#using-anaconda-recommended) to see if that solves your problem. 
 
 If you raise an issue without first trying a conda install it's highly likely that your issue will not be solved and will eventually be closed. 
+
+### Please provide the following
+- The install command you used (e.g. `pip install ...`)
+- Other packges in your pip "environment" (i.e. the output of `pip freeze`)
 
 # Please provide the following additional info
 

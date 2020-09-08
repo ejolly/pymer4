@@ -15,3 +15,4 @@ dist/*
 dev/
 .coverage
 .vscode/settings.json
+*.key
