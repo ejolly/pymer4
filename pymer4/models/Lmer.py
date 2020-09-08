@@ -141,7 +141,7 @@ class Lmer(object):
             >>> _make_factors(factor_dict={'factor': {'A': 1, 'B': -0.5, 'C': -0.5}})
         """
 
-        errormsg = f"factors should be specified as a dictionary with values as one of:\n1) a list with factor levels in the desired order for dummy/treatment/polynomial contrasts\n2) a dict with keys as factor levels and values as desired comparisons in human readable format"
+        errormsg = "factors should be specified as a dictionary with values as one of:\n1) a list with factor levels in the desired order for dummy/treatment/polynomial contrasts\n2) a dict with keys as factor levels and values as desired comparisons in human readable format"
         # We create a copy of data because we need to convert dtypes to categories and then pass them to R. However, resetting categories on the *same* dataframe and passing to R repeatedly (e.g. multiple calls to .fit with different contrasats) does not work as R only uses the 1st category spec. So instead we create a copy and return that copy to get used by .fit
         out = {}
         df = self.data.copy()
@@ -414,9 +414,7 @@ class Lmer(object):
             _fam = "gaussian"
             if verbose:
                 print(
-                    "Fitting linear model using lmer with "
-                    + conf_int
-                    + " confidence intervals...\n"
+                    f"Fitting linear model using lmer with {conf_int} confidence intervals...\n"
                 )
 
             lmer = importr("lmerTest")
@@ -427,9 +425,7 @@ class Lmer(object):
         else:
             if verbose:
                 print(
-                    "Fitting generalized linear model using glmer (family {}) with "
-                    + conf_int
-                    + " confidence intervals...\n".format(self.family)
+                    f"Fitting generalized linear model using glmer (family {self.family}) with {conf_int} confidence intervals...\n"
                 )
             lmer = importr("lme4")
             if self.family == "inverse_gaussian":
@@ -708,7 +704,7 @@ class Lmer(object):
         self.fitted = True
 
         # Random effect variances and correlations
-        varcor_NAs = ["NA", "N", robjects.NA_Character]
+        varcor_NAs = ["NA", "N", robjects.NA_Character]  # NOQA
         df = pd.DataFrame(base.data_frame(unsum.rx2("varcor")))
 
         ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
@@ -808,7 +804,7 @@ class Lmer(object):
             }
         """
         resid_func = robjects.r(rstring)
-        self.residuals = resid_func(self.model_obj)
+        self.residuals = np.array(resid_func(self.model_obj))
         try:
             self.data["residuals"] = copy(self.residuals)
         except ValueError as e:  # NOQA

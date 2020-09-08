@@ -5,18 +5,19 @@ Historically :code:`pymer4` versioning was a bit all over the place but has sett
 0.7.1
 -----
 - **Pymer4 will be on conda as of this release!**
-    - install with :code:`conda install pymer4 -c ejolly`
+    - install with :code:`conda install -c ejolly -c defaults -c conda-forge pymer4`
     - This should make installation much easier
     - Big thanks to `Tom Urbach <https://turbach.github.io/toms_kutaslab_website/>`_ for assisting with this!
 - **Bug fixes:**  
     - design matrix now handles rfx only models properly
     - compatibility with the latest version of pandas and rpy2 (as of 08/20)
+    - :code:`Lmer.residuals` now save as numpy array rather than :code:`R FloatVector`
 - **New features:**  
     - :code:`stats.tost_equivalence` now takes a :code:`seed` argument for reproducibility
 - **Result Altering Change:**
     - Custom contrasts in :code:`Lmer` models are now expected to be specified in *human readable* format. This should be more intuitive for most users and is often what users expect from R itself, even though that's not what it actually does! R expects custom contrasts passed to the :code:`contrasts()` function to be the *inverse* of the desired contrasts. See `this vignette <https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html>`_ for more info. 
     - In :code:`Pymer4`, specifying the following contrasts: :code:`model.fit(factors = {"Col1": {'A': 1, 'B': -.5, 'C': -.5}}))` will estimate the difference between A and the mean of B and C as one would expect. Behind the scenes, :code:`Pymer4` is performing the inversion operation automatically for R. 
-- Lots of devops changes to make testing, bug-fixing, development, future releases and overall maintenance much easier. Much of this work has been off-loaded to automated testing and deployment via Travis CI.
+- Lots of other devops changes to make testing, bug-fixing, development, future releases and overall maintenance much easier. Much of this work has been off-loaded to automated testing and deployment via Travis CI.
 
 
 0.7.0
