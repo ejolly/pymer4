@@ -9,18 +9,27 @@ Using Anaconda (recommended)
 For the latest stable release (recommended)
 +++++++++++++++++++++++++++++++++++++++++++
 
-You may want to install in a separate environment so there are no dependency conflicts with any existing packages you have installed if so use:
+:code:`pymer4` has some dependecies that can only be resolved using `conda-forge <https://conda-forge.org/>`_ (e.g. recent version of :code:`rpy2`). For this reason you may want to install it into a separate conda environment to avoid conflicts with any existing packages you have installed:
 
     .. code-block:: bash
 
-        conda create --name pymer4 -c ejolly pymer4
+        conda create --name pymer4 -c ejolly -c defaults -c conda-forge pymer4
         conda activate pymer4 (to active this new environment)
 
 Otherwise you can install into an existing environment with:
 
     .. code-block:: bash
 
-        conda install -c ejolly pymer4
+        conda install -c ejolly -c defaults -c conda-forge pymer4
+
+.. note::
+    Both commands above try to resolve dependencies without using conda-forge, unless absolutely necessary (i.e. lowest priority). This is why it's the last channel specified in the command.
+    
+If you are already using pacakges from conda-forge in your environment and prefer to use it for all dependecies simply omit the :code:`defaults` channel:
+
+    .. code-block:: bash
+
+        conda install -c ejolly -c conda-forge pymer4
 
 For the latest development release
 ++++++++++++++++++++++++++++++++++
@@ -29,7 +38,7 @@ Simply use either command above and substitute :code:`ejolly` for :code:`ejolly/
 
     .. code-block:: bash
 
-        conda install pymer4 -c ejolly/label/pre-release
+        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4
 
 For previous stable or development releases
 +++++++++++++++++++++++++++++++++++++++++++
@@ -38,17 +47,20 @@ Simple use either command above and specify the version e.g.
 
     .. code-block:: bash
 
-        conda install pymer4=0.7.2 -c ejolly
+        conda install -c ejolly -c defaults -c conda-forge pymer4=0.7.2
 
 Or
 
     .. code-block:: bash
 
-        conda install pymer4=0.7.3.dev2 -c ejolly/label/pre-release
+        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4=0.7.3.dev2
 
 
 Using pip
 ---------
+
+.. warning::
+    It's strongly advised to use the conda install method above because of how notoriously finicky it can be to install :code:`rpy2` on various platforms. I recommend only following the directions below if you're comfortable with :code:`pip` and the command line or prefer not to use Anaconda.
 
 Prerequisites
 +++++++++++++
@@ -64,7 +76,7 @@ Make sure you also have the 3 required R packages which can be installed from wi
 
 2. If you don't have R/RStudio installed
 ########################################
-It's highly recommended that you install and use the `Anaconda Python distribution <https://www.anaconda.com/distribution/>`_ to manage your Python packages/environment. Anaconda can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:
+The `Anaconda Python distribution <https://www.anaconda.com/distribution/>`_ can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:
 
  .. code-block:: bash
 

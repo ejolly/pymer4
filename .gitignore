@@ -14,3 +14,4 @@ dist/*
 **/__pycache__
 dev/
 .coverage
+.vscode/settings.json
