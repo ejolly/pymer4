@@ -8,7 +8,14 @@ Code Guidelines
 ---------------
 Please fork and make pull requests from the `development branch <https://github.com/ejolly/pymer4/tree/dev/>`_ on github. This branch will usually have additions and bug fixes not in master and is easier to integrate with contributions.
 
-Please use the `black <https://black.readthedocs.io/en/stable/>`_ code formatter for styling code.
+Please use the `black <https://black.readthedocs.io/en/stable/>`_ code formatter for styling code. Any easy way to check if code is formatted properly is to use a `git pre-commit hook <https://githooks.com/>`_. After installing black, just create a file called :code:`.git/hooks/pre-commit` and put the following inside:
+
+    .. code-block:: bash
+
+        #!/bin/sh
+        black --check .    
+
+This will prevent the use of the :code:`git commit` command if black notes any files that have not been formatted. Just format those files and you should be able to proceed with the commit!
 
 Please use `google style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html/>`_ for documenting all functions, methods, and classes.
 
