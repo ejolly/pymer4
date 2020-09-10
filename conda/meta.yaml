@@ -12,7 +12,7 @@ build:
     # script: python setup.py install --single-version-externally-managed --record=record.txt
     script: pip install . -vv --no-deps
     # abandoned conda build GIT_BUILD_STRING env variable
-    string: {{ environ.get("GIT_ABBREV_COMMIT", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
+    string: py{{environ.get("CONDA_PY", "XX")}}{{environ.get("GIT_ABBREV_COMMIT", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
 
 requirements:
 
@@ -27,10 +27,10 @@ requirements:
     - matplotlib >=3.0
     - numpy >=1.16
     - pandas >=1.0
-    - patsy =>0.5.1
+    - patsy >=0.5.1
     - rpy2 >=3.3.2
-    - scipy>=1.4.0
-    - seaborn>=0.10.0
+    - scipy >=1.4.0
+    - seaborn >=0.10.0
     - r-base
     - r-lme4
     - r-lmerTest

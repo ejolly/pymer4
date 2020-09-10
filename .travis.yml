@@ -19,7 +19,7 @@ before_install:
 
 install:
   - conda install -q conda-build conda-verify
-  - conda build conda -c defaults -c conda-forge
+  - conda build --python 3.6 --python 3.7 --python 3.8 -c defaults -c conda-forge conda
   - conda create --name pymer4_env pymer4 -c local -c defaults -c conda-forge
   - conda activate pymer4_env  # run pytests in conda env
   - conda install black pytest-cov
