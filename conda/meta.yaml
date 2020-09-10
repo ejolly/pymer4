@@ -17,11 +17,12 @@ build:
 requirements:
 
   host:
-    - python  # else test section fails during TravisCI conda build
+    # else test section fails during TravisCI conda build
+    - python {{ python }}
     - pip
 
   run:
-    - python >=3.6
+    - python {{ python }}
     - deepdish >=0.3.6
     - joblib >=0.14
     - matplotlib >=3.0

@@ -30,11 +30,11 @@ fi
 # bld_prefix=${HOME}/miniconda3
 bld_prefix="/home/travis/miniconda"  # from the .travis.yml
 
-# on travis there should be a single linux-64 package tarball. insist
-tarball=`/bin/ls -1 ${bld_prefix}/conda-bld/linux-64/${PACKAGE_NAME}-*-*.tar.bz2`
+# on travis there should be 3 tarballs linux-64 for 
+tarball=`/bin/ls -1ta ${bld_prefix}/conda-bld/linux-64/${PACKAGE_NAME}-*-py3[678]*.tar.bz2`
 n_tarballs=`echo "${tarball}" | wc -w`
-if (( $n_tarballs != 1 )); then
-    echo "found $n_tarballs package tarballs there must be exactly 1"
+if (( $n_tarballs != 3 )); then
+    echo "found $n_tarballs package tarballs there must be exactly 3"
     echo "$tarball"
     exit -3
 fi
