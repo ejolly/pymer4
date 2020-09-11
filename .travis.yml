@@ -19,8 +19,7 @@ before_install:
 
 install:
   - conda install -q conda-build conda-verify
-  #- conda build --python 3.6 --python 3.7 --python 3.8 -c defaults -c conda-forge conda
-  # python 3.X builds specified in conda_build_config.yml
+  # python 3.X build variants in conda_build_config.yml
   - conda build -c defaults -c conda-forge conda
   - conda create --name pymer4_env pymer4 -c local -c defaults -c conda-forge
   - conda activate pymer4_env  # run pytests in conda env
@@ -30,10 +29,21 @@ install:
   - python -c 'import numpy; numpy.show_config()'
 
 script:
+  # test default py 3.8 env
   - black --check --verbose .
   - pytest --cov=pymer4
+  - conda deactivate
+
+  # install and test py 3.6 variant
+  - conda create -n test_36 python=3.6 pymer4 pytest -c local -c defaults -c conda-forge
+  - conda activate test_36 && pytest && conda deactivate
+
+  # install and test py 3.7 variant
+  - conda create -n test_37 python=3.7 pymer4 pytest -c local -c defaults -c conda-forge
+  - conda activate test_37 && pytest && conda deactivate
 
 after_success:
+  - conda activate pymer4_env
   - conda install codecov && codecov
 
 before_deploy:
