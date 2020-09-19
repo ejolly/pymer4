@@ -11,7 +11,7 @@ Each new *pre-release* should proceed by opening a pull-request (PR) the against
 
 Each new *stable* release should follow the following steps, the first of which can occur in two ways:  
 
-- Step 1: drop :code:`.devX` from version string in the code base via **either**:
+- Step 1: drop :code:`.devX` from version string (in :code:`pymer4/version.py`) in the code base via **either**:
 
   - **Pre-merge** at least one commit in :code:`dev` for the PR against master, such that the merge will include updating the version string. In the illustration below, this is depicted by the dashed borders around the final merge into :code:`master`.
 

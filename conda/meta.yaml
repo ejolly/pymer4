@@ -1,12 +1,13 @@
 {% set name = "pymer4" %}
-{% set version = "0.7.1" %}
+{% set data = load_setup_py_data() %}
 
 package:
   name: "{{ name|lower }}"
-  version: "{{ version }}"
+  version: "{{ data.get('version') }}"
 
 source:
     git_url: ../  # to enable GIT_X_Y env vars
+    path_url: ../ # so conda build will grab source to read version
 
 build:
     # script: python setup.py install --single-version-externally-managed --record=record.txt
