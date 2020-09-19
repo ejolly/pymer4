@@ -14,7 +14,7 @@ For the latest stable release (recommended)
     .. code-block:: bash
 
         conda create --name pymer4 -c ejolly -c defaults -c conda-forge pymer4
-        conda activate pymer4 (to active this new environment)
+        conda activate pymer4 
 
 Otherwise you can install into an existing environment with:
 
