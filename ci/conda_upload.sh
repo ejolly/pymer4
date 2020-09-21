@@ -1,7 +1,8 @@
 # Anaconda Cloud package uploader.
 # 
-#  * This assumes TravisCI ran conda build and the linux-64 package tar.bz
-#    is in the default location /home/travis/miniconda3/conda-bld/linux-64
+#  * This assumes TravisCI ran conda build python=$PYV conda 
+#    and the one linux-64 tarball is in the default location
+#    /home/travis/miniconda3/conda-bld/linux-64
 # 
 #  * The upload only fires if the package version from meta.yaml is
 #    (exactly) Major.Minor.Patch and $TRAVIS_BRANCH is master or
@@ -21,6 +22,9 @@ if [[ -z ${CONDA_DEFAULT_ENV} ]]; then
 fi
 
 # intended for TravisCI deploy but can be tricked into running locally
+echo PACKAGE_NAME=$PACKAGE_NAME
+echo TRAVIS=$TRAVIS
+echo TRAVIS_BRANCH=$TRAVIS_BRANCH
 if [[ "$TRAVIS" != "true" || -z "$TRAVIS_BRANCH" || -z "${PACKAGE_NAME}" ]]; then
     echo "conda_upload.sh is meant to run on TravisCI"
     exit -2
@@ -30,8 +34,8 @@ fi
 # bld_prefix=${HOME}/miniconda3
 bld_prefix="/home/travis/miniconda"  # from the .travis.yml
 
-# on travis there should be a single linux-64 package tarball. insist
-tarball=`/bin/ls -1 ${bld_prefix}/conda-bld/linux-64/${PACKAGE_NAME}-*-*.tar.bz2`
+# for travis parallel jobs there should be 1 py3X linux-64 tarball, insist
+tarball=`/bin/ls -1ta ${bld_prefix}/conda-bld/linux-64/${PACKAGE_NAME}-*-*.tar.bz2`
 n_tarballs=`echo "${tarball}" | wc -w`
 if (( $n_tarballs != 1 )); then
     echo "found $n_tarballs package tarballs there must be exactly 1"
@@ -55,7 +59,7 @@ mmp=$(echo $version | sed -n "s/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/p")
 # assume this is a dry run, unless version is M.N.P or M.N.P.devXXX and
 # TRAVIS_BRANCH is master or a tagged vM.N.P release, in which case,
 # set the destination label appropriately.
-label="dry-run"  
+label="dry-run"
 if [[ "${version}" =~ ^${mmp}(.dev[0-9]+){0,1}$ ]]; then
 
     # commit to master uploads to pre-release
@@ -74,11 +78,11 @@ fi
 mkdir -p ${bld_prefix}/conda-convert/linux-64
 cp ${tarball} ${bld_prefix}/conda-convert/linux-64
 cd ${bld_prefix}/conda-convert
-conda convert -p linux-64 -p osx-64 -p win-64  linux-64/${PACKAGE_NAME}*tar.bz2
+conda convert -p linux-64 -p osx-64 -p win-64  linux-64/${PACKAGE_NAME}-*-*.tar.bz2
 
 # POSIX trick sets $ANACONDA_TOKEN if unset or empty string 
 ANACONDA_TOKEN=${ANACONDA_TOKEN:-[not_set]}
-conda_cmd="anaconda --token $ANACONDA_TOKEN upload ./**/${PACKAGE_NAME}*.tar.bz2 --label ${label} --skip-existing"
+conda_cmd="anaconda --token $ANACONDA_TOKEN upload ./**/${PACKAGE_NAME}*-*.tar.bz2 --label ${label} --skip-existing"
 
 # echo values to the TravisCI log for general info/debugging
 echo "package name: $PACKAGE_NAME"
@@ -91,7 +95,7 @@ echo "tarball: $tarball"
 echo "conda label: ${label}"
 echo "conda upload command: ${conda_cmd}"
 echo "platforms:"
-echo "$(ls ./**/${PACKAGE_NAME}*.tar.bz2)"
+echo "$(ls ./**/${PACKAGE_NAME}-*-*.tar.bz2)"
 
 # trigger the upload and destination or 
 if [[ $ANACONDA_TOKEN != "[not_set]" && ( $label = "main" || $label = "pre-release" ) ]]; then
