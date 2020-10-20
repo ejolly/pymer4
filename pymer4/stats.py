@@ -375,7 +375,8 @@ def _boot_func(x, y, func, func_args, paired, random_state):
         x, y = x[idx], y[idx]
     else:
         x = random_state.choice(x, size=x.size, replace=True)
-        y = random_state.choice(y, size=y.size, replace=True)
+        if y is not None:
+            y = random_state.choice(y, size=y.size, replace=True)
     return boot_func(x, y, func, func_args, paired=paired, n_boot=0)
 
 
