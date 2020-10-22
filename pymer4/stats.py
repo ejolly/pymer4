@@ -112,7 +112,7 @@ def cohens_d(
     Returns:
         Multiple:
         
-            - **effect_size** (*float*): cohen's d    
+            - **effect_size** (*float*): cohen's d
 
             - **ci** (*np.array*): lower and upper bounds of 95% bootstrapped confidence intervals; optional
 
@@ -208,7 +208,7 @@ def perm_test(
     Returns:
         Multiple:
         
-            - **original_stat** (*float*): the original statistic  
+            - **original_stat** (*float*): the original statistic
 
             - **perm_p_val** (*float*): the permuted p-value
 
@@ -610,7 +610,7 @@ def welch_dof(x, y):
 
 def rsquared(y, res, has_constant=True):
     """
-    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance" 
+    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance"
 
     Args:
         y (np.ndarray): 1d array of dependent variable
@@ -632,7 +632,7 @@ def rsquared(y, res, has_constant=True):
 
 def rsquared_adj(r, nobs, df_res, has_constant=True):
     """
-    Compute the adjusted R^2, coefficient of determination. 
+    Compute the adjusted R^2, coefficient of determination.
 
     Args:
         r (float): rsquared value
