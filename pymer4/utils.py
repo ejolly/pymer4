@@ -436,10 +436,10 @@ def upper(mat):
 
     Args:
         mat (np.ndarray): 2d numpy array
-    
+
     Returns:
         np.array: 1d numpy array of values
-    
+
     """
     idx = np.triu_indices_from(mat, k=1)
     return mat[idx]
@@ -476,11 +476,11 @@ def _welch_ingredients(x):
 def con2R(arr, names=None):
     """
     Convert human-readable contrasts into a form that R requires. Works like the make.contrasts() function from the gmodels package, in that it will auto-solve for the remaining orthogonal k-1 contrasts if fewer than k-1 contrasts are specified.
-                
+
     Arguments:
         arr (np.ndarray): 1d or 2d numpy array with each row reflecting a unique contrast and each column a factor level
         names (list/np.ndarray): optional list of contrast names which will cast the return object as a dataframe
-    
+
     Returns:
         A 2d numpy array or dataframe useable with the contrasts argument of glmer
     """
@@ -545,8 +545,7 @@ def R2con(arr):
 
 
 def _df_meta_to_arr(df):
-    """Check what kind of data exists in pandas columns or index. If string return as numpy array 'S' type, otherwise regular numpy array.
-    """
+    """Check what kind of data exists in pandas columns or index. If string return as numpy array 'S' type, otherwise regular numpy array."""
 
     if len(df.columns):
         if isinstance(df.columns[0], str):

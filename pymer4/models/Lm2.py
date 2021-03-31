@@ -42,7 +42,7 @@ class Lm2(object):
         fits (numpy.ndarray): model fits/predictions
         se_type (string): how standard errors are computed
         sig_type (string): how inference is performed
-        
+
 
     """
 
