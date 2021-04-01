@@ -2,6 +2,14 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.2
+-----
+- **Bug fixes:**  
+    - fix bug in which :code:`boot_func` would fail iwth :code:`y=None` and :code:`paired=False`
+- **Compatibility updates:**  
+    - add support for :code:`rpy2>=3.4.3` which handles model matrices differently
+    - pin maximum :code:`pandas<1.2`. This is neccesary until our other dependency :code:`deepdish` adds support. See `this issue <https://github.com/uchicago-cs/deepdish/issues/45>`_
+
 0.7.1
 -----
 - **Pymer4 will be on conda as of this release!**
