@@ -796,16 +796,25 @@ class Lmer(object):
             colnames(df) <- make.unique(colnames(df))
             df
             }
+            getIndex <- function(df){
+            df <- transform(df, index=row.names(df))
+            df
+            }
             out <- lapply(ranef(model),uniquify)
+            out <- lapply(out, getIndex)
             out
             }
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = [pd.DataFrame(e) for e in ranefs]
+            self.ranef = [
+                pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in ranefs
+            ]
         else:
-            self.ranef = pd.DataFrame(ranefs[0])
+            self.ranef = pd.DataFrame(ranefs[0], index=ranefs[0].index).drop(
+                columns=["index"]
+            )
 
         # Model residuals
         rstring = """
