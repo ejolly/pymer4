@@ -37,7 +37,7 @@ script:
   # install and test py 3.x variants
   - conda create -n pyenv_${PYV} python=${PYV} pymer4 -c local -c defaults -c conda-forge
   - conda activate pyenv_${PYV}
-  - conda install black pytest-cov
+  - pip install black pytest-cov
   - conda list
   - lscpu
   - python -c 'import numpy; numpy.show_config()'

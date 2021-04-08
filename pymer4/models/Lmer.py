@@ -125,7 +125,7 @@ class Lmer(object):
 
         Returns:
             pandas.core.frame.DataFrame: copy of original data with factorized columns
-        
+
         Examples:
 
             Dummy/treatment contrasts with 'A' as the reference level and other contrasts as 'B'-'A' and 'C'-'A'
@@ -269,8 +269,7 @@ class Lmer(object):
         return self.anova_results
 
     def _get_ngrps(self, unsum, base):
-        """Get the groups information from the model as a dictionary
-        """
+        """Get the groups information from the model as a dictionary"""
         # This works for 2 grouping factors
         ns = unsum.rx2("ngrps")
         names = base.names(self.model_obj.slots["flist"])
@@ -436,12 +435,24 @@ class Lmer(object):
                 _fam = self.family
             lmc = robjects.r(f"glmerControl({control})")
             self.model_obj = lmer.glmer(
-                self.formula, data=data, family=_fam, control=lmc, contrasts=contrasts,
+                self.formula,
+                data=data,
+                family=_fam,
+                control=lmc,
+                contrasts=contrasts,
             )
 
         # Store design matrix and get number of IVs for inference
         design_matrix = stats.model_matrix(self.model_obj)
-        if design_matrix:
+        # rpy2 > 3.4 returns a numpy array that can be empty but has shape (obs x IVs)
+        if isinstance(design_matrix, np.ndarray):
+            if design_matrix.shape[1] > 0:
+                self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+                num_IV = self.design_matrix.shape[1]
+            else:
+                num_IV = 0
+        # rpy2 < 3.4 returns an R matrix object with a length
+        elif len(design_matrix):
             self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
             num_IV = self.design_matrix.shape[1]
         else:
@@ -785,16 +796,25 @@ class Lmer(object):
             colnames(df) <- make.unique(colnames(df))
             df
             }
+            getIndex <- function(df){
+            df <- transform(df, index=row.names(df))
+            df
+            }
             out <- lapply(ranef(model),uniquify)
+            out <- lapply(out, getIndex)
             out
             }
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = [pd.DataFrame(e) for e in ranefs]
+            self.ranef = [
+                pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in ranefs
+            ]
         else:
-            self.ranef = pd.DataFrame(ranefs[0])
+            self.ranef = pd.DataFrame(ranefs[0], index=ranefs[0].index).drop(
+                columns=["index"]
+            )
 
         # Model residuals
         rstring = """

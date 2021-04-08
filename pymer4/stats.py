@@ -45,7 +45,7 @@ def vif(df, has_intercept=True, exclude_intercept=True, tol=5.0, check_only=Fals
         exclude_intercept (bool): exclude intercept from computation and assumed intercept is the first column; default True
         tol (float): tolerance check to print warning if any vifs exceed this value
         check_only (bool): restrict return to a dictionary of vifs that exceed tol only rather than all; default False
-    
+
     Returns:
         dict: dictionary with keys as column names and values as vifs
     """
@@ -80,11 +80,11 @@ def vif(df, has_intercept=True, exclude_intercept=True, tol=5.0, check_only=Fals
 
 
 def discrete_inverse_logit(arr):
-    """ Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes.
-    
+    """Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes.
+
     Args:
         arr (np.array): 1d numpy array
-    
+
     Returns:
         np.array: transformed values
     """
@@ -111,8 +111,8 @@ def cohens_d(
 
     Returns:
         Multiple:
-        
-            - **effect_size** (*float*): cohen's d    
+
+            - **effect_size** (*float*): cohen's d
 
             - **ci** (*np.array*): lower and upper bounds of 95% bootstrapped confidence intervals; optional
 
@@ -207,8 +207,8 @@ def perm_test(
 
     Returns:
         Multiple:
-        
-            - **original_stat** (*float*): the original statistic  
+
+            - **original_stat** (*float*): the original statistic
 
             - **perm_p_val** (*float*): the permuted p-value
 
@@ -339,7 +339,7 @@ def boot_func(
 
     Returns:
         Multiple:
-        
+
             - **original_stat** (*float*): function result with given data
 
             - **ci** (*np.array*): lower and upper bounds of 95% confidence intervals
@@ -375,7 +375,8 @@ def _boot_func(x, y, func, func_args, paired, random_state):
         x, y = x[idx], y[idx]
     else:
         x = random_state.choice(x, size=x.size, replace=True)
-        y = random_state.choice(y, size=y.size, replace=True)
+        if y is not None:
+            y = random_state.choice(y, size=y.size, replace=True)
     return boot_func(x, y, func, func_args, paired=paired, n_boot=0)
 
 
@@ -530,7 +531,7 @@ def tost_equivalence(
 def welch_dof(x, y):
     """
     Compute adjusted dof via Welch-Satterthwaite equation
-    
+
     Args:
         x (np.ndarray): 1d numpy array
         y (np.ndarray): 1d numpy array
@@ -609,13 +610,13 @@ def welch_dof(x, y):
 
 def rsquared(y, res, has_constant=True):
     """
-    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance" 
+    Compute the R^2, coefficient of determination. This statistic is a ratio of "explained variance" to "total variance"
 
     Args:
         y (np.ndarray): 1d array of dependent variable
         res (np.ndarray): 1d array of residuals
         has_constant (bool): whether the fitted model included a constant (intercept)
-    
+
     Returns:
         float: coefficient of determination
     """
@@ -631,14 +632,14 @@ def rsquared(y, res, has_constant=True):
 
 def rsquared_adj(r, nobs, df_res, has_constant=True):
     """
-    Compute the adjusted R^2, coefficient of determination. 
+    Compute the adjusted R^2, coefficient of determination.
 
     Args:
         r (float): rsquared value
         nobs (int): number of observations the model was fit on
         df_res (int): degrees of freedom of the residuals (nobs - number of model params)
         has_constant (bool): whether the fitted model included a constant (intercept)
-    
+
     Returns:
         float: adjusted coefficient of determination
     """

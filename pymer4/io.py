@@ -18,7 +18,7 @@ def save_model(model, filepath, compression="zlib", **kwargs):
 
     Args:
         model (pymer4.models): an instance of a pymer4 model
-        filepath (str): full filepath string ending with .h5 or .hd5f 
+        filepath (str): full filepath string ending with .h5 or .hd5f
         compression (string): what kind of compression to use; zlib is the default which should be universally accessible, but for example 'blosc' will be faster and produce smaller files. See more here: https://bit.ly/33x9JD7
         kwargs: optional keyword arguments to deepdish.io.save
     """
@@ -96,7 +96,7 @@ def load_model(filepath):
 
     Args:
         model (pymer4.models): an instance of a pymer4 model
-        filepath (str): full filepath string ending with .h5 or .hd5f 
+        filepath (str): full filepath string ending with .h5 or .hd5f
     """
 
     if filepath.endswith(".h5") or filepath.endswith(".hdf5"):

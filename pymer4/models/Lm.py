@@ -77,7 +77,10 @@ class Lm(object):
 
     def __repr__(self):
         out = "{}(fitted={}, formula={}, family={})".format(
-            self.__class__.__module__, self.fitted, self.formula, self.family,
+            self.__class__.__module__,
+            self.fitted,
+            self.formula,
+            self.family,
         )
         return out
 
@@ -134,7 +137,7 @@ class Lm(object):
         Returns:
             pd.DataFrame: R/statsmodels style summary
 
-        
+
         Examples:
 
             Simple multiple regression model with parametric assumptions
@@ -149,7 +152,7 @@ class Lm(object):
             Same as above but with cluster-robust standard errors. The cluster argument should refer to a column in the dataframe.
 
             >>> model.fit(robust='cluster', cluster='Group')
-            
+
             Simple regression with categorical predictor, i.e. between groups t-test assuming equal variances
 
             >>> model = Lm('DV ~ Group', data=df)
@@ -160,7 +163,7 @@ class Lm(object):
             >>> model.fit(weights='Group')
 
             Manually compute the variance of each group and use the inverse of that as the weights. In this case WLS is estimated but dof correction won't be applied because it's not trivial to compute.
-            
+
             >>> weights = 1 / df.groupby("Group")['DV'].transform(np.var,ddof=1)
             model.fit(weights=weights)
 

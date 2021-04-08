@@ -41,8 +41,8 @@ def simulate_lm(
 
     Returns:
         Multiple:
-        
-            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef    
+
+            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef
 
             - **coefs** (*np.array*): ground-truth coefficient values
 
@@ -131,11 +131,11 @@ def simulate_lmm(
 
     Returns:
         Multiple:
-        
-            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef    
+
+            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef
 
             - **blups** (*pd.DataFrame*): ground-truth group/cluster level coefficients, organized as num_grps x num_coef (i.e. BLUPs)
-            
+
             - **coefs** (*np.array*): ground-truth population-level coefficients
 
     """
