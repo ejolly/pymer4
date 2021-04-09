@@ -2,6 +2,11 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.3
+-----
+- **Bug fixes:**
+    - fix issue in which random effect and fixed effect index names were lost thanks to `@jcheong0428 <https://github.com/jcheong0428>`_ and `@Shotgunosine <https://github.com/Shotgunosine>`_ for the quick PRs!
+
 0.7.2
 -----
 - **Bug fixes:**  
