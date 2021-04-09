@@ -748,13 +748,22 @@ class Lmer(object):
         # Cluster (e.g subject) level coefficients
         rstring = """
             function(model){
+            getIndex <- function(df){
+                    orignames <- names(df)
+                    df <- transform(df, index=row.names(df))
+                    names(df) <- append(orignames, c("index"))
+                    df
+                    }
             out <- coef(model)
+            out <- lapply(out, getIndex)
             out
             }
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
-        fixefs = [pd.DataFrame(f) for f in fixefs]
+        fixefs = [
+            pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in fixefs
+        ]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []

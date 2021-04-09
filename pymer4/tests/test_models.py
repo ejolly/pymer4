@@ -105,6 +105,8 @@ def test_gaussian_lmm():
     assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
 
     assert isinstance(model.fixef, list)
+    assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
+    assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
     assert model.fixef[0].shape == (47, 3)
     assert model.fixef[1].shape == (3, 3)
 
@@ -132,6 +134,24 @@ def test_gaussian_lmm():
 
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
+
+    # test fixef code for 1 fixed effect
+    model = Lmer("DV ~ IV3 + IV2 + (IV2|Group)", data=df)
+    model.fit(summarize=False, control=opt_opts)
+
+    assert (model.fixef.index.astype(int) == df.Group.unique()).all()
+    assert model.fixef.shape == (47, 3)
+    assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef.mean(), atol=0.01)
+
+    # test fixef code for 0 fixed effects
+    model = Lmer("DV ~ (IV2|Group) + (1|IV3)", data=df)
+    model.fit(summarize=False, control=opt_opts)
+
+    assert isinstance(model.fixef, list)
+    assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
+    assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
 
 
 def test_contrasts():
