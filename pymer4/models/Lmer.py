@@ -469,7 +469,7 @@ class Lmer(object):
         # Get group names separately cause rpy2 > 2.9 is weird and doesnt return them above
         try:
             self._get_ngrps(unsum, base)
-        except Exception as e:  # NOQA
+        except Exception as _:
             print(traceback.format_exc())
             raise Exception(
                 "The rpy2, lme4, or lmerTest API appears to have changed again. Please file a bug report at https://github.com/ejolly/pymer4/issues with your R, Python, rpy2, lme4, and lmerTest versions and the OS you're running pymer4 on. Apologies."
@@ -656,7 +656,7 @@ class Lmer(object):
                 dv_var = self.formula.split("~")[0].strip()
                 grp_vars = list(self.grps.keys())
                 perms = []
-                for i in range(permute):
+                for _ in range(permute):
                     perm_dat[dv_var] = perm_dat.groupby(grp_vars)[dv_var].transform(
                         lambda x: x.sample(frac=1)
                     )
@@ -836,7 +836,7 @@ class Lmer(object):
         self.residuals = np.array(resid_func(self.model_obj))
         try:
             self.data["residuals"] = copy(self.residuals)
-        except ValueError as e:  # NOQA
+        except ValueError as _:  # NOQA
             print(
                 "**NOTE**: Column for 'residuals' not created in model.data, but saved in model.resid only. This is because you have rows with NaNs in your data.\n"
             )
@@ -852,7 +852,7 @@ class Lmer(object):
         self.fits = fit_func(self.model_obj)
         try:
             self.data["fits"] = copy(self.fits)
-        except ValueError as e:  # NOQA
+        except ValueError as _:  # NOQA
             print(
                 "**NOTE** Column for 'fits' not created in model.data, but saved in model.fits only. This is because you have rows with NaNs in your data.\n"
             )
@@ -1317,7 +1317,7 @@ class Lmer(object):
         # For seaborn
         m = pd.melt(m_ranef)
 
-        f, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         if ranef:
             alpha_plot = ranef_alpha
@@ -1420,7 +1420,7 @@ class Lmer(object):
                 "No fixed effects were estimated so prediction is not possible!"
             )
         if not ax:
-            f, ax = plt.subplots(1, 1, figsize=figsize)
+            _, ax = plt.subplots(1, 1, figsize=figsize)
 
         # Get range of unique values for desired parameter
         x_vals = self.design_matrix[param].unique()
@@ -1454,7 +1454,7 @@ class Lmer(object):
             ran_dat = self.fixef
 
         # Now generate random effects predictions
-        for i, row in ran_dat.iterrows():
+        for _, row in ran_dat.iterrows():
 
             ranef_desired = row["(Intercept)"] + row[param] * x_vals
             # ranef_other = np.dot(other_vals_means, row.loc[other_vals])

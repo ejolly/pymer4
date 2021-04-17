@@ -1,5 +1,4 @@
-from __future__ import division
-
+"""Utility functions"""
 __all__ = [
     "get_resource_path",
     "_check_random_state",
@@ -12,6 +11,12 @@ __all__ = [
     "_ols_group",
     "_corr_group",
     "_perm_find",
+    "_mean_diff",
+    "_return_t",
+    "_get_params",
+    "_lrt",
+    "_df_meta_to_arr",
+    "_welch_ingredients",
     "_to_ranks_by_group",
     "isPSD",
     "nearestPSD",
@@ -146,13 +151,13 @@ def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
         meat = weights[0] * np.dot(np.dot(X.T, V), X)
 
         # Now loop over additional lags
-        for l in range(1, n_lags + 1):
+        for j in range(1, n_lags + 1):
 
-            V = np.diag(vals[l:] * vals[:-l])
-            meat_1 = np.dot(np.dot(X[l:].T, V), X[:-l])
-            meat_2 = np.dot(np.dot(X[:-l].T, V), X[l:])
+            V = np.diag(vals[j:] * vals[:-j])
+            meat_1 = np.dot(np.dot(X[j:].T, V), X[:-j])
+            meat_2 = np.dot(np.dot(X[:-j].T, V), X[j:])
 
-            meat += weights[l] * (meat_1 + meat_2)
+            meat += weights[j] * (meat_1 + meat_2)
 
     else:
         # Otherwise deal with estimators that modify the same essential operation
@@ -249,7 +254,7 @@ def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
     """
     # Shuffle y labels
     y = y.sample(frac=1, replace=False, random_state=seed)
-    b, s, t, res = _ols(x, y, robust, n_lags, cluster, weights=weights, all_stats=True)
+    _, _, t, _ = _ols(x, y, robust, n_lags, cluster, weights=weights, all_stats=True)
 
     return list(t)
 
@@ -418,7 +423,7 @@ def nearestPSD(mat, nit=100):
     # the algorithm should work for any diagonal W
     deltaS = 0
     Yk = mat.copy()
-    for k in range(nit):
+    for _ in range(nit):
         Rk = Yk - deltaS
         Xk = _getPs(Rk, W=W)
         deltaS = Xk - Rk
