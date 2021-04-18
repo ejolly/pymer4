@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pymer4.io &#8212; pymer4 0.7.3 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery-binder.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery-dataframe.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/gallery-rendered-html.css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../_static/js/jquery-1.12.4.min.js "></script>
+<script type="text/javascript" src="../../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../../_static/bootstrap-3.4.1/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.7.3</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../../auto_examples/index.html">Tutorial</a></li>
+                <li><a href="../../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pymer4.io</h1><div class="highlight"><pre>
+<span></span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;save_model&quot;</span><span class="p">,</span> <span class="s2">&quot;load_model&quot;</span><span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Lm</span><span class="p">,</span> <span class="n">Lm2</span><span class="p">,</span> <span class="n">Lmer</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">_df_meta_to_arr</span>
+<span class="kn">from</span> <span class="nn">rpy2.robjects.packages</span> <span class="kn">import</span> <span class="n">importr</span>
+<span class="kn">import</span> <span class="nn">deepdish</span> <span class="k">as</span> <span class="nn">dd</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">tables</span> <span class="kn">import</span> <span class="n">NaturalNameWarning</span>
+
+<span class="n">base</span> <span class="o">=</span> <span class="n">importr</span><span class="p">(</span><span class="s2">&quot;base&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="save_model"><a class="viewcode-back" href="../../api.html#pymer4.io.save_model">[docs]</a><span class="k">def</span> <span class="nf">save_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zlib&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for saving pymer4 models. All models are saved in .h5 or .hdf5 files so filepath extensions should include this. For Lmer models an additional filepath.robj file will be created to retain all R objects.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (pymer4.models): an instance of a pymer4 model</span>
+<span class="sd">        filepath (str): full filepath string ending with .h5 or .hd5f</span>
+<span class="sd">        compression (string): what kind of compression to use; zlib is the default which should be universally accessible, but for example &#39;blosc&#39; will be faster and produce smaller files. See more here: https://bit.ly/33x9JD7</span>
+<span class="sd">        kwargs: optional keyword arguments to deepdish.io.save</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.hdf5&quot;</span><span class="p">):</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Separate out model attributes that are not pandas dataframes (or lists conatins dataframes) or R model objects</span>
+        <span class="n">simple_atts</span><span class="p">,</span> <span class="n">data_atts</span> <span class="o">=</span> <span class="p">{},</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s2">&quot;model_obj&quot;</span><span class="p">:</span>
+                <span class="n">skip</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">skip</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]):</span>
+                    <span class="n">skip</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">skip</span><span class="p">:</span>
+                <span class="n">simple_atts</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_atts</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="n">simple_atts</span><span class="p">[</span><span class="s2">&quot;model_class&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="c1"># Now deal with other attributes</span>
+        <span class="n">data_atts_separated</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data_atts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;model_obj&quot;</span><span class="p">:</span>
+                <span class="c1"># Deconstruct pandas dataframes</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                    <span class="n">cols</span><span class="p">,</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">_df_meta_to_arr</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                    <span class="n">vals</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">values</span>
+                    <span class="n">dtypes</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                    <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;df_cols__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cols</span>
+                    <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;df_idx__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span>
+                    <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;df_vals__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span>
+                    <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;df_dtypes__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtypes</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                            <span class="n">cols</span><span class="p">,</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">_df_meta_to_arr</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+                            <span class="n">vals</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">values</span>
+                            <span class="n">dtypes</span> <span class="o">=</span> <span class="n">elem</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                            <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_cols__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cols</span>
+                            <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_idx__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span>
+                            <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_vals__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span>
+                            <span class="n">data_atts_separated</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_dtypes__</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtypes</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Value is list but list item is </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span><span class="si">}</span><span class="s2"> not pd.DataFrame&quot;</span>
+                            <span class="p">)</span>
+
+        <span class="c1"># Combine all attributes into a single dict and save with dd</span>
+        <span class="n">model_atts</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;simple_atts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">simple_atts</span>
+        <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_atts_separated</span>
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">NaturalNameWarning</span><span class="p">)</span>
+            <span class="n">dd</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">model_atts</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+
+        <span class="c1"># Now deal with model object in R if needed</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">model_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">base</span><span class="o">.</span><span class="n">saveRDS</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">model_obj</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">.rds&quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">.rds&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;filepath must end with .h5 or .hdf5&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load_model"><a class="viewcode-back" href="../../api.html#pymer4.io.load_model">[docs]</a><span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for loading pymer4 models. A file path ending in .h5 or .hdf5 should be provided. For Lmer models an additional filepath.robj should be located in the same directory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (pymer4.models): an instance of a pymer4 model</span>
+<span class="sd">        filepath (str): full filepath string ending with .h5 or .hd5f</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.h5&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.hdf5&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;File not found!&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Load h5 first</span>
+        <span class="n">model_atts</span> <span class="o">=</span> <span class="n">dd</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="c1"># Figure out what kind of model we&#39;re dealing with</span>
+        <span class="k">if</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;simple_atts&quot;</span><span class="p">][</span><span class="s2">&quot;model_class&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Lmer&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">Lmer</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">elif</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;simple_atts&quot;</span><span class="p">][</span><span class="s2">&quot;model_class&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Lm2&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">Lm2</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">[],</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;simple_atts&quot;</span><span class="p">][</span><span class="s2">&quot;model_class&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Lm&quot;</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="c1"># Set top level attributes</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;simple_atts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;model_class&quot;</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="c1"># Make sure the model formula is a python string string so that rpy2 doesn&#39;t complain</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">formula</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span>
+
+        <span class="c1"># Set data attributes</span>
+        <span class="c1"># Container for already set items</span>
+        <span class="n">completed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Re-assembe dataframes</span>
+            <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;df_&quot;</span><span class="p">):</span>
+                <span class="c1"># First check if we haven&#39;t set it yet</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">completed</span><span class="p">:</span>
+                    <span class="c1"># Get the id of this deconstructed df</span>
+                    <span class="n">item_name</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">vals_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;df_vals__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">cols_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;df_cols__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">idx_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;df_idx__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">dtype_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;df_dtypes__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="c1"># Reconstruct the dataframe</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                        <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">vals_name</span><span class="p">],</span>
+                        <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                            <span class="n">e</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span>
+                            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">cols_name</span><span class="p">]</span>
+                        <span class="p">],</span>
+                        <span class="n">index</span><span class="o">=</span><span class="p">[</span>
+                            <span class="n">e</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span>
+                            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">idx_name</span><span class="p">]</span>
+                        <span class="p">],</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">dtype_name</span><span class="p">])</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+                    <span class="c1"># Add it to the list of completed items</span>
+                    <span class="n">completed</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">item_name</span><span class="p">,</span> <span class="n">vals_name</span><span class="p">,</span> <span class="n">idx_name</span><span class="p">,</span> <span class="n">dtype_name</span><span class="p">])</span>
+            <span class="c1"># Same idea for list items</span>
+            <span class="k">elif</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;list_&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">completed</span><span class="p">:</span>
+                    <span class="c1"># Get the id of the deconstructed list</span>
+                    <span class="n">item_name</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">item_idx</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">vals_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">item_idx</span><span class="si">}</span><span class="s2">_vals__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">cols_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">item_idx</span><span class="si">}</span><span class="s2">_cols__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">idx_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">item_idx</span><span class="si">}</span><span class="s2">_idx__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">dtype_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;list_</span><span class="si">{</span><span class="n">item_idx</span><span class="si">}</span><span class="s2">_dtypes__</span><span class="si">{</span><span class="n">item_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="c1"># Reconstruct the dataframe</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                        <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">vals_name</span><span class="p">],</span>
+                        <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                            <span class="n">e</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span>
+                            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">cols_name</span><span class="p">]</span>
+                        <span class="p">],</span>
+                        <span class="n">index</span><span class="o">=</span><span class="p">[</span>
+                            <span class="n">e</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">e</span>
+                            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">idx_name</span><span class="p">]</span>
+                        <span class="p">],</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">model_atts</span><span class="p">[</span><span class="s2">&quot;data_atts&quot;</span><span class="p">][</span><span class="n">dtype_name</span><span class="p">])</span>
+                    <span class="c1"># Check if the list already exists if so just append to it</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">):</span>
+                        <span class="n">current_items</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">current_items</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">current_items</span> <span class="o">+=</span> <span class="p">[</span><span class="n">df</span><span class="p">]</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">,</span> <span class="n">current_items</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">,</span> <span class="p">[</span><span class="n">df</span><span class="p">])</span>
+                    <span class="c1"># Otherwise create it</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">item_name</span><span class="p">,</span> <span class="p">[</span><span class="n">df</span><span class="p">])</span>
+                    <span class="c1"># Add to the list of completed items</span>
+                    <span class="n">completed</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">item_name</span><span class="p">,</span> <span class="n">vals_name</span><span class="p">,</span> <span class="n">idx_name</span><span class="p">,</span> <span class="n">dtype_name</span><span class="p">])</span>
+        <span class="c1"># Now deal with model object in R if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Lmer</span><span class="p">):</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">model_obj</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">readRDS</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">.rds&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">model</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;filepath must end with .h5 or .hdf5&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2021, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.5.4.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>
