@@ -43,7 +43,7 @@ MAX_INT = np.iinfo(np.int32).max
 
 
 def get_resource_path():
-    """ Get path sample data directory. """
+    """Get path sample data directory."""
     return os.path.join(os.path.dirname(__file__), "resources") + os.path.sep
 
 
