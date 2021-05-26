@@ -2,6 +2,13 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.4
+-----
+- **Compatibility updates:**
+    - This version drops official support for Python 3.6 and adds support for Python 3.9. While 3.6 should still work for the most part, development support and testing against this version of Python will no longer continue moving forward.
+- **New features:**  
+    - :code:`utils.result_to_table` function nicely formats the :code:`model.coefs` output for a fitted model. The docstring also contains instructions on using this in conjunction with the `gspread-pandas <https://github.com/aiguofer/gspread-pandas>`_ library for "exporting" model results to a google sheet
+
 0.7.3
 -----
 - **Bug fixes:**

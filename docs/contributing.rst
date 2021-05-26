@@ -11,7 +11,7 @@ Each new *pre-release* should proceed by opening a pull-request (PR) the against
 
 Each new *stable* release should follow the following steps, the first of which can occur in two ways:  
 
-- Step 1: drop :code:`.devX` from version string (in :code:`pymer4/version.py`) in the code base via **either**:
+- Step 1: drop :code:`.devX` from version string (in :code:`pymer4/version.py`) and update the release notes page in the docs via **either**:
 
   - **Pre-merge** at least one commit in :code:`dev` for the PR against master, such that the merge will include updating the version string. In the illustration below, this is depicted by the dashed borders around the final merge into :code:`master`.
 
@@ -19,7 +19,7 @@ Each new *stable* release should follow the following steps, the first of which 
 
 - Step 2: manually trigger a release on Github using a :code:`vM.N.P` version string where :code:`M.N.P` matches Step 1. In the illustration below, this is depicted by the right-most, salmon-colored "tagged manual release" commit to :code:`master`. 
 
-  - **Note:** this is the version string entered *on Github* when publishing the release and specifically adds a :code:`v` prefix. 
+  - **Note:** this is the version string entered *on Github* when publishing the release and should specifically contain a :code:`v` prefix. 
 
 - Step 3: immediately bump the version string on :code:`dev` to :code:`M.N.P+1.dev0` where :code:`M.N.P` refers to the version string from Step 1. In the illustration below, an example is shown on the left-side of the diagram immediately to the right of the "tagged manual release" of :code:`v0.7.1` on :code:`master`.
 
