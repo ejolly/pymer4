@@ -1,5 +1,3 @@
-from __future__ import division
-
 """User-facing statistics functions and tests."""
 
 __all__ = [
@@ -21,14 +19,10 @@ from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
 
-# from itertools import product
 from pymer4.utils import (
     _check_random_state,
     _welch_ingredients,
-    # _get_params,
     _mean_diff,
-    # _lrt,
-    # _sig_stars,
 )
 from joblib import Parallel, delayed
 
@@ -504,7 +498,7 @@ def tost_equivalence(
     if plot:
         # Get mean diff
         m, (lb, ub) = boot_func(x, y, _mean_diff, n_boot=n_boot)
-        f, ax = plt.subplots(1, 1, figsize=(8, 6))
+        _, ax = plt.subplots(1, 1, figsize=(8, 6))
         ax.plot(m, 0, "o", markersize=18, color="black")
         ax.hlines(y=0, xmin=m, xmax=ub, linestyle="-", linewidth=6)
         ax.hlines(y=0, xmin=lb, xmax=m, linestyle="-", linewidth=6)

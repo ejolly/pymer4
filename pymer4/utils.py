@@ -1,5 +1,4 @@
-from __future__ import division
-
+"""Utility functions"""
 __all__ = [
     "get_resource_path",
     "_check_random_state",
@@ -12,6 +11,12 @@ __all__ = [
     "_ols_group",
     "_corr_group",
     "_perm_find",
+    "_mean_diff",
+    "_return_t",
+    "_get_params",
+    "_lrt",
+    "_df_meta_to_arr",
+    "_welch_ingredients",
     "_to_ranks_by_group",
     "isPSD",
     "nearestPSD",
@@ -38,7 +43,7 @@ MAX_INT = np.iinfo(np.int32).max
 
 
 def get_resource_path():
-    """ Get path sample data directory. """
+    """Get path sample data directory."""
     return os.path.join(os.path.dirname(__file__), "resources") + os.path.sep
 
 
@@ -146,13 +151,13 @@ def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
         meat = weights[0] * np.dot(np.dot(X.T, V), X)
 
         # Now loop over additional lags
-        for l in range(1, n_lags + 1):
+        for j in range(1, n_lags + 1):
 
-            V = np.diag(vals[l:] * vals[:-l])
-            meat_1 = np.dot(np.dot(X[l:].T, V), X[:-l])
-            meat_2 = np.dot(np.dot(X[:-l].T, V), X[l:])
+            V = np.diag(vals[j:] * vals[:-j])
+            meat_1 = np.dot(np.dot(X[j:].T, V), X[:-j])
+            meat_2 = np.dot(np.dot(X[:-j].T, V), X[j:])
 
-            meat += weights[l] * (meat_1 + meat_2)
+            meat += weights[j] * (meat_1 + meat_2)
 
     else:
         # Otherwise deal with estimators that modify the same essential operation
@@ -249,7 +254,7 @@ def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
     """
     # Shuffle y labels
     y = y.sample(frac=1, replace=False, random_state=seed)
-    b, s, t, res = _ols(x, y, robust, n_lags, cluster, weights=weights, all_stats=True)
+    _, _, t, _ = _ols(x, y, robust, n_lags, cluster, weights=weights, all_stats=True)
 
     return list(t)
 
@@ -418,7 +423,7 @@ def nearestPSD(mat, nit=100):
     # the algorithm should work for any diagonal W
     deltaS = 0
     Yk = mat.copy()
-    for k in range(nit):
+    for _ in range(nit):
         Rk = Yk - deltaS
         Xk = _getPs(Rk, W=W)
         deltaS = Xk - Rk
@@ -571,3 +576,75 @@ def pandas2R(df):
     with localconverter(robjects.default_converter + pandas2ri.converter):
         data = robjects.conversion.py2rpy(df)
     return data
+
+
+def result_to_table(
+    model,
+    drop_intercept=True,
+    iv_name="Predictor",
+    round=True,
+    pval_text="< .001",
+    pval_thresh=0.001,
+):
+    """
+    Nicely format the `.coefs` attribute of a fitted model. The intended use of this function is to nicely format the `.coefs` of a fitted model such that the resultant dataframe can be copied outside of python/jupyter or saved to another file (e.g. googlesheet). It's particularly well suited for use with `gspread_pandas`.
+
+    Args:
+        model (pymer.model): pymer4 model object that's already been fit
+        drop_intercept (bool, optional): remove the model intercept results from the table; Default True
+        iv_name (str, optional): column name of the model's independent variables. Defaults to "Predictor".
+        round (bool, optional): round all numeric values to 3 decimal places. Defaults to True.
+        pval_text (str, optional): what to replace p-values with when they are < pval_thres. Defaults to "< .001".
+        pval_thresh (float, optional): threshold to replace p-values with. Primarily intended to be used for very small p-values (e.g. .0001), where the tradition is to display '< .001' instead of the exact p-values. Defaults to 0.001.
+
+    Returns:
+        pd.DataFrame: formatted dataframe of results
+
+    Example:
+
+        Send model results to a google sheet, assuming `model.fit()` has already been called:
+
+        >>> from gspread_pandas import Spread
+        >>> spread = Spread('My_Results_Sheet')
+        >>> formatted_results = result_to_table(model)
+        >>> spread.df_to_sheet(formatted_results, replace=True, index=False)
+
+        Now 'My_Results_Sheet' will have a copy of `formatted_results` which can be copy and pasted into a google doc as a nice auto-updating table. On new model fits, simple repeat the steps above to replace the values in the google sheet, thus triggering an update of the linked table in a google doc.
+
+    """
+
+    if not model.fitted:
+        raise ValueError("model must be fit to format results")
+
+    results = model.coefs.copy()
+    if round:
+        results = results.round(3)
+    if drop_intercept:
+        if "(Intercept)" in results.index:
+            results = results.drop(index=["(Intercept)"])
+        elif "Intercept" in results.index:
+            results = results.drop(index=["Intercept"])
+
+    results = (
+        results.drop(columns=["Sig"])
+        .reset_index()
+        .assign(
+            ci=lambda df: df[["2.5_ci", "97.5_ci"]].apply(
+                lambda row: f"({' '.join(row.values.astype(str))})", axis=1
+            ),
+            p=lambda df: df["P-val"].apply(
+                lambda val: pval_text if val < pval_thresh else str(val)
+            ),
+        )
+        .drop(columns=["2.5_ci", "97.5_ci", "SE", "P-val"])
+        .rename(
+            columns={
+                "index": iv_name,
+                "Estimate": "b",
+                "T-stat": "t",
+                "DF": "df",
+            }
+        )
+        .reindex(columns=[iv_name, "b", "ci", "t", "df", "p"])
+    )
+    return results

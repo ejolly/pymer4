@@ -22,8 +22,9 @@ setup(
     long_description="pymer4 is a Python package to make it simple to perform multi-level modeling by interfacing with the popular R package lme4. pymer4 is also capable of fitting a variety of standard regression models with robust, bootstrapped, and permuted estimators",
     keywords=["statistics", "multi-level-modeling", "regression", "analysis"],
     classifiers=[
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",

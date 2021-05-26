@@ -208,7 +208,7 @@ class Lm2(object):
             betas = np.array(betas)
 
         # Get the model matrix formula from patsy to make it more reliable to set the results dataframe index like Lmer
-        y, x = dmatrices(self.formula, self.data, 1, return_type="dataframe")
+        _, x = dmatrices(self.formula, self.data, 1, return_type="dataframe")
         # Perform an intercept only regression for each beta
         results = []
         perm_ps = []
@@ -384,7 +384,7 @@ class Lm2(object):
         # For seaborn
         m = pd.melt(m_ranef)
 
-        f, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         if ranef:
             alpha_plot = ranef_alpha
