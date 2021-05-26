@@ -81,7 +81,7 @@ deploy:
     skip_cleanup: true
     script: bash ./ci/conda_upload.sh
     on:
-      condition: $PYV =~ ^3\.[678]$  # python 3.6, 3.7, 3.8 jobs
+      condition: $PYV =~ ^3\.[789]$  # python 3.7, 3.8, 3.9 jobs
       all_branches: true  # dry-run the script on any branch
 
   # only upload manual github releases tagged vM.N.P to PyPI
