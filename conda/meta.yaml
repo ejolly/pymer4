@@ -46,7 +46,7 @@ test:
    - pytest
 
 about:
-  home: "http://eshinjolly.com/pymer4/"
+  home: "https://eshinjolly.com/pymer4/"
   license: MIT
   license_family: MIT
   license_file:

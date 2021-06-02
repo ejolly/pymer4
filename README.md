@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/ejolly/pymer4.svg?branch=master)](https://travis-ci.org/ejolly/pymer4)
+[![tests & build](https://github.com/ejolly/pymer4/actions/workflows/CI.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/CI.yml)
+[![PyPI version](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4)
 [![Anaconda Version](https://anaconda.org/ejolly/pymer4/badges/version.svg)](https://anaconda.org/ejolly/pymer4) 
 [![Anaconda Platforms](https://anaconda.org/ejolly/pymer4/badges/platforms.svg)](https://anaconda.org/ejolly/pymer4)
-[![PyPI version](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4)
 [![Downloads](https://pepy.tech/badge/pymer4)](https://pepy.tech/project/pymer4)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862)
 [![DOI](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205)
@@ -56,7 +56,7 @@ Installing via [Anaconda](https://www.anacnda.com/products/individual) is the pr
 ## Contributing
 
 Contributions are *always welcome*!  
-If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues), [development roadmap on Trello](https://trello.com/b/gGKmeAJ4), or submit pull requests for additional features or bug fixes. If you do make a pull request, please do so by forking the [development branch](https://github.com/ejolly/pymer4/tree/dev) and taking note of the [contribution guidelines](http://eshinjolly.com/pymer4/contributing.html).
+If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues), [development roadmap on Trello](https://trello.com/b/gGKmeAJ4), or submit pull requests for additional features or bug fixes. If you do make a pull request, please do so by forking the [development branch](https://github.com/ejolly/pymer4/tree/dev) and taking note of the [contribution guidelines](https://eshinjolly.com/pymer4/contributing.html).
 
 ## Contributors
 

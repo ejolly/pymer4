@@ -1,7 +1,10 @@
 Pymer4
 ======
-.. image:: https://travis-ci.org/ejolly/pymer4.svg?branch=master
-    :target: https://travis-ci.org/ejolly/pymer4
+.. image:: https://github.com/ejolly/pymer4/actions/workflows/CI.yml/badge.svg
+    :target: https://github.com/ejolly/pymer4/actions/workflows/CI.yml
+
+.. image:: https://badge.fury.io/py/pymer4.svg
+    :target: https://badge.fury.io/py/pymer4
 
 .. image:: https://anaconda.org/ejolly/pymer4/badges/version.svg
    :target: https://anaconda.org/ejolly/pymer4
@@ -9,9 +12,6 @@ Pymer4
 .. image:: https://anaconda.org/ejolly/pymer4/badges/platforms.svg   
   :target: https://anaconda.org/ejolly/pymer4
   
-.. image:: https://badge.fury.io/py/pymer4.svg
-    :target: https://badge.fury.io/py/pymer4
-
 .. image:: https://pepy.tech/badge/pymer4
   :target: https://pepy.tech/project/pymer4
 
