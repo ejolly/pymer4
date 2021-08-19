@@ -16,6 +16,7 @@ on:
         description: 'Run workflow with ssh debugging'
         required: false
         default: false
+  release:
 
   schedule:
     - cron: '0 0 * * 0'
