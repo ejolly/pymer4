@@ -901,14 +901,41 @@ class Lmer(object):
         sims = simulate_func(self.model_obj)
         return pd.DataFrame(sims)
 
-    def predict(self, data, use_rfx=False, pred_type="response", verbose=False):
+    def predict(
+        self,
+        data,
+        use_rfx=True,
+        pred_type="response",
+        skip_data_checks=False,
+        verify_predictions=True,
+        verbose=False,
+    ):
         """
-        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). If using random effects to make predictions, input data must also contain a column for the group identifier that were used to fit the model random effects terms. Using random effects to make predictions only makes sense if predictions are being made about the same groups/clusters.
+        Make predictions given new data. Input must be a dataframe that contains the
+        same columns as the model.matrix excluding the intercept (i.e. all the predictor
+        variables used to fit the model). If using random effects to make predictions,
+        input data must also contain a column for the group identifier that were used to
+        fit the model random effects terms. Using random effects to make predictions
+        only makes sense if predictions are being made about the same groups/clusters.
+        If any predictors are categorical, you can skip verifying column names by
+        setting `skip_data_checks=True`.
 
         Args:
             data (pandas.core.frame.DataFrame): input data to make predictions on
-            use_rfx (bool): whether to condition on random effects when making predictions
-            pred_type (str): whether the prediction should be on the 'response' scale (default); or on the 'link' scale of the predictors passed through the link function (e.g. log-odds scale in a logit model instead of probability values)
+            use_rfx (bool): whether to condition on random effects when making
+            predictions; Default True
+            pred_type (str): whether the prediction should be on the 'response' scale
+            (default); or on the 'link' scale of the predictors passed through the link
+            function (e.g. log-odds scale in a logit model instead of probability
+            values)
+            skip_data_checks (bool): whether to skip checks that input data have the
+            same columns as the original data the model were trained on. If predicting
+            using a model trained with categorical variables it can be helpful to set
+            this to False. Default True
+            verify_predictions (bool): whether to ensure that the predicted data are not
+            identical to original model fits. Only useful to set this to False when
+            making predictions on the same data the model was fit on, but its faster to
+            access these directly from model.fits or model.data['fits']. Default True
             verbose (bool): whether to print R messages to console
 
         Returns:
@@ -920,16 +947,20 @@ class Lmer(object):
             raise ValueError(
                 "No fixed effects were estimated so prediction is not possible!"
             )
-        required_cols = self.design_matrix.columns[1:]
-        if not all([col in data.columns for col in required_cols]):
-            raise ValueError("Column names do not match all fixed effects model terms!")
-
-        if use_rfx:
-            required_cols = set(list(required_cols) + list(self.grps.keys()))
+        if not skip_data_checks:
+            required_cols = self.design_matrix.columns[1:]
             if not all([col in data.columns for col in required_cols]):
                 raise ValueError(
-                    "Column names are missing random effects model grouping terms!"
+                    "Column names do not match all fixed effects model terms!\nThis may be a false error if some predictors are categorical, in which case you can bypass this check by setting skip_checks=True."
                 )
+
+        if use_rfx:
+            if not skip_data_checks:
+                required_cols = set(list(required_cols) + list(self.grps.keys()))
+                if not all([col in data.columns for col in required_cols]):
+                    raise ValueError(
+                        "Column names are missing random effects model grouping terms!"
+                    )
 
             re_form = "NULL"
         else:
@@ -950,7 +981,33 @@ class Lmer(object):
 
         predict_func = robjects.r(rstring)
         preds = predict_func(self.model_obj, pandas2R(data))
+        if verify_predictions:
+            self._verify_preds(preds, use_rfx)
         return preds
+
+    def _verify_preds(self, preds, use_rfx):
+        """
+        Verify that the output of .predict given new data is not identitical to the
+        model's fits from the data it was trained on. This is necessary because
+        `predict()` in R will silently fallback to return the same predicted values when
+        given input data with no matching columns, but with `use_rfx=False`
+
+        Args:
+            preds (np.array): output of self.predict()
+            use_rfx (bool): same input parameter as self.predict
+
+        Raises:
+            ValueError: If predictions match model fits from original data
+        """
+        training_preds = self.predict(
+            self.data, use_rfx=use_rfx, skip_data_checks=True, verify_predictions=False
+        )
+        mess = "(using rfx)" if use_rfx else "(without rfx)"
+
+        if np.allclose(training_preds, preds):
+            raise ValueError(
+                f"Predictions are identitical to fitted values {mess}!!\nYou can ignore this error if you intended to predict using the same data the model was trained on by setting verify_predictions=False. If you didn't, then its likely that some or all of the column names in your test data don't match the column names from the data the model was trained on and you set skip_data_checks=True."
+            )
 
     def summary(self):
         """

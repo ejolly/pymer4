@@ -8,6 +8,7 @@ from scipy.stats import ttest_ind
 import os
 import pytest
 import seaborn as sns
+from rpy2.rinterface_lib.embedded import RRuntimeError
 
 # import re
 
@@ -120,8 +121,70 @@ def test_gaussian_lmm():
 
     assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef[0].mean(), atol=0.01)
 
-    # Test prediction
-    assert np.allclose(model.predict(model.data, use_rfx=True), model.data.fits)
+    # Test predict
+    # Little hairy to we test a few different cases. If a dataframe with non-matching
+    # column names is passed in, but we only used fixed-effects to make predictions,
+    # then R will not complain and will return population level predictions given the
+    # model's original data. This is undesirable behavior, so pymer tries to naively
+    # check column names in Python first and checks the predictions against the
+    # originally fitted values second. This is works fine except when there are
+    # categorical predictors which get expanded out to a design matrix internally in R.
+    # Unfortunately we can't easily pre-expand this to check against the column names of
+    # the model matrix.
+
+    # Test circular prediction which should raise error
+    with pytest.raises(ValueError):
+        assert np.allclose(model.predict(model.data), model.data.fits)
+
+    # Same thing, but skip the prediction verification; no error
+    assert np.allclose(
+        model.predict(model.data, verify_predictions=False), model.data.fits
+    )
+
+    # Test on data that has no matching columns;
+    X = pd.DataFrame(np.random.randn(model.data.shape[0], model.data.shape[1] - 1))
+
+    # Should raise error no matching columns, caught by checks in Python
+    with pytest.raises(ValueError):
+        model.predict(X)
+
+    # If user skips Python checks, then pymer raises an error if the predictions match
+    # the population predictions from the model's original data (which is what predict()
+    # in R will do by default).
+    with pytest.raises(ValueError):
+        model.predict(X, skip_data_checks=True, use_rfx=False)
+
+    # If the user skips check, but tries to predict with rfx then R will complain so we
+    # can check for an exception raised from R rather than pymer
+    with pytest.raises(RRuntimeError):
+        model.predict(X, skip_data_checks=True, use_rfx=True)
+
+    # Finally a user can turn off every kind of check in which case we expect circular predictions
+    pop_preds = model.predict(model.data, use_rfx=False, verify_predictions=False)
+    assert np.allclose(
+        pop_preds,
+        model.predict(
+            X,
+            use_rfx=False,
+            skip_data_checks=True,
+            verify_predictions=False,
+        ),
+    )
+
+    # Test prediction with categorical variables
+    df["DV_ll"] = df.DV_l.apply(lambda x: "yes" if x == 1 else "no")
+    m = Lmer("DV ~ IV3 + DV_ll + (IV2|Group) + (1|IV3)", data=df)
+    m.fit(summarize=False)
+
+    # Should fail because column name checks don't understand expanding levels of
+    # categorical variable into new design matrix columns, as the checks are in Python
+    # but R handles the design matrix conversion
+    with pytest.raises(ValueError):
+        m.predict(m.data, verify_predictions=False)
+
+    # Should fail because of circular predictions
+    with pytest.raises(ValueError):
+        m.predict(m.data, skip_data_checks=True)
 
     # Test simulate
     out = model.simulate(2)
@@ -225,7 +288,10 @@ def test_logistic_lmm():
     assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef.mean(), atol=0.01)
 
     # Test prediction
-    assert np.allclose(model.predict(model.data, use_rfx=True), model.data.fits)
+    assert np.allclose(
+        model.predict(model.data, use_rfx=True, verify_predictions=False),
+        model.data.fits,
+    )
     assert np.allclose(
         model.predict(model.data, use_rfx=True, pred_type="link"),
         logit(model.data.fits),
