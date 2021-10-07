@@ -160,7 +160,7 @@ jobs:
           pip install build
           python -m build --sdist --wheel --outdir dist/
       
-      # 7. Deploy package to Pypi (only for 3.8 linux which handles deployment)
+      # 7. Deploy package to Pypi 
       # Only runs when a manual github release is created
       - name: PyPi deploy
         if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS && github.event_name == 'release'}}
@@ -168,10 +168,10 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-      # 8a. Deploy package to main conda channel (only for 3.8 which handles deployment) but each OS uploads their own and linux uploads for linux and windows
+      # 8a. Deploy package to main conda channel but each OS uploads their own and linux uploads for linux and windows
       # Only runs when a manual github release is created
       - name: Conda main deploy 
-        if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' }}
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
@@ -183,7 +183,7 @@ jobs:
       # 8b. Deploy package to pre-release conda channel (only for 3.8 which handles deployment) but each OS uploads their own and linux uploads for linux and windows
       # Only runs when a PR is merged into master or there's a direct push to master
       - name: Conda pre-release deploy
-        if: ${{ (matrix.py_ver == env.DEPLOY_PY_VER) && ((github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event.pull_request.merged && github.base_ref == 'master' && github.head_ref == 'dev')) }}
+        if: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event.pull_request.merged && github.base_ref == 'master' && github.head_ref == 'dev')) }}
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
