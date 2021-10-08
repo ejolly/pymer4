@@ -112,12 +112,7 @@ jobs:
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          if [[ ${{ runner.os }} == Linux ]]; then \
-            conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c defaults -c conda-forge
-          fi
-          if [[ ${{ runner.os }} == macOS ]]; then \
-            conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas>2.11' -c $CONDA_BLD_PATH -c defaults -c conda-forge
-          fi
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c defaults -c conda-forge
           conda activate env_$PY_VER
           pip install black pytest-cov
           conda list

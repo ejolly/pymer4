@@ -24,6 +24,7 @@ requirements:
 
   run:
     - python {{ python }}
+    - blas=*=mkl
     - deepdish >=0.3.6
     - joblib >=0.14
     - matplotlib >=3.0
