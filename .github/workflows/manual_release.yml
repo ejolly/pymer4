@@ -1,5 +1,5 @@
 name: manual release
-on: [release, workflow_dispatch]
+on: [workflow_dispatch]
 
 env:
   PACKAGE_NAME: pymer4
@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         py_ver: [3.8]
-        os: [ubuntu-latest, macos-10.15]  # Intel macs
+        os: [ubuntu-latest, macos-11]  # Intel macs
 
     outputs:
       # tarballs are py3X job-specific
@@ -91,7 +91,7 @@ jobs:
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c defaults -c conda-forge
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c defaults -c conda-forge
           conda activate env_$PY_VER
           pip install black pytest-cov
           conda list
@@ -116,7 +116,6 @@ jobs:
 
       # 8a. Deploy package to main conda channel (only for 3.8 which handles deployment) but each OS uploads their own and linux uploads for linux and windows
       - name: Conda main deploy 
-        if: ${{ matrix.py_ver == env.DEPLOY_PY_VER }}
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
