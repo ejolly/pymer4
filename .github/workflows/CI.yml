@@ -112,8 +112,7 @@ jobs:
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c
-          $CONDA_BLD_PATH -c conda-forge -c defaults
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
           conda install black pytest-cov -c conda-forge
           conda list
