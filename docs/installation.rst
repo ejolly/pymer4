@@ -9,28 +9,36 @@ Using Anaconda (recommended)
 For the latest stable release (recommended)
 +++++++++++++++++++++++++++++++++++++++++++
 
-:code:`pymer4` has some dependecies that can only be resolved using `conda-forge <https://conda-forge.org/>`_ (e.g. recent version of :code:`rpy2`). For this reason you may want to install it into a separate conda environment to avoid conflicts with any existing packages you have installed:
+:code:`pymer4` has some dependecies that can only be resolved using `conda-forge
+<https://conda-forge.org/>`_ (e.g. recent versions of :code:`R, lme4, rpy2` etc). For
+this reason I recommend preferring :code:`conda-forge` for all packages in the
+environment you use for :code:`pymer4`. If you prefer to use the defaults Anaconda
+channel you can switch the order of the channel priorities in any of the commands below,
+i.e. :code:`-c conda-forge -c defaults` to :code:`-c defaults -c conda-forge`. 
+
+Creating and installing into a new environment
+##############################################
 
     .. code-block:: bash
 
-        conda create --name pymer4 -c ejolly -c defaults -c conda-forge pymer4
+        conda create --name pymer4 -c ejolly -c conda-forge -c defaults pymer4
         conda activate pymer4 
 
-Otherwise you can install into an existing environment with:
+Installing into an existing environment
+#######################################
 
     .. code-block:: bash
 
-        conda install -c ejolly -c defaults -c conda-forge pymer4
+        conda install -c ejolly -c conda-forge -c defaults pymer4
 
 .. note::
-    Both commands above try to resolve dependencies without using conda-forge, unless absolutely necessary (i.e. lowest priority). This is why it's the last channel specified in the command.
+    Both commands above pull dependencies from conda-forge *first* rather than the
+    default Anaconda channel. It's good practice to maintain this channel priority if
+    you add additional packages to your environment. So be mindful of adding a :code:`-c
+    conda-forge` flag if you install any additional packages into your environment. You
+    can avoid this if you deliberately reversed the order of channels when installing
+    :code:`pymer4` as noted above.
     
-If you are already using pacakges from conda-forge in your environment and prefer to use it for all dependecies simply omit the :code:`defaults` channel:
-
-    .. code-block:: bash
-
-        conda install -c ejolly -c conda-forge pymer4
-
 For the latest development release
 ++++++++++++++++++++++++++++++++++
 
@@ -38,22 +46,23 @@ Simply use either command above and substitute :code:`ejolly` for :code:`ejolly/
 
     .. code-block:: bash
 
-        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4
+        conda install -c ejolly/label/pre-release -c conda-forge -c defaults pymer4
 
-For previous stable or development releases
-+++++++++++++++++++++++++++++++++++++++++++
+Speed Ups on Intel CPUs
++++++++++++++++++++++++
 
-Simple use either command above and specify the version e.g.
-
-    .. code-block:: bash
-
-        conda install -c ejolly -c defaults -c conda-forge pymer4=0.7.2
-
-Or
+If you are installing on an Intel CPU, you can additionally request the highly optimized
+Intel Math Kernel Library (MKL) which uses optimized math libraries for Basic Linear Algebra Subprograms (BLAS) computations and can provide substantial speed ups for :code:`pymer4` as well as:code:`numpy`. 
 
     .. code-block:: bash
 
-        conda install -c ejolly/label/pre-release -c defaults -c conda-forge pymer4=0.7.3.dev2
+        conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=mkl*"
+
+This isn't recommended for other CPUs (e.g. AMD) as MKL will actually *slow down* computations. Instead you can request OpenBLAS, which is the default when installing :code:`pymer4` from conda-forge. If you want to install this explicitly the following command will work:
+
+    .. code-block:: bash
+
+        conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=openblas*"
 
 
 Using pip

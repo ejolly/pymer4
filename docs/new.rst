@@ -2,13 +2,15 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.7
+-----
+- This version is identical to 0.7.6 but supports :code:`R >= 4.1`
+- Installation is also more flexible and includes instructions for using :code:`conda-forge` and optimized libraries (MKL) for Intel CPUs
+
 0.7.6
 -----
 - **Bug fixes:**
-    - fixes an issue in which a :code:`Lmer` model fit using categorical predictors
-    would be unable to use :code:`.predict` or would return fitted values instead of
-    predictions on new data. random effect and fixed effect index names were lost thanks
-    to Mario Leaonardo Salinas for discovering this issue
+    - fixes an issue in which a :code:`Lmer` model fit using categorical predictors    would be unable to use :code:`.predict` or would return fitted values instead of    predictions on new data. random effect and fixed effect index names were lost thanks to Mario Leaonardo Salinas for discovering this issue
     
 0.7.5
 -----

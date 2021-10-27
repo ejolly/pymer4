@@ -96,7 +96,7 @@ jobs:
           OS: ${{ runner.os }}   
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda build --python=$PY_VER -c defaults -c conda-forge conda
+          conda build --python=$PY_VER -c conda-forge -c defaults conda
           tarball=$(conda build --python=$PY_VER conda --output | tail -1)
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
@@ -112,9 +112,10 @@ jobs:
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c defaults -c conda-forge
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c
+          $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
-          pip install black pytest-cov
+          conda install black pytest-cov -c conda-forge
           conda list
           lscpu
           python -c 'import numpy; numpy.show_config()'
