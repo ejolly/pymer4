@@ -17,6 +17,7 @@ on:
         required: false
         default: false
   release:
+    types: [published]
 
   schedule:
     - cron: '0 0 * * 0'
