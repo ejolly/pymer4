@@ -1,4 +1,4 @@
-name: manual release
+name: manual release pypi
 on: [workflow_dispatch]
 
 env:
