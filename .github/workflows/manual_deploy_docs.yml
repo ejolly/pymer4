@@ -1,5 +1,26 @@
-name: manual release
-on: [workflow_dispatch]
+name: tests & build
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags-ignore:
+      - v[0-9].[0-9].[0-9]  # prevent double runs for vM.N.P releases
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run workflow with ssh debugging'
+        required: false
+        default: false
+  release:
+    types: [published]
+
+  schedule:
+    - cron: '0 0 * * 0'
 
 env:
   PACKAGE_NAME: pymer4
@@ -17,9 +38,10 @@ jobs:
   ci:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         py_ver: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest, macos-11]  # Intel macs
+        os: [ubuntu-latest, macos-11]
 
     outputs:
       # tarballs are py3X job-specific
@@ -75,7 +97,7 @@ jobs:
           OS: ${{ runner.os }}   
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda build --python=$PY_VER -c defaults -c conda-forge conda
+          conda build --python=$PY_VER -c conda-forge -c defaults conda
           tarball=$(conda build --python=$PY_VER conda --output | tail -1)
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
@@ -91,33 +113,33 @@ jobs:
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c defaults -c conda-forge
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
-          pip install black pytest-cov
+          conda install black pytest-cov -c conda-forge
           conda list
           lscpu
           python -c 'import numpy; numpy.show_config()'
           python -c "from pymer4.test_install import test_install; test_install()"
 
-      # 6. Build package for PyPi (only for 3.8 linux which handles deployment)
-      - name: Build for Pypi
+      # 5a. Build docs (only for 3.8 which handles deployment)
+      # Will also run on PRs which serves as another layer of testing
+      - name: Build docs
+        env:
+          PY_VER: ${{ matrix.py_ver }}
         if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS }}
         run: |
           conda activate env_$PY_VER
-          pip install build
-          python -m build --sdist --wheel --outdir dist/
-      
-      # 7. Deploy package to Pypi (only need to do this once on linux)
-      - name: PyPi deploy
-        if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS }}
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          conda install sphinx sphinx_bootstrap_theme sphinx-gallery -c conda-forge
+          cd docs && make clean && make html
+          touch _build/html/.nojekyll
 
-      # 8a. Deploy package to main conda channel (only for 3.8 which handles deployment) but each OS uploads their own and linux uploads for linux and windows
-      - name: Conda main deploy 
+      # 5b. Deploy docs (only for 3.8 which handles deployment)
+      # Only runs when a PR is merged into master or there's a direct push to master
+      - name: Deploy docs
         env:
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
-        run: |
-          echo 'Conda release on main channel'
-          anaconda -t "$ANACONDA_TOKEN" upload $CONDA_BLD_PATH/**/${PACKAGE_NAME}*.tar.bz2 -l "main"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ (matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS) && ((github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event.pull_request.merged && github.base_ref == 'master' && github.head_ref == 'dev')) }}
+        uses: crazy-max/ghaction-github-pages@v2
+        with:
+          target_branch: gh-pages
+          build_dir: docs/_build/html
