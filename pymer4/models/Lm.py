@@ -289,9 +289,10 @@ class Lm(object):
             # Cluster corrected dof (num clusters - num coef)
             # Differs from stats and statsmodels which do num cluster - 1
             # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
-            df = cluster.nunique() - x.shape[1]
+            df = cluster.nunique() - np.linalg.matrix_rank(x)
         else:
-            df = x.shape[0] - x.shape[1]
+            # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
+            df = x.shape[0] - np.linalg.matrix_rank(x)
             if isinstance(weights, str) and wls_dof_correction:
                 if weight_groups.ngroups != 2:
                     w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
@@ -408,6 +409,7 @@ class Lm(object):
         self.rsquared_adj = rsquared_adj(
             self.rsquared, len(res), len(res) - x.shape[1], center_tss
         )
+        # self.rsquared_adj = np.nan
         half_obs = len(res) / 2.0
         ssr = np.dot(res, res.T)
         self.logLike = (-np.log(ssr) * half_obs) - (

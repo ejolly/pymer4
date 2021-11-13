@@ -235,7 +235,8 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
                 res, X, robust_estimator=robust, n_lags=n_lags, cluster=cluster
             )
         else:
-            sigma = np.sqrt(res.T.dot(res) / (X.shape[0] - X.shape[1]))
+            # Use dof calculation in the denominator that accounts for square matrices to avoid 0 division error
+            sigma = np.sqrt(res.T.dot(res) / (X.shape[0] - np.linalg.matrix_rank(X)))
             se = np.sqrt(np.diag(np.linalg.pinv(np.dot(X.T, X)))) * sigma
 
         t = b / se

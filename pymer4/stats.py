@@ -638,6 +638,9 @@ def rsquared_adj(r, nobs, df_res, has_constant=True):
         float: adjusted coefficient of determination
     """
 
+    # Skip calculation if Dof is not a positive number to avoid 0 division error or calculating negative R^2 values
+    if df_res <= 0:
+        return np.nan
     if has_constant:
         return 1.0 - (nobs - 1) / df_res * (1.0 - r)
     else:
