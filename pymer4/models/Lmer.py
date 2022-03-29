@@ -951,7 +951,7 @@ class Lmer(object):
             required_cols = self.design_matrix.columns[1:]
             if not all([col in data.columns for col in required_cols]):
                 raise ValueError(
-                    "Column names do not match all fixed effects model terms!\nThis may be a false error if some predictors are categorical, in which case you can bypass this check by setting skip_checks=True."
+                    "Column names do not match all fixed effects model terms!\nThis may be a false error if some predictors are categorical, in which case you can bypass this check by setting skip_data_checks=True."
                 )
 
         if use_rfx:
