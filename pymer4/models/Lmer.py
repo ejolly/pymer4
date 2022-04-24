@@ -13,7 +13,8 @@ from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.rinterface_lib import callbacks
 
-from rpy2.robjects import numpy2ri
+from rpy2.robjects import numpy2ri, pandas2ri
+from rpy2.robjects.conversion import localconverter
 import rpy2.rinterface as rinterface
 import warnings
 import traceback
@@ -452,13 +453,16 @@ class Lmer(object):
         # rpy2 > 3.4 returns a numpy array that can be empty but has shape (obs x IVs)
         if isinstance(design_matrix, np.ndarray):
             if design_matrix.shape[1] > 0:
-                self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+                self.design_matrix = pd.DataFrame(design_matrix)
                 num_IV = self.design_matrix.shape[1]
             else:
                 num_IV = 0
         # rpy2 < 3.4 returns an R matrix object with a length
         elif len(design_matrix):
-            self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+            with localconverter(robjects.default_converter + pandas2ri.converter):
+                self.design_matrix = robjects.conversion.rpy2py(
+                    base.data_frame(design_matrix)
+                )
             num_IV = self.design_matrix.shape[1]
         else:
             num_IV = 0
@@ -537,9 +541,10 @@ class Lmer(object):
                 )
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = pd.DataFrame(out_summary)
+                with localconverter(robjects.default_converter + pandas2ri.converter):
+                    df = robjects.conversion.rpy2py(out_summary)
                 dfshape = df.shape[1]
-                df.index = out_rownames
+                df.index = list(out_rownames)
 
                 # gaussian
                 if dfshape == 7:
@@ -627,8 +632,9 @@ class Lmer(object):
 
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = pd.DataFrame(out_summary)
-                df.index = out_rownames
+                with localconverter(robjects.default_converter + pandas2ri.converter):
+                    df = robjects.conversion.rpy2py(out_summary)
+                df.index = list(out_rownames)
                 df.columns = [
                     "Estimate",
                     "SE",
@@ -725,8 +731,9 @@ class Lmer(object):
 
         # Random effect variances and correlations
         varcor_NAs = ["NA", "N", robjects.NA_Character]  # NOQA
-        df = pd.DataFrame(base.data_frame(unsum.rx2("varcor")))
-
+        # NOTE: For some reason the rpy2 converter causes a recursion error on rpy2 == 3.5.1, but casting works except the result is transposed and the column names are lost
+        df = pd.DataFrame(base.data_frame(unsum.rx2("varcor"))).T
+        df.columns = ["grp", "var1", "var2", "vcov", "sdcor"]
         ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
@@ -770,9 +777,10 @@ class Lmer(object):
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
-        fixefs = [
-            pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in fixefs
-        ]
+        with localconverter(robjects.default_converter + pandas2ri.converter):
+            fixefs = [
+                robjects.conversion.rpy2py(e).drop(columns=["index"]) for e in fixefs
+            ]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []
@@ -825,14 +833,16 @@ class Lmer(object):
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
-        if len(ranefs) > 1:
-            self.ranef = [
-                pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in ranefs
-            ]
-        else:
-            self.ranef = pd.DataFrame(ranefs[0], index=ranefs[0].index).drop(
-                columns=["index"]
-            )
+        with localconverter(robjects.default_converter + pandas2ri.converter):
+            if len(ranefs) > 1:
+                self.ranef = [
+                    robjects.conversion.rpy2py(e).drop(columns=["index"])
+                    for e in ranefs
+                ]
+            else:
+                self.ranef = robjects.conversion.rpy2py(ranefs[0]).drop(
+                    columns=["index"]
+                )
 
         # Model residuals
         rstring = """
@@ -908,7 +918,9 @@ class Lmer(object):
         )
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
-        return pd.DataFrame(sims)
+        with localconverter(robjects.default_converter + pandas2ri.converter):
+            out = robjects.conversion.rpy2py(sims)
+        return out
 
     def predict(
         self,
@@ -1240,7 +1252,9 @@ class Lmer(object):
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        self.marginal_estimates = pd.DataFrame(base.summary(res)[0])
+        breakpoint()
+        with localconverter(robjects.default_converter + pandas2ri.converter):
+            self.marginal_estimates = robjects.conversion.rpy2py(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
