@@ -1,26 +1,5 @@
 name: manual deploy docs
-on:
-  push:
-    branches:
-      - master
-      - main
-    tags-ignore:
-      - v[0-9].[0-9].[0-9]  # prevent double runs for vM.N.P releases
-  pull_request:
-    branches:
-      - master
-      - main
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: 'Run workflow with ssh debugging'
-        required: false
-        default: false
-  release:
-    types: [published]
-
-  schedule:
-    - cron: '0 0 * * 0'
+on: [workflow_dispatch]
 
 env:
   PACKAGE_NAME: pymer4
