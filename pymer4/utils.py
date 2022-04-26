@@ -147,7 +147,7 @@ def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
         weights = 1 - np.arange(n_lags + 1.0) / (n_lags + 1.0)
 
         # First compute lag 0
-        V = np.diag(vals ** 2)
+        V = np.diag(vals**2)
         meat = weights[0] * np.dot(np.dot(X.T, V), X)
 
         # Now loop over additional lags
@@ -161,7 +161,7 @@ def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
 
     else:
         # Otherwise deal with estimators that modify the same essential operation
-        V = np.diag(vals ** 2)
+        V = np.diag(vals**2)
 
         if robust_estimator == "hc0":
             # No modification of residuals
@@ -412,7 +412,7 @@ def nearestPSD(mat, nit=100):
         return Q * xdiag * Q.T
 
     def _getPs(mat, W=None):
-        W05 = np.matrix(W ** 0.5)
+        W05 = np.matrix(W**0.5)
         return W05.I * _getAplus(W05 * mat * W05) * W05.I
 
     def _getPu(mat, W=None):

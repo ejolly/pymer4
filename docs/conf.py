@@ -85,11 +85,11 @@ autodoc_member_order = "alphabetical"
 master_doc = "index"
 
 # General information about the project.
-project = u"pymer4"
+project = "pymer4"
 import time
 
-copyright = u"2017-{}, Eshin Jolly".format(time.strftime("%Y"))
-author = u"Eshin Jolly"
+copyright = "2017-{}, Eshin Jolly".format(time.strftime("%Y"))
+author = "Eshin Jolly"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -247,7 +247,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "pymer4.tex", u"pymer4 Documentation", u"Eshin Jolly", "manual")
+    (master_doc, "pymer4.tex", "pymer4 Documentation", "Eshin Jolly", "manual")
 ]
 
 
@@ -255,7 +255,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "pymer4", u"pymer4 Documentation", [author], 1)]
+man_pages = [(master_doc, "pymer4", "pymer4 Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -267,7 +267,7 @@ texinfo_documents = [
     (
         master_doc,
         "pymer4",
-        u"pymer4 Documentation",
+        "pymer4 Documentation",
         author,
         "pymer4",
         "One line description of project.",

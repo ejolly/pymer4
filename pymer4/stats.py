@@ -429,7 +429,7 @@ def tost_equivalence(
             vn1 = v1 / n1
             vn2 = v2 / n2
             with np.errstate(divide="ignore", invalid="ignore"):
-                df = (vn1 + vn2) ** 2 / (vn1 ** 2 / (n1 - 1) + vn2 ** 2 / (n2 - 1))
+                df = (vn1 + vn2) ** 2 / (vn1**2 / (n1 - 1) + vn2**2 / (n2 - 1))
             denom = np.sqrt(vn1 + vn2)
         return numerator / denom, df
 
@@ -616,11 +616,11 @@ def rsquared(y, res, has_constant=True):
     """
 
     y_mean = y.mean()
-    rss = np.sum(res ** 2)
+    rss = np.sum(res**2)
     if has_constant:
         tss = np.sum((y - y_mean) ** 2)
     else:
-        tss = np.sum(y ** 2)
+        tss = np.sum(y**2)
     return 1 - (rss / tss)
 
 

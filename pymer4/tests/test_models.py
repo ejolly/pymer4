@@ -156,7 +156,7 @@ def test_gaussian_lmm():
 
     # If the user skips check, but tries to predict with rfx then R will complain so we
     # can check for an exception raised from R rather than pymer
-    with pytest.raises(RRuntimeError):
+    with pytest.raises((RRuntimeError, ValueError)):
         model.predict(X, skip_data_checks=True, use_rfx=True)
 
     # Finally a user can turn off every kind of check in which case we expect circular predictions
