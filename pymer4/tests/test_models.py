@@ -29,6 +29,15 @@ def test_gaussian_lm2():
     assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
     assert model.fixef.shape == (47, 3)
 
+    assert model.rsquared is not None
+    assert model.rsquared_adj is not None
+    assert len(model.rsquared_per_group) == 47
+    assert len(model.rsquared_adj_per_group) == 47
+    assert len(model.fits) == model.data.shape[0]
+    assert len(model.residuals) == model.data.shape[0]
+    assert "fits" in model.data.columns
+    assert "residuals" in model.data.columns
+
     # Test bootstrapping and permutation tests
     model.fit(permute=500, conf_int="boot", n_boot=500, summarize=False)
     assert model.ci_type == "boot (500)"

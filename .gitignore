@@ -16,3 +16,4 @@ dev/
 .coverage
 .vscode/settings.json
 *.key
+pytest.ini
