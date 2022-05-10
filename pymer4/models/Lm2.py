@@ -13,6 +13,7 @@ import seaborn as sns
 from patsy import dmatrices
 from joblib import Parallel, delayed
 from .Lm import Lm
+from ..stats import rsquared, rsquared_adj
 from ..utils import _sig_stars, _permute_sign, _ols_group, _corr_group, _perm_find
 
 
@@ -178,6 +179,7 @@ class Lm2(object):
         if to_corrs:
             # Loop over each group and get semi/partial correlation estimates
             # Reminder len(betas) == len(betas) - 1, from normal OLS, since corr of intercept is not computed
+            # TODO: Update _corr_group like _ols_group below
             betas = par_for(
                 delayed(_corr_group)(
                     self.data,
@@ -195,7 +197,7 @@ class Lm2(object):
                 betas = np.array(betas)
         else:
             # Loop over each group and fit a separate regression
-            betas = par_for(
+            out = par_for(
                 delayed(_ols_group)(
                     self.data,
                     self.formula,
@@ -205,10 +207,17 @@ class Lm2(object):
                 )
                 for i in range(self.data[self.group].nunique())
             )
-            betas = np.array(betas)
+            betas = np.array([e["betas"] for e in out])
+            fits = np.concatenate([e["pred"] for e in out], axis=0)
+            residuals = np.concatenate([e["res"] for e in out], axis=0)
 
+        self.residuals = residuals
+        self.data["residuals"] = residuals
+        self.fits = fits
+        self.data["fits"] = fits
         # Get the model matrix formula from patsy to make it more reliable to set the results dataframe index like Lmer
         _, x = dmatrices(self.formula, self.data, 1, return_type="dataframe")
+        self.design_matrix = x
         # Perform an intercept only regression for each beta
         results = []
         perm_ps = []
@@ -291,20 +300,43 @@ class Lm2(object):
             ]
         self.fitted = True
 
-        # Need to figure out how best to compute predictions and residuals. Should test how Lmer does it, i.e. BLUPs or fixed effects?
-        # Option 1) Use only second-level estimates
-        # Option 2) Use only first-level estimates and make separate predictions per group
-        # self.resid = res
-        # self.data['fits'] = y.squeeze() - res
-        # self.data['residuals'] = res
-
         # Fit statistics
-        # self.rsquared = np.nan
-        # self.rsquared = np.nan
-        # self.rsquared_adj = np.nan
-        # self.logLike = np.nan
-        # self.AIC = np.nan
-        # self.BIC = np.nan
+        if "Intercept" in self.design_matrix.columns:
+            center_tss = True
+        else:
+            center_tss = False
+        # NOTE: This are rudimentary calculations because there are a variety of ways
+        # to compute R^2 metrics for LMM models. Most however use intermediate
+        # calculations from running a "true" MLM like Lmer rather than a two-stage
+        # regression like Lm2. Here we compute the "naive" R^2 over the whole dataset,
+        # and the same metrics on a per-group basis to give the user flexibilty. We
+        # don't compute anything from the second-level fits or residuals since those
+        # are just univariate mean tests.
+
+        # Method 1: "naive" over the whole dataset
+        self.rsquared = rsquared(fits, residuals, center_tss)
+        self.rsquared_adj = rsquared_adj(
+            self.rsquared, len(residuals), len(residuals) - x.shape[1], center_tss
+        )
+
+        # Method 2: calculated separately group. Potentially useful for inspecting 1st
+        # level model fits
+        separate_results = [(e["pred"], e["res"]) for e in out]
+        self.rsquared_per_group = np.array(
+            [rsquared(e[0], e[1], center_tss) for e in separate_results]
+        )
+        self.rsquared_adj_per_group = np.array(
+            [
+                rsquared_adj(
+                    self.rsquared_per_group[i],
+                    len(separate_results[i][0]),
+                    len(separate_results[i][0]) - x.shape[1],
+                    center_tss,
+                )
+                for i in range(len(self.rsquared_per_group))
+            ]
+        )
+
         self.iscorrs = to_corrs
 
         if summarize:

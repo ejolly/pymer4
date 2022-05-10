@@ -5,6 +5,9 @@ Pymer4 Lmer Class
 Main class to wrap R's lme4 library
 """
 
+import os
+
+os.environ["R_HOME"] = "/Users/Esh/anaconda3/envs/pymer4_dev/lib/R"
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
