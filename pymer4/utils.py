@@ -291,7 +291,10 @@ def _ols_group(dat, formula, group_col, group, rank):
         dat = dat.rank()
     y, x = dmatrices(formula, dat, 1, return_type="dataframe")
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
-    return list(b)
+    Y, X = y.to_numpy().squeeze(), x.to_numpy()
+    pred = np.dot(X, b)
+    res = Y - pred
+    return dict(betas=list(b), pred=pred, res=res)
 
 
 def _corr_group(dat, formula, group_col, group, rank, corr_type):
