@@ -58,7 +58,8 @@ class Lmer(object):
         data (pd.DataFrame): model copy of input data
         grps (dict): groups and number of observations per groups recognized by lmer
         design_matrix (pd.DataFrame): model design matrix determined by lmer
-        AIC (float): model akaike information criterion
+        AIC (float): model Akaike information criterion
+        BIC (float): model Bayesian information criterion
         logLike (float): model Log-likelihood
         family (string): model family
         warnings (list): warnings output from R or Python
@@ -93,6 +94,7 @@ class Lmer(object):
         self.data = copy(data)
         self.grps = None
         self.AIC = None
+        self.BIC = None
         self.logLike = None
         self.warnings = []
         self.ranef_var = None
@@ -479,6 +481,7 @@ class Lmer(object):
             )
 
         self.AIC = unsum.rx2("AICtab")[0]
+        self.BIC = stats.BIC(self.model_obj)
         self.logLike = unsum.rx2("logLik")[0]
 
         # First check for lme4 printed messages (e.g. convergence info is usually here instead of in warnings)

@@ -603,7 +603,8 @@ def lrt(models, refit = True):
                         "npar": m.coefs.shape[0],
                         "DF": m.coefs.loc["(Intercept)", "DF"],
                         "AIC": m.AIC,
-                        # "BIC": m.BIC,
+                        "BIC": m.BIC,
+                        "deviance": -2 * m.logLike,
                         "log-likelihood": m.logLike,
                         "P-val": pval,
                     },
@@ -612,7 +613,7 @@ def lrt(models, refit = True):
                 ignore_index=True,
             )
     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
-    out = out[["model", "npar", "log-likelihood", "AIC", "P-val", "Sig"]]
+    out = out[["model", "npar", "log-likelihood", "AIC", "BIC","deviance", "P-val", "Sig"]]
 
     if refitted:
     	print("refitting model(s) with ML (instead of REML)")
