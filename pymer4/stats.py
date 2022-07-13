@@ -595,7 +595,7 @@ def lrt(models, refit = True):
         out = pd.DataFrame()
         for i, m in enumerate(models_list):
             pval = s[i - 1] if i > 0 else np.nan
-            out = out.append(
+            out = pd.concat([out,
                 pd.DataFrame(
                     {
                         "model": m.formula,
@@ -607,7 +607,7 @@ def lrt(models, refit = True):
                         "P-val": pval,
                     },
                     index=[0],
-                ),
+                )],
                 ignore_index=True,
             )
     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
