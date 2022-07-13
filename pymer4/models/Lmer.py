@@ -1023,6 +1023,10 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate summary!")
+        if self._REML:
+            print("Linear mixed model fit by REML [’lmerMod’]")
+        else:
+            print("Linear mixed model fit by maximum likelihood  ['lmerMod']")    
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
