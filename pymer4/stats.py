@@ -552,12 +552,13 @@ def welch_dof(x, y):
 
 def lrt(models, refit = True):
     """
-    Compute a likelihood ratio test between Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
+    Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
 #     Possible additions:
 #     1) Generalize function to perform LRT, or vuong test
 #     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
 #     3) Given a single model expand out to all separate term tests
    Args:
+       models (list): a list of two Lmer models to be compared
        refit (bool): should REML models be refitted as ML before comparison (defaults to True)
 
    Returns:
@@ -567,8 +568,8 @@ def lrt(models, refit = True):
     models_list = copy.deepcopy(models)
     if not isinstance(models_list, list):
         models_list = [models_list]
-    if len(models_list) < 2:
-        raise ValueError("Must have at least 2 models to perform comparison")
+    if len(models_list) <2:
+        raise ValueError("Must have 2 models to perform comparison")
 
     # refit models if needed
     refitted = False
@@ -587,37 +588,34 @@ def lrt(models, refit = True):
     idx = np.argsort(all_params)
     all_params = all_params[idx]
     models_list = np.array(models_list)[idx]
-    model_pairs = list(product(models_list, repeat=2))
-
-    model_pairs = model_pairs[1 : len(models_list)]
-    s = []
-    for p in model_pairs:
-        s.append(_lrt(p))
-        out = pd.DataFrame()
-        for i, m in enumerate(models_list):
-            pval = s[i - 1] if i > 0 else np.nan
-            out = pd.concat([out,
-                pd.DataFrame(
-                    {
-                        "model": m.formula,
-                        "npar": m.coefs.shape[0],
-                        "DF": m.coefs.loc["(Intercept)", "DF"],
-                        "AIC": m.AIC,
-                        "BIC": m.BIC,
-                        "deviance": -2 * m.logLike,
-                        "log-likelihood": m.logLike,
-                        "P-val": pval,
-                    },
-                    index=[0],
-                )],
-                ignore_index=True,
-            )
+    out = pd.DataFrame()
+    for i, m in enumerate(models_list):
+       df = _get_params(m)-(_get_params(models_list[i-1])) if i>0 else np.nan
+       chisq =  ((-2 * models_list[i-1].logLike) - (-2 * m.logLike)) if i > 0 else np.nan
+       pval = _lrt([models_list [index] for index in [i-1,i]]) if i > 0 else np.nan
+       out = pd.concat([out,
+                        pd.DataFrame(
+                            {
+                                "model": m.formula,
+                                "npar": _get_params(m),
+                                "AIC": m.AIC,
+                                "BIC": m.BIC,
+                                "deviance": -2 * m.logLike,
+                                "log-likelihood": m.logLike,
+                                "Chisq": chisq,
+                                "Df": df,
+                                "P-val": pval,
+                            },
+                            index=[0],
+                        )],
+                       ignore_index=True,
+                       )
     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
-    out = out[["model", "npar", "log-likelihood", "AIC", "BIC","deviance", "P-val", "Sig"]]
+    out = out[["model", "npar",  "AIC", "BIC", "log-likelihood","deviance", "Chisq", "Df", "P-val", "Sig"]]
 
     if refitted:
     	print("refitting model(s) with ML (instead of REML)")
-    print(out.fillna(''))
+    return(out.fillna(''))
 
 
 
