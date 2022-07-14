@@ -463,7 +463,7 @@ def _return_t(model):
 
 def _get_params(model):
     """Get number of params in a model."""
-    return model.coefs.shape[0]
+    return model.coefs.shape[0]+ model.ranef_var.shape[0]+(model.ranef_corr.shape[0] if (model.ranef_corr is not None) else 0)
 
 
 def _lrt(tup):
