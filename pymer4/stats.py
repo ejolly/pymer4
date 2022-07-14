@@ -549,37 +549,37 @@ def welch_dof(x, y):
         raise TypeError("Both x and y must be 1d numpy arrays")
 
 
-def lrt(models, refit = True):
+def lrt(models, refit=True):
     """
-    Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
-#     Possible additions:
-#     1) Generalize function to perform LRT, or vuong test
-#     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
-#     3) Given a single model expand out to all separate term tests
-   Args:
-       models (list): a list of two Lmer models to be compared
-       refit (bool): should REML models be refitted as ML before comparison (defaults to True)
+        Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
+    #     Possible additions:
+    #     1) Generalize function to perform LRT, or vuong test
+    #     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
+    #     3) Given a single model expand out to all separate term tests
+       Args:
+           models (list): a list of two Lmer models to be compared
+           refit (bool): should REML models be refitted as ML before comparison (defaults to True)
 
-   Returns:
-       df (pandas.DataFrame): dataframe of the anova results
+       Returns:
+           df (pandas.DataFrame): dataframe of the anova results
 
     """
     models_list = copy.deepcopy(models)
     if not isinstance(models_list, list):
         models_list = [models_list]
-    if len(models_list) <2:
+    if len(models_list) < 2:
         raise ValueError("Must have 2 models to perform comparison")
 
     # refit models if needed
     refitted = False
     if refit:
         for i, m in enumerate(models_list):
-            if (m._REML):
+            if m._REML:
                 refitted = True
                 m.fit(REML=False, summarize=False)
-                models_list[i]=m
+                models_list[i] = m
 
-    #Get number of coefs for each model
+    # Get number of coefs for each model
     all_params = []
     for m in models_list:
         all_params.append(_get_params(m))
@@ -589,34 +589,50 @@ def lrt(models, refit = True):
     models_list = np.array(models_list)[idx]
     out = pd.DataFrame()
     for i, m in enumerate(models_list):
-       df = _get_params(m)-(_get_params(models_list[i-1])) if i>0 else np.nan
-       chisq =  ((-2 * models_list[i-1].logLike) - (-2 * m.logLike)) if i > 0 else np.nan
-       pval = _lrt([models_list [index] for index in [i-1,i]]) if i > 0 else np.nan
-       out = pd.concat([out,
-                        pd.DataFrame(
-                            {
-                                "model": m.formula,
-                                "npar": _get_params(m),
-                                "AIC": m.AIC,
-                                "BIC": m.BIC,
-                                "deviance": -2 * m.logLike,
-                                "log-likelihood": m.logLike,
-                                "Chisq": chisq,
-                                "Df": df,
-                                "P-val": pval,
-                            },
-                            index=[0],
-                        )],
-                       ignore_index=True,
-                       )
+        df = _get_params(m) - (_get_params(models_list[i - 1])) if i > 0 else np.nan
+        chisq = (
+            ((-2 * models_list[i - 1].logLike) - (-2 * m.logLike)) if i > 0 else np.nan
+        )
+        pval = _lrt([models_list[index] for index in [i - 1, i]]) if i > 0 else np.nan
+        out = pd.concat(
+            [
+                out,
+                pd.DataFrame(
+                    {
+                        "model": m.formula,
+                        "npar": _get_params(m),
+                        "AIC": m.AIC,
+                        "BIC": m.BIC,
+                        "deviance": -2 * m.logLike,
+                        "log-likelihood": m.logLike,
+                        "Chisq": chisq,
+                        "Df": df,
+                        "P-val": pval,
+                    },
+                    index=[0],
+                ),
+            ],
+            ignore_index=True,
+        )
     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
-    out = out[["model", "npar",  "AIC", "BIC", "log-likelihood","deviance", "Chisq", "Df", "P-val", "Sig"]]
+    out = out[
+        [
+            "model",
+            "npar",
+            "AIC",
+            "BIC",
+            "log-likelihood",
+            "deviance",
+            "Chisq",
+            "Df",
+            "P-val",
+            "Sig",
+        ]
+    ]
 
     if refitted:
-    	print("refitting model(s) with ML (instead of REML)")
-    return(out.fillna(''))
-
-
+        print("refitting model(s) with ML (instead of REML)")
+    return out.fillna("")
 
 
 def rsquared(y, res, has_constant=True):
