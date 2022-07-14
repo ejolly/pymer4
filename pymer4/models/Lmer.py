@@ -7,7 +7,7 @@ Main class to wrap R's lme4 library
 
 import os
 
-#os.environ["R_HOME"] = "/Users/Esh/anaconda3/envs/pymer4_dev/lib/R"
+# os.environ["R_HOME"] = "/Users/Esh/anaconda3/envs/pymer4_dev/lib/R"
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
@@ -1029,7 +1029,7 @@ class Lmer(object):
         if self._REML:
             print("Linear mixed model fit by REML [’lmerMod’]")
         else:
-            print("Linear mixed model fit by maximum likelihood  ['lmerMod']")    
+            print("Linear mixed model fit by maximum likelihood  ['lmerMod']")
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
