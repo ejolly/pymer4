@@ -480,7 +480,7 @@ class Lmer(object):
                 "The rpy2, lme4, or lmerTest API appears to have changed again. Please file a bug report at https://github.com/ejolly/pymer4/issues with your R, Python, rpy2, lme4, and lmerTest versions and the OS you're running pymer4 on. Apologies."
             )
 
-        #self.AIC = unsum.rx2("AICtab")[0]
+        # self.AIC = unsum.rx2("AICtab")[0]
         # the above is incorrect. The AICtab of summary.lmerMod gives the deviance (which in this context is really
         # -2 LogLik, NOT the AIC
         self.AIC = stats.AIC(self.model_obj)
@@ -1584,3 +1584,104 @@ class Lmer(object):
         if ylabel:
             ax.set_ylabel(ylabel)
         return ax
+
+    def confint(
+        self,
+        parm=None,
+        level=0.95,
+        method="Wald",
+        zeta=None,
+        nsim=500,
+        boot_type="perc",
+        quiet=False,
+        oldnames=False,
+    ):
+        """
+        Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
+        Args:
+            self (Lmer): the Lmer object for which confidence intervals should be computed
+            parm (list of str): parameter names for which intervals are sought. Specified by an integer vector of positions
+             (leave blank to compute ci for all parameters)
+            level (float):  confidence level <1, typically above 0.90
+            method (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot'
+             (parametric bootstrap)
+            zeta (float): (for method = "profile" only:) likelihood cutoff (if not specified, as by default, computed
+             from level in R).
+            nsim (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
+            boot_type (str): bootstrap confidence interval type (one of "perc","basic","norm", as defined in boot_ci in R)
+            quiet (bool): (logical) suppress messages about computationally intensive profiling?
+            oldnames: (logical) use old-style names for variance-covariance parameters, e.g. ".sig01", rather than newer
+             (more informative) names such as "sd_(Intercept)|Subject"?
+
+        Returns:
+            pd.DataFrame: confidence intervals for the parameters of interest
+
+        Examples:
+            The following examples demonstrate how to get different types of confidence intervals.
+
+            The default Wald estimates for all parameters
+
+            >>> model.confint()
+
+            Boostrap estimate for the variance component of the random intercept from factor "Group" and the error
+            variance. You will need more than 100 repeats for a real application
+
+            >>> model.confint(method="boot", nsim=100, parm=["sd_(Intercept)|Group","sigma"])
+
+            Same as above but using oldnames for those variances, which is still the devault in lme4
+
+            >>> model.confint(method="boot", nsim=100, oldnames=True, parm=[".sig01",".sigma"])
+
+        """
+
+        # record messages going to screen
+        r_console = []
+
+        def _f(x):
+            r_console.append(x)
+
+        callbacks.consolewrite_warnerror = _f
+        # create string for parm
+        parm_string = ""
+        if parm is not None:
+            parm_string = """,parm=c('"""
+            for i, this_parm in enumerate(parm):
+                if i != 0:
+                    parm_string = parm_string + """,'"""
+                parm_string = parm_string + this_parm + """'"""
+            parm_string = parm_string + """)"""
+        # create string of command
+        rstring = (
+            """
+                function(model){
+                out_ci <- as.data.frame(confint(model"""
+            + parm_string
+            + """,level="""
+            + str(level)
+            + """,method='"""
+            + method
+            + """'"""
+            + ((""",zeta=""" + str(zeta)) if zeta is not None else """""")
+            + """,nsim="""
+            + str(nsim)
+            + """,boot.type='"""
+            + boot_type
+            + """'"""
+            + """,quiet="""
+            + ("""TRUE""" if quiet else """FALSE""")
+            + """,oldNames="""
+            + ("""TRUE""" if oldnames else """FALSE""")
+            + """))
+            list(out_ci,rownames(out_ci))
+            }"""
+        )
+        confint_func = robjects.r(rstring)
+        out_summary, out_rownames = confint_func(self.model_obj)
+        df = pd.DataFrame(out_summary)
+        df.index = out_rownames
+
+        # restore outputs
+        callbacks.consolewrite_warnerror = consolewrite_warning_backup
+        for message in r_console:
+            print(message)
+        return df
