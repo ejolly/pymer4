@@ -480,7 +480,10 @@ class Lmer(object):
                 "The rpy2, lme4, or lmerTest API appears to have changed again. Please file a bug report at https://github.com/ejolly/pymer4/issues with your R, Python, rpy2, lme4, and lmerTest versions and the OS you're running pymer4 on. Apologies."
             )
 
-        self.AIC = unsum.rx2("AICtab")[0]
+        #self.AIC = unsum.rx2("AICtab")[0]
+        # the above is incorrect. The AICtab of summary.lmerMod gives the deviance (which in this context is really
+        # -2 LogLik, NOT the AIC
+        self.AIC = stats.AIC(self.model_obj)
         self.BIC = stats.BIC(self.model_obj)
         self.logLike = unsum.rx2("logLik")[0]
 
