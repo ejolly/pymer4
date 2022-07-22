@@ -4,7 +4,14 @@ import pandas as pd
 import os
 from pymer4.models import Lmer
 from pymer4.utils import get_resource_path
-from pymer4.stats import cohens_d, perm_test, boot_func, tost_equivalence, _mean_diff, lrt
+from pymer4.stats import (
+    cohens_d,
+    perm_test,
+    boot_func,
+    tost_equivalence,
+    _mean_diff,
+    lrt,
+)
 
 
 def test_cohens_d():
@@ -64,6 +71,7 @@ def test_boot_func():
     assert len(result) == 2
     assert len(result[1]) == 2
 
+
 def test_lrt():
     # read the data and build 3 nexted models
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
@@ -104,13 +112,54 @@ def test_lrt():
     # # now assert they are equal
 
     r_lrt_reml_sub = pd.DataFrame.from_records(
-        np.rec.array([(0, 3., 4832.10121511, 4845.10637787, -2413.05060756, 4826.10121511, '', '', ''),
-                   (1, 4., 4587.9706894, 4605.3109064, -2289.9853447, 4579.9706894, 246.13052571481512, 1.0,
-                    1.8115312634852814e-55),
-                   (2, 5., 4584.81022022, 4606.48549148, -2287.40511011, 4574.81022022, 5.160469174164973, 1.0,
-                    0.02310665453923671)],
-                  dtype=[('index', '<i8'), ('npar', '<f8'), ('AIC', '<f8'), ('BIC', '<f8'), ('log-likelihood', '<f8'),
-                         ('deviance', '<f8'), ('Chisq', 'O'), ('Df', 'O'), ('P-val', 'O')])
+        np.rec.array(
+            [
+                (
+                    0,
+                    3.0,
+                    4832.10121511,
+                    4845.10637787,
+                    -2413.05060756,
+                    4826.10121511,
+                    "",
+                    "",
+                    "",
+                ),
+                (
+                    1,
+                    4.0,
+                    4587.9706894,
+                    4605.3109064,
+                    -2289.9853447,
+                    4579.9706894,
+                    246.13052571481512,
+                    1.0,
+                    1.8115312634852814e-55,
+                ),
+                (
+                    2,
+                    5.0,
+                    4584.81022022,
+                    4606.48549148,
+                    -2287.40511011,
+                    4574.81022022,
+                    5.160469174164973,
+                    1.0,
+                    0.02310665453923671,
+                ),
+            ],
+            dtype=[
+                ("index", "<i8"),
+                ("npar", "<f8"),
+                ("AIC", "<f8"),
+                ("BIC", "<f8"),
+                ("log-likelihood", "<f8"),
+                ("deviance", "<f8"),
+                ("Chisq", "O"),
+                ("Df", "O"),
+                ("P-val", "O"),
+            ],
+        )
     )
 
     pd.testing.assert_frame_equal(r_lrt_reml_sub, r_lrt_reml_sub, check_dtype=False)
@@ -120,16 +169,54 @@ def test_lrt():
     # r_lrt_ml_sub.columns = lrt_ml_sub.columns
 
     r_lrt_ml_sub = pd.DataFrame.from_records(
-        np.rec.array([(0, 3., 4836.69171163, 4849.69687439, -2415.34585582, 4830.69171163, '', '', ''),
-                      (1, 4., 4586.95522083, 4604.29543783, -2289.47761041, 4578.95522083, 251.7364908061154, 1.0,
-                       1.08611087137599e-56),
-                      (2, 5., 4586.10807729, 4607.78334855, -2288.05403865, 4576.10807729, 2.8471435322935577, 1.0,
-                       0.09153644160564649)],
-                     dtype=[('index', '<i8'), ('npar', '<f8'), ('AIC', '<f8'), ('BIC', '<f8'),
-                            ('log-likelihood', '<f8'), ('deviance', '<f8'), ('Chisq', 'O'), ('Df', 'O'),
-                            ('P-val', 'O')])
+        np.rec.array(
+            [
+                (
+                    0,
+                    3.0,
+                    4836.69171163,
+                    4849.69687439,
+                    -2415.34585582,
+                    4830.69171163,
+                    "",
+                    "",
+                    "",
+                ),
+                (
+                    1,
+                    4.0,
+                    4586.95522083,
+                    4604.29543783,
+                    -2289.47761041,
+                    4578.95522083,
+                    251.7364908061154,
+                    1.0,
+                    1.08611087137599e-56,
+                ),
+                (
+                    2,
+                    5.0,
+                    4586.10807729,
+                    4607.78334855,
+                    -2288.05403865,
+                    4576.10807729,
+                    2.8471435322935577,
+                    1.0,
+                    0.09153644160564649,
+                ),
+            ],
+            dtype=[
+                ("index", "<i8"),
+                ("npar", "<f8"),
+                ("AIC", "<f8"),
+                ("BIC", "<f8"),
+                ("log-likelihood", "<f8"),
+                ("deviance", "<f8"),
+                ("Chisq", "O"),
+                ("Df", "O"),
+                ("P-val", "O"),
+            ],
+        )
     )
 
-
     pd.testing.assert_frame_equal(r_lrt_ml_sub, r_lrt_ml_sub, check_dtype=False)
-
