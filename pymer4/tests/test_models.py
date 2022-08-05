@@ -204,6 +204,20 @@ def test_gaussian_lmm():
     assert isinstance(out, pd.DataFrame)
     assert out.shape == (model.data.shape[0], 2)
 
+    # Test confint
+    # Wald confidence interval
+    wald_confint = model.confint()
+    assert isinstance(wald_confint, pd.DataFrame)
+    assert wald_confint.shape == (8, 2)
+    # there should be no estimates for the random effects
+    assert wald_confint["2.5 %"].isna().sum() == 5
+    # bootstrapped confidence intervals
+    boot_confint = model.confint(method="boot", nsim=10)
+    assert isinstance(boot_confint, pd.DataFrame)
+    assert boot_confint.shape == (8, 2)
+    # ci for random effects should be estimates by bootstrapping
+    assert boot_confint["2.5 %"].isna().sum() == 0
+
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
 
