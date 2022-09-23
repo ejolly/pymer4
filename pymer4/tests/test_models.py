@@ -218,7 +218,9 @@ def test_gaussian_lmm():
 
 
 def test_contrasts():
-    df = sns.load_dataset("gammas").rename(columns={"BOLD signal": "bold"})
+    df = pd.read_csv(os.path.join(get_resource_path(), "gammas.csv")).rename(
+        columns={"BOLD signal": "bold"}
+    )
     grouped_means = df.groupby("ROI")["bold"].mean()
     model = Lmer("bold ~ ROI + (1|subject)", data=df)
 
