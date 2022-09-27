@@ -1,8 +1,9 @@
 from __future__ import division
 import numpy as np
 import pandas as pd
+import pytest
 import os
-from pymer4.models import Lmer
+from pymer4.models import Lmer, Lm2
 from pymer4.utils import get_resource_path
 from pymer4.stats import (
     cohens_d,
@@ -81,6 +82,12 @@ def test_lrt():
     model_sub.fit(summarize=False)
     model_sub2 = Lmer("DV ~ 1+ (1|Group)", data=df)
     model_sub2.fit(summarize=False)
+
+    # Can only compare Lmer models
+    lm_model = Lm2("DV ~ IV3 + IV2", group="Group", data=df)
+    with pytest.raises(TypeError):
+        lrt([model, lm_model])
+
     # lrt test with REML (i.e. WITHOUT refitting the models)
     lrt_reml = lrt([model, model_sub, model_sub2], refit=False)
     # the order in which we give the models should not affect the output

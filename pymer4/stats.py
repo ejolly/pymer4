@@ -20,6 +20,7 @@ from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
 from itertools import product
+from pymer4.models import Lmer
 
 from pymer4.utils import (
     _check_random_state,
@@ -569,6 +570,8 @@ def lrt(models, refit=True):
         models_list = [models_list]
     if len(models_list) < 2:
         raise ValueError("Must have 2 models to perform comparison")
+    if not all(list(map(lambda m: isinstance(m, Lmer), models_list))):
+        raise TypeError("All models are not Lmer")
 
     # refit models if needed
     refitted = False
