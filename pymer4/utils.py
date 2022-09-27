@@ -11,6 +11,7 @@ __all__ = [
     "_robust_estimator",
     "_whiten_wls",
     "_ols",
+    "_logregress",
     "_chunk_perm_ols",
     "_permute_sign",
     "_chunk_boot_ols_coefs",
@@ -29,8 +30,9 @@ import os
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
-from scipy.stats import chi2
+from scipy.stats import chi2, t, norm
 from rpy2.robjects.packages import importr
+from sklearn.linear_model import LogisticRegression
 
 base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
@@ -399,6 +401,39 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
         return Y - np.dot(X, b)
     else:
         return b
+
+
+def _logregress(x, y, all_stats=True):
+    # Design matrix already has intercept. We want no regularization and the newton solver to match as closely with R
+    model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
+    _ = model.fit(x, y)
+    b = model.coef_
+
+    # Inference implementation from: Vallat, R. (2018). Pingouin: statistics in Python. Journal of Open Source Software, 3(31), 1026, https://doi.org/10.21105/joss.01026
+    # Compute the fisher information matrix
+    num_feat = x.shape[1]
+    denom = 2 * (1 + np.cosh(model.decision_function(x)))
+    denom = np.tile(denom, (num_feat, 1)).T
+    fim = (x / denom).T @ x
+    crao = np.linalg.pinv(fim)
+
+    # Standard error and Z-scores
+    se = np.sqrt(np.diag(crao))
+    z = b / se
+
+    # Two-tailed p-values
+    p = 2 * norm.sf(np.fabs(z))
+
+    # Wald Confidence intervals
+    # In R: this is equivalent to confint.default(model)
+    # Note that confint(model) will however return the profile CI
+    crit = norm.ppf(1 - 0.05 / 2)
+    ll = b - crit * se
+    ul = b + crit * se
+
+    # TODO: need to convert log odds and probs. See Lmer
+    if all_stats:
+        return b, ll, ul, se, z, p
 
 
 def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):

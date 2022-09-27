@@ -54,11 +54,9 @@ class Lm(object):
     def __init__(self, formula, data, family="gaussian"):
 
         self.family = family
-        # implemented_fams = ['gaussian','binomial']
-        if self.family != "gaussian":
-            raise NotImplementedError(
-                "Currently only linear (family ='gaussian') models supported! "
-            )
+        implemented_fams = ["gaussian", "binomial"]
+        if self.family not in implemented_fams:
+            raise NotImplementedError(f"family must be one of: {implemented_fams}")
         self.fitted = False
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
@@ -97,7 +95,7 @@ class Lm(object):
         cluster=None,
         weights=None,
         wls_dof_correction=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
@@ -169,6 +167,14 @@ class Lm(object):
 
         """
 
+        # Guard against lack of feature parity between log and lin regress
+        if self.family == "binomial" and (
+            robust or permute or weights is not None or conf_int != "standard"
+        ):
+            raise ValueError(
+                "Logistic regression currently only supports standard parametric inference"
+            )
+
         # Alllow summary or summarize for compatibility
         if "summary" in kwargs and "summarize" in kwargs:
             raise ValueError(
@@ -236,6 +242,10 @@ class Lm(object):
                         )
                     )
 
+        elif self.family == "binomial":
+            # TODO: write me
+            pass
+
         self.ci_type = (
             conf_int + " (" + str(n_boot) + ")" if conf_int == "boot" else conf_int
         )
@@ -275,123 +285,136 @@ class Lm(object):
         y, x = dmatrices(self.formula, ddat, 1, return_type="dataframe")
         self.design_matrix = x
 
-        # Compute standard estimates
-        b, se, t, res = _ols(
-            x,
-            y,
-            robust,
-            all_stats=True,
-            n_lags=n_lags,
-            cluster=cluster,
-            weights=weight_vals,
-        )
-        if cluster is not None:
-            # Cluster corrected dof (num clusters - num coef)
-            # Differs from stats and statsmodels which do num cluster - 1
-            # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
-            df = cluster.nunique() - np.linalg.matrix_rank(x)
+        # Logistic Regression
+        if self.family == "binomial":
+            b, oddratio, prob, se, t, res = _logregress(x, y, all_stats=True)
+
+            # TODO: finish me
+
+        # Linear Regression
         else:
-            # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
-            df = x.shape[0] - np.linalg.matrix_rank(x)
-            if isinstance(weights, str) and wls_dof_correction:
-                if weight_groups.ngroups != 2:
-                    w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
-                    warnings.warn(w)
-                    self.warnings.append(w)
-                else:
-                    welch_ingredients = np.array(
-                        self.data.groupby(weights)[dv]
-                        .apply(_welch_ingredients)
-                        .values.tolist()
-                    )
-                    df = (
-                        np.power(welch_ingredients[:, 0].sum(), 2)
-                        / welch_ingredients[:, 1].sum()
-                    )
-
-        p = 2 * (1 - t_dist.cdf(np.abs(t), df))
-        df = np.array([df] * len(t))
-        sig = np.array([_sig_stars(elem) for elem in p])
-
-        if conf_int == "boot":
-
-            # Parallelize bootstrap computation for CIs
-            par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
-
-            # To make sure that parallel processes don't use the same random-number generator pass in seed (sklearn trick)
-            seeds = np.random.randint(np.iinfo(np.int32).max, size=n_boot)
-
-            # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
-            boot_betas = par_for(
-                delayed(_chunk_boot_ols_coefs)(
-                    dat=self.data, formula=self.formula, weights=weights, seed=seeds[i]
-                )
-                for i in range(n_boot)
+            # Compute standard estimates
+            b, se, t, res = _ols(
+                x,
+                y,
+                robust,
+                all_stats=True,
+                n_lags=n_lags,
+                cluster=cluster,
+                weights=weight_vals,
             )
+            if cluster is not None:
+                # Cluster corrected dof (num clusters - num coef)
+                # Differs from stats and statsmodels which do num cluster - 1
+                # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
+                df = cluster.nunique() - np.linalg.matrix_rank(x)
+            else:
+                # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
+                df = x.shape[0] - np.linalg.matrix_rank(x)
+                if isinstance(weights, str) and wls_dof_correction:
+                    if weight_groups.ngroups != 2:
+                        w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
+                        warnings.warn(w)
+                        self.warnings.append(w)
+                    else:
+                        welch_ingredients = np.array(
+                            self.data.groupby(weights)[dv]
+                            .apply(_welch_ingredients)
+                            .values.tolist()
+                        )
+                        df = (
+                            np.power(welch_ingredients[:, 0].sum(), 2)
+                            / welch_ingredients[:, 1].sum()
+                        )
 
-            boot_betas = np.array(boot_betas)
-            ci_u = np.percentile(boot_betas, 97.5, axis=0)
-            ci_l = np.percentile(boot_betas, 2.5, axis=0)
-
-        else:
-            # Otherwise we're doing parametric CIs
-            ci_u = b + t_dist.ppf(0.975, df) * se
-            ci_l = b + t_dist.ppf(0.025, df) * se
-
-        if permute:
-            # Permuting will change degrees of freedom to num_iter and p-values
-            # Parallelize computation
-            # Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??
-            # _chunk_perm_ols -> _ols -> _robust_estimator
-            if robust:
-                n_jobs = 1
-            par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
-            seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
-            perm_ts = par_for(
-                delayed(_chunk_perm_ols)(
-                    x=x,
-                    y=y,
-                    robust=robust,
-                    n_lags=n_lags,
-                    cluster=cluster,
-                    weights=weights,
-                    seed=seeds[i],
-                )
-                for i in range(permute)
-            )
-            perm_ts = np.array(perm_ts)
-
-            p = []
-            for col, fit_t in zip(range(perm_ts.shape[1]), t):
-                p.append(_perm_find(perm_ts[:, col], fit_t))
-            p = np.array(p)
-            df = np.array([permute] * len(p))
+            p = 2 * (1 - t_dist.cdf(np.abs(t), df))
+            df = np.array([df] * len(t))
             sig = np.array([_sig_stars(elem) for elem in p])
 
-        # Make output df
-        results = np.column_stack([b, ci_l, ci_u, se, df, t, p, sig])
-        results = pd.DataFrame(results)
-        results.index = x.columns
-        results.columns = [
-            "Estimate",
-            "2.5_ci",
-            "97.5_ci",
-            "SE",
-            "DF",
-            "T-stat",
-            "P-val",
-            "Sig",
-        ]
-        results[
-            ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-        ] = results[
-            ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-        ].apply(
-            pd.to_numeric, args=("coerce",)
-        )
+            if conf_int == "boot":
 
-        if permute:
-            results = results.rename(columns={"DF": "Num_perm", "P-val": "Perm-P-val"})
+                # Parallelize bootstrap computation for CIs
+                par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+
+                # To make sure that parallel processes don't use the same random-number generator pass in seed (sklearn trick)
+                seeds = np.random.randint(np.iinfo(np.int32).max, size=n_boot)
+
+                # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
+                boot_betas = par_for(
+                    delayed(_chunk_boot_ols_coefs)(
+                        dat=self.data,
+                        formula=self.formula,
+                        weights=weights,
+                        seed=seeds[i],
+                    )
+                    for i in range(n_boot)
+                )
+
+                boot_betas = np.array(boot_betas)
+                ci_u = np.percentile(boot_betas, 97.5, axis=0)
+                ci_l = np.percentile(boot_betas, 2.5, axis=0)
+
+            else:
+                # Otherwise we're doing parametric CIs
+                ci_u = b + t_dist.ppf(0.975, df) * se
+                ci_l = b + t_dist.ppf(0.025, df) * se
+
+            if permute:
+                # Permuting will change degrees of freedom to num_iter and p-values
+                # Parallelize computation
+                # Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??
+                # _chunk_perm_ols -> _ols -> _robust_estimator
+                if robust:
+                    n_jobs = 1
+                par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+                seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
+                perm_ts = par_for(
+                    delayed(_chunk_perm_ols)(
+                        x=x,
+                        y=y,
+                        robust=robust,
+                        n_lags=n_lags,
+                        cluster=cluster,
+                        weights=weights,
+                        seed=seeds[i],
+                    )
+                    for i in range(permute)
+                )
+                perm_ts = np.array(perm_ts)
+
+                p = []
+                for col, fit_t in zip(range(perm_ts.shape[1]), t):
+                    p.append(_perm_find(perm_ts[:, col], fit_t))
+                p = np.array(p)
+                df = np.array([permute] * len(p))
+                sig = np.array([_sig_stars(elem) for elem in p])
+
+            # Make output df
+            results = np.column_stack([b, ci_l, ci_u, se, df, t, p, sig])
+            results = pd.DataFrame(results)
+            results.index = x.columns
+            results.columns = [
+                "Estimate",
+                "2.5_ci",
+                "97.5_ci",
+                "SE",
+                "DF",
+                "T-stat",
+                "P-val",
+                "Sig",
+            ]
+            results[
+                ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
+            ] = results[
+                ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
+            ].apply(
+                pd.to_numeric, args=("coerce",)
+            )
+
+            if permute:
+                results = results.rename(
+                    columns={"DF": "Num_perm", "P-val": "Perm-P-val"}
+                )
 
         self.coefs = results
         self.fitted = True
