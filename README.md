@@ -28,6 +28,10 @@ The goal of this branch is to offer a complete version of `pymer4` with **no R d
 
 However, reaching feature parity with the release version of pymer4 (e.g. a variety of automatic contrasts computations, post-hoc tests, etc) will likely take sometime and happen gradually. Until then, releases on the [main branch](https://github.com/ejolly/pymer4) or `pypi` will continue to be powered by `R`. 
 
+## Development
+
+One other major difference is that this branch uses [poetry](https://python-poetry.org/) for package and environment installation, build, and deployment. To work with this branch locally run `curl -sSL https://install.python-poetry.org | python` to install poetry. Then `poetry install` from within this repo to setup a virtual environment with all dependencies in `.venv`. You can then use `poetry run pytest` to run the test suite.
+
 ## Contributing
 
 Contributions are *always welcome*!  
