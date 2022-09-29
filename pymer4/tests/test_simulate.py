@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 from pymer4.models import Lm, Lmer
 from pymer4.simulate import simulate_lm, simulate_lmm
+import pytest
 
 
 def test_simulate_lm():
@@ -38,6 +39,7 @@ def test_simulate_lm():
     assert (np.abs(m.coefs.iloc[0, 0] - coef_vals[0]) < 1).all()
 
 
+@pytest.mark.skip()
 def test_simulate_lmm():
 
     # Simulate some data

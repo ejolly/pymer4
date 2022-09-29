@@ -73,6 +73,7 @@ def test_boot_func():
     assert len(result[1]) == 2
 
 
+@pytest.mark.skip()
 def test_lrt():
     # read the data and build 3 nexted models
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))

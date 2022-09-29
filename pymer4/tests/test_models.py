@@ -7,8 +7,7 @@ from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
 import pytest
-
-# import re
+import re
 
 np.random.seed(10)
 
@@ -140,6 +139,7 @@ def test_gaussian_lmm():
     # Test simulate
 
 
+@pytest.mark.skip()
 def test_contrasts():
     df = pd.read_csv(os.path.join(get_resource_path(), "gammas.csv")).rename(
         columns={"BOLD signal": "bold"}
@@ -177,23 +177,7 @@ def test_contrasts():
     assert np.allclose(model.coefs.iloc[1, 0], custom_contrast)
 
 
-def test_post_hoc():
-    np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    model = Lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df, family="gaussian")
-    model.fit(
-        factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False
-    )
-
-    marginal, contrasts = model.post_hoc(marginal_vars="IV3", p_adjust="dunnet")
-    assert marginal.shape[0] == 3
-    assert contrasts.shape[0] == 3
-
-    marginal, contrasts = model.post_hoc(marginal_vars=["IV3", "DV_l"])
-    assert marginal.shape[0] == 6
-    assert contrasts.shape[0] == 15
-
-
+@pytest.mark.skip()
 def test_logistic_lmm():
 
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
@@ -234,19 +218,7 @@ def test_logistic_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_anova():
-
-    np.random.seed(1)
-    data = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    data["DV_l2"] = np.random.randint(0, 4, data.shape[0])
-    model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=data)
-    model.fit(summarize=False)
-    out = model.anova()
-    assert out.shape == (3, 7)
-    out = model.anova(force_orthogonal=True)
-    assert out.shape == (3, 7)
-
-
+@pytest.mark.skip()
 def test_poisson_lmm():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
@@ -269,6 +241,7 @@ def test_poisson_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
+@pytest.mark.skip()
 def test_gamma_lmm():
 
     np.random.seed(1)
@@ -292,6 +265,7 @@ def test_gamma_lmm():
     # assert model.fixef[1].shape == (3, 2)
 
 
+@pytest.mark.skip()
 def test_inverse_gaussian_lmm():
 
     np.random.seed(1)
@@ -316,27 +290,24 @@ def test_inverse_gaussian_lmm():
 
 
 # all or prune to suit
-# tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
-# tests_ = [
-#     test_gaussian_lm2,
-#     test_gaussian_lm,
-#     test_gaussian_lmm,
-#     test_post_hoc,
-#     test_logistic_lmm,
-#     test_anova,
-#     test_poisson_lmm,
-#     test_gamma_lmm,
-#     test_inverse_gaussian_lmm,
-#     test_lmer_opt_passing,
-#     test_glmer_opt_passing,
-# ]
+tests_ = [eval(v) for v in locals() if re.match(r"^test_", str(v))]
+tests_ = [
+    test_gaussian_lm2,
+    test_gaussian_lm,
+    test_gaussian_lmm,
+    test_logistic_lmm,
+    test_poisson_lmm,
+    test_gamma_lmm,
+    test_inverse_gaussian_lmm,
+]
 
 
-# @pytest.mark.parametrize("model", tests_)
-# def test_Pool(model):
-#     from multiprocessing import get_context
+@pytest.mark.skip()
+@pytest.mark.parametrize("model", tests_)
+def test_Pool(model):
+    from multiprocessing import get_context
 
-#     # squeeze model functions through Pool pickling
-#     print("Pool", model.__name__)
-#     with get_context("spawn").Pool(1) as pool:
-#         _ = pool.apply(model, [])
+    # squeeze model functions through Pool pickling
+    print("Pool", model.__name__)
+    with get_context("spawn").Pool(1) as pool:
+        _ = pool.apply(model, [])
