@@ -41,8 +41,8 @@ class Lmer(object):
         ranef_var (pd.DataFrame): random effects variances
         ranef_corr(pd.DataFrame): random effects correlations
         residuals (numpy.ndarray): model residuals
-        fits (numpy.ndarray): model fits/predictions
-        model_obj (lmer model): rpy2 lmer model object
+        fits (arviz.InfereceData): xarray inference data
+        model_obj (bambi model): bambi model object
         factors (dict): factors used to fit the model if any
 
     """
@@ -50,17 +50,16 @@ class Lmer(object):
     def __init__(self, formula, data, family="gaussian", **bambi_kwargs):
 
         self.family = family
-        implemented_fams = [
-            "gaussian",
-            "binomial",
-            "gamma",
-            "inverse_gaussian",
-            "poisson",
-        ]
+        implemented_fams = ["gaussian"]
+        # implemented_fams = [
+        #     "gaussian",
+        #     "binomial",
+        #     "gamma",
+        #     "inverse_gaussian",
+        #     "poisson",
+        # ]
         if self.family not in implemented_fams:
-            raise ValueError(
-                "Family must be one of: gaussian, binomial, gamma, inverse_gaussian or poisson!"
-            )
+            raise ValueError(f"Family must be one of: {implemented_fams}!")
         self.fitted = False
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
@@ -85,6 +84,9 @@ class Lmer(object):
         self.sig_type = None
         self.factors_prev_ = None
         self.contrasts = None
+        self.backend = None
+        self.draws = 2000
+        self.tune = 1000
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(
@@ -243,13 +245,21 @@ class Lmer(object):
     ):
 
         inference_method = bambi_kwargs.pop("inference_method", "nuts_numpyro")
-        draws = bambi_kwargs.pop("draws", 2000)
-        tune = bambi_kwargs.pop("tune", 1000)
+        draws = bambi_kwargs.pop("draws", self.draws)
+        tune = bambi_kwargs.pop("tune", self.tune)
+        # Different backends have different kwarg names so we need to build this dict programmatically
+        additional_kwargs = dict()
+        if inference_method == "nuts_numpyro":
+            additional_kwargs["progress_bar"] = False
+            self.backend = "Numpyro/Jax NUTS Sampler"
+        else:
+            additional_kwargs["progressbar"] = False
+            self.backend = "PyMC MCMC"
         self.fits = self.model_obj.fit(
             draws=draws,
             inference_method=inference_method,
             tune=tune,
-            progress_bar=False,
+            **additional_kwargs,
         )
         self.coefs = az.summary(
             self.fits,
@@ -269,7 +279,7 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
-        self.fixefs = az.summary(
+        self.fixef = az.summary(
             self.fits, kind="all", var_names=["|"], filter_vars="like", hdi_prob=0.95
         ).rename(
             columns={
@@ -284,11 +294,11 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         # Filter out fixefs variances manually as the az.summary still includes them
-        to_remove = self.fixefs.filter(like="_sigma", axis=0).index
-        self.fixefs = self.fixefs[~self.fixefs.index.isin(to_remove)]
+        to_remove = self.fixef.filter(like="_sigma", axis=0).index
+        self.fixef = self.fixef[~self.fixef.index.isin(to_remove)]
 
         # Variance of ranfx
-        self.ranef_vars = az.summary(
+        self.ranef_var = az.summary(
             self.fits,
             kind="all",
             var_names=["_sigma"],
@@ -307,7 +317,7 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         self.fitted = True
-        print(self.ranef_vars)
+        print(self.ranef_var)
         # TODO: add warnings for RG stat > 1.05
         return self.coefs
 
@@ -337,15 +347,21 @@ class Lmer(object):
             **kwargs,
         )
 
-    def plot_summary(self, kind="trace", params="coefs", **kwargs):
+    def plot_summary(self, kind="trace", params="coefs", ci=95, **kwargs):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to plot summary!")
+
+        hdi_prob = kwargs.pop("ci", 95) / 100
+        kwargs.update({"hdi_prob": hdi_prob})
 
         if kind == "priors":
             return self.plot_priors(**kwargs)
 
         if kind in ["ppc", "yhat"]:
+            _ = kwargs.pop("hdi_prob", None)
+            # Generate samples for plot
+            _ = self.model_obj.predict(self.fits, kind="pps")
             return az.plot_ppc(self.fits, **kwargs)
 
         if params in ["coefs", "fixefs"]:
@@ -360,9 +376,16 @@ class Lmer(object):
             var_names = None
 
         if kind == "trace":
+            if "combined" not in kwargs:
+                kwargs.update({"combined": False})
+            _ = kwargs.pop("hdi_prob", None)
             plot_func = az.plot_trace
-        elif kind in ["forest", "summary"]:
+        elif kind in ["forest", "summary", "ridge"]:
+            if "combined" not in kwargs:
+                kwargs.update({"combined": True})
             plot_func = az.plot_forest
+            if kind == "ridge":
+                kwargs.update({"kind": "ridgeplot"})
         elif kind in ["posterior", "posteriors"]:
             plot_func = az.plot_posterior
         else:
@@ -445,10 +468,10 @@ class Lmer(object):
             raise RuntimeError("Model must be fitted to generate summary!")
 
         # TODO: Print backend info here
-        print("Linear mixed model fit by maximum likelihood  ['lmerMod']")
+        print(f"Linear mixed model fit by: {self.backend}")
 
         print("Formula: {}\n".format(self.formula))
-        print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
+        print("Family: {}\n".format(self.family))
         print(
             "Number of observations: %s\t Groups: %s\n"
             % (self.data.shape[0], self.grps)

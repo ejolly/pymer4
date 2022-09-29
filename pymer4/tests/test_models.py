@@ -8,6 +8,8 @@ from scipy.stats import ttest_ind
 import os
 import pytest
 import re
+from bambi import load_data
+import matplotlib.pyplot as plt
 
 np.random.seed(10)
 
@@ -99,6 +101,27 @@ def test_gaussian_lm():
 def test_gaussian_lmm():
 
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
+
+    # Test against lme4 model in tutorial 1 notebook
+    model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
+    coefs = model.fit()
+    assert coefs.loc["Intercept", "2.5_ci"] > 4.5
+    assert coefs.loc["Intercept", "97.5_ci"] < 16
+    assert coefs.loc["IV2", "2.5_ci"] > 0.5
+    assert coefs.loc["IV2", "97.5_ci"] < 0.9
+
+    # Plotting
+    model.plot_summary()
+    model.plot_summary(kind="trace")
+    model.plot_summary(kind="priors")
+    model.plot_summary(kind="ppc")
+    model.plot_summary(kind="forest", params="ranefs", ci=90)
+    model.plot_summary(kind="ridge")
+    model.plot_summary(kind="posterior")
+
+    plt.close("all")
+
+    # Test shape works with random items
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
 
     assert model.design_matrix is not None
@@ -109,11 +132,20 @@ def test_gaussian_lmm():
         df.Group.nunique() * 2 + df.IV3.nunique(),
     )
 
-    _ = model.fit(random_seed=10)
+    _ = model.fit()
 
     assert model.coefs.shape == (3, 6)
-    assert model.fixefs.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
-    assert model.ranef_vars.shape == (4, 6)
+    assert model.fixef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
+    assert model.ranef_var.shape == (4, 6)
+
+    # Fit check against example on bambi website
+    data = load_data("sleepstudy")
+    model = Lmer("Reaction ~ 1 + Days + (Days | Subject)", data)
+    coefs = model.fit()
+    assert coefs.loc["Intercept", "2.5_ci"] > 233
+    assert coefs.loc["Intercept", "97.5_ci"] < 267
+    assert coefs.loc["Days", "2.5_ci"] > 6.5
+    assert coefs.loc["Days", "97.5_ci"] < 14
 
     # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
     # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
