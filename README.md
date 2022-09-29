@@ -8,50 +8,25 @@
 ![Python Versions](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ejolly/pymer4/issues)
 
-# Pymer4
+# Pymer4 with Bambi/PyMC Backend
+This branch uses [Bambi](https://bambinos.github.io/bambi/main/index.html) as a backend for `Lmer` models instead of `lme4` in `R`. Bambi is itself layer of abstraction on top of the [PyMC probabilistic inference toolbox](https://www.pymc.io/welcome.html). The appeal of going with Bambi instead of PyMC directly is because it offers a lot of "primitives" that would otherwise be tedious to rewrite, e.g.
+- a formula-based modeling building interface
+- automatic calculation of "weakly informative" priors scaled to the data <- this alone is a huge benefit for adoption making comparisons and the transition between frequentist/maximum-likelihood  bayesian estimation much easier
+- support for categorical predictors
+- tight integration with [Xarray](https://docs.xarray.dev/en/stable/) data structures and the [Arviz](https://arviz-devs.github.io/arviz/) plotting library
 
-❗️⚠️ **[Contributors wanted](https://github.com/ejolly/pymer4/issues/61)** ⚠️❗️
+ The current implementation is a proof-of-concept and defaults to the [numpyro NUTS sampler](https://num.pyro.ai/en/stable/) powered by [jax](https://jax.readthedocs.io/en/latest/) as it seems to be the fastest without relying on variational inference.
 
-Pymer4 is a statistics library for estimating various regression and multi-level models in Python. Love [lme4](https://cran.r-project.org/web/packages/lme4/index.html) in R, but prefer to work in the scientific Python ecosystem? This package has got you covered!
+# Goal
+The goal of this branch is to offer a complete version of `pymer4` with **no R dependencies** and **minimal changes** to the current API. Overtime this would
+- dramatically reduce the maintenance burden for `pymer4`
+- offer and much simpler installation path for users, e.g. `pip` only installation with no `conda` no longer required
+- create new opportunities for integrating `pymer4` with other technologies, e.g.
+  - embedding in websites with [Pyodide](https://pyodide.org/en/stable/);  PyMC is already [compatible](https://www.pymc.io/welcome.html) 
+  - speeding up inference with [JIT GPU compilation](https://jax.readthedocs.io/en/latest/notebooks/quickstart.html)  
+- present the opportunity for additional community maintainer of the current R-backend for `pymer4` 
 
-`pymer4` provides a clean interface that hides the back-and-forth code required when moving between R and Python. In other words, you can work completely in Python, never having to deal with R, but get (most) of lme4’s goodness. This is accomplished using [rpy2](hhttps://rpy2.github.io/doc/latest/html/index.html/) to interface between langauges.
-
-Additionally `pymer4` can fit various additional regression models with some bells, such as robust standard errors, and two-stage regression (summary statistics) models. See the features page for more information.
-
-**TL;DR** this package is your new simple Pythonic drop-in replacement for `lm()` or `glmer()` in R.
-
-For example:
-
-```python
-# Assuming you have a pandas dataframe in tidy/long format
-# with DV and IV columns for dependent/outcome vars and
-# independent/predictor vars 
-
-model = Lmer('DV ~ IV1 + IV2 + (IV+IV2|Group)', data=dataframe)
-
-# Fit and print an R/statsmodels style summary 
-# with t/z-tests, CIs, and p-values
-model.fit()
-
-# Access model attributes
-model.BIC
-model.residuals
-
-# Get fitted parameters
-model.coef # population parameters
-model.fixef # group/cluster estimates (BLUPs)
-model.ranef # group/cluster deviates
-```
-
-## Documentation
-
-Check out the [documentation site](http://eshinjolly.com/pymer4/) for detailed tutorial examples, API documentation, and installation instructions!
-
-
-## Installation
-
-Installing via [Anaconda](https://www.anacnda.com/products/individual) is the preferred installation method. Follow the directions [here](https://eshinjolly.com/pymer4/installation.html).  
-
+However, reaching feature parity with the release version of pymer4 (e.g. a variety of automatic contrasts computations, post-hoc tests, etc) will likely take sometime and happen gradually. Until then, releases on the [main branch](https://github.com/ejolly/pymer4) or `pypi` will continue to be powered by `R`. 
 
 ## Contributing
 
