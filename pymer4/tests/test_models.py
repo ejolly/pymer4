@@ -7,16 +7,10 @@ from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
 import pytest
-import seaborn as sns
-from rpy2.rinterface_lib.embedded import RRuntimeError
 
 # import re
 
 np.random.seed(10)
-
-os.environ[
-    "KMP_DUPLICATE_LIB_OK"
-] = "True"  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
 
 
 def test_gaussian_lm2():
@@ -165,8 +159,6 @@ def test_gaussian_lmm():
 
     # If the user skips check, but tries to predict with rfx then R will complain so we
     # can check for an exception raised from R rather than pymer
-    with pytest.raises((RRuntimeError, ValueError)):
-        model.predict(X, skip_data_checks=True, use_rfx=True)
 
     # Finally a user can turn off every kind of check in which case we expect circular predictions
     pop_preds = model.predict(model.data, use_rfx=False, verify_predictions=False)

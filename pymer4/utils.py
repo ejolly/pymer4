@@ -33,12 +33,7 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrices
 from scipy.stats import chi2
-from rpy2.robjects.packages import importr
-from rpy2.robjects.conversion import localconverter
-from rpy2.robjects import pandas2ri
-import rpy2.robjects as robjects
 
-base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
 
 
@@ -454,13 +449,6 @@ def upper(mat):
     return mat[idx]
 
 
-def _return_t(model):
-    """Return t or z stat from R model summary."""
-    summary = base.summary(model)
-    unsum = base.unclass(summary)
-    return unsum.rx2("coefficients")[:, -1]
-
-
 def _get_params(model):
     """Get number of params in a model."""
     return (
@@ -578,11 +566,6 @@ def _df_meta_to_arr(df):
 
     return columns, index
 
-
-def pandas2R(df):
-    """Local conversion of pandas dataframe to R dataframe as recommended by rpy2"""
-    with localconverter(robjects.default_converter + pandas2ri.converter):
-        data = robjects.conversion.py2rpy(df)
     return data
 
 

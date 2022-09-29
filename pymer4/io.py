@@ -3,14 +3,11 @@ __all__ = ["save_model", "load_model"]
 import os
 from .models import Lm, Lm2, Lmer
 from .utils import _df_meta_to_arr
-from rpy2.robjects.packages import importr
 import deepdish as dd
 import pandas as pd
 import warnings
 from tables import NaturalNameWarning
 from pathlib import Path
-
-base = importr("base")
 
 
 def save_model(model, filepath, compression="zlib", **kwargs):
