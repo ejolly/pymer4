@@ -101,135 +101,38 @@ def test_gaussian_lmm():
 
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
-    opt_opts = "optimizer='Nelder_Mead', optCtrl = list(FtolAbs=1e-8, XtolRel=1e-8)"
-    model.fit(summarize=False, control=opt_opts)
 
-    assert model.coefs.shape == (3, 8)
-    estimates = np.array([12.04334602, -1.52947016, 0.67768509])
-    assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
+    assert model.design_matrix is not None
+    assert model.design_matrix_rfx is not None
+    assert model.design_matrix.shape == (df.shape[0], 3)  # including intercept
+    assert model.design_matrix_rfx.shape == (
+        df.shape[0],
+        df.Group.nunique() * 2 + df.IV3.nunique(),
+    )
 
-    assert isinstance(model.fixef, list)
-    assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
-    assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
-    assert model.fixef[0].shape == (47, 3)
-    assert model.fixef[1].shape == (3, 3)
+    # assert model.coefs.shape == (3, 8)
+    # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
+    # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
 
-    assert isinstance(model.ranef, list)
-    assert model.ranef[0].shape == (47, 2)
-    assert model.ranef[1].shape == (3, 1)
-    assert (model.ranef[1].index == ["0.5", "1", "1.5"]).all()
+    # assert isinstance(model.fixef, list)
+    # assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
+    # assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
+    # assert model.fixef[0].shape == (47, 3)
+    # assert model.fixef[1].shape == (3, 3)
 
-    assert model.ranef_corr.shape == (1, 3)
-    assert model.ranef_var.shape == (4, 3)
+    # assert isinstance(model.ranef, list)
+    # assert model.ranef[0].shape == (47, 2)
+    # assert model.ranef[1].shape == (3, 1)
+    # assert (model.ranef[1].index == ["0.5", "1", "1.5"]).all()
 
-    assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef[0].mean(), atol=0.01)
+    # assert model.ranef_corr.shape == (1, 3)
+    # assert model.ranef_var.shape == (4, 3)
+
+    # assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef[0].mean(), atol=0.01)
 
     # Test predict
-    # Little hairy to we test a few different cases. If a dataframe with non-matching
-    # column names is passed in, but we only used fixed-effects to make predictions,
-    # then R will not complain and will return population level predictions given the
-    # model's original data. This is undesirable behavior, so pymer tries to naively
-    # check column names in Python first and checks the predictions against the
-    # originally fitted values second. This is works fine except when there are
-    # categorical predictors which get expanded out to a design matrix internally in R.
-    # Unfortunately we can't easily pre-expand this to check against the column names of
-    # the model matrix.
-
-    # Test circular prediction which should raise error
-    with pytest.raises(ValueError):
-        assert np.allclose(model.predict(model.data), model.data.fits)
-
-    # Same thing, but skip the prediction verification; no error
-    assert np.allclose(
-        model.predict(model.data, verify_predictions=False), model.data.fits
-    )
-
-    # Test on data that has no matching columns;
-    X = pd.DataFrame(np.random.randn(model.data.shape[0], model.data.shape[1] - 1))
-
-    # Should raise error no matching columns, caught by checks in Python
-    with pytest.raises(ValueError):
-        model.predict(X)
-
-    # If user skips Python checks, then pymer raises an error if the predictions match
-    # the population predictions from the model's original data (which is what predict()
-    # in R will do by default).
-    with pytest.raises(ValueError):
-        model.predict(X, skip_data_checks=True, use_rfx=False)
-
-    # If the user skips check, but tries to predict with rfx then R will complain so we
-    # can check for an exception raised from R rather than pymer
-
-    # Finally a user can turn off every kind of check in which case we expect circular predictions
-    pop_preds = model.predict(model.data, use_rfx=False, verify_predictions=False)
-    assert np.allclose(
-        pop_preds,
-        model.predict(
-            X,
-            use_rfx=False,
-            skip_data_checks=True,
-            verify_predictions=False,
-        ),
-    )
-
-    # Test prediction with categorical variables
-    df["DV_ll"] = df.DV_l.apply(lambda x: "yes" if x == 1 else "no")
-    m = Lmer("DV ~ IV3 + DV_ll + (IV2|Group) + (1|IV3)", data=df)
-    m.fit(summarize=False)
-
-    # Should fail because column name checks don't understand expanding levels of
-    # categorical variable into new design matrix columns, as the checks are in Python
-    # but R handles the design matrix conversion
-    with pytest.raises(ValueError):
-        m.predict(m.data, verify_predictions=False)
-
-    # Should fail because of circular predictions
-    with pytest.raises(ValueError):
-        m.predict(m.data, skip_data_checks=True)
 
     # Test simulate
-    out = model.simulate(2)
-    assert isinstance(out, pd.DataFrame)
-    assert out.shape == (model.data.shape[0], 2)
-
-    out = model.simulate(2, use_rfx=True)
-    assert isinstance(out, pd.DataFrame)
-    assert out.shape == (model.data.shape[0], 2)
-
-    # Test confint
-    # Wald confidence interval
-    wald_confint = model.confint()
-    assert isinstance(wald_confint, pd.DataFrame)
-    assert wald_confint.shape == (8, 2)
-    # there should be no estimates for the random effects
-    assert wald_confint["2.5 %"].isna().sum() == 5
-    # bootstrapped confidence intervals
-    boot_confint = model.confint(method="boot", nsim=10)
-    assert isinstance(boot_confint, pd.DataFrame)
-    assert boot_confint.shape == (8, 2)
-    # ci for random effects should be estimates by bootstrapping
-    assert boot_confint["2.5 %"].isna().sum() == 0
-
-    # Smoketest for old_optimizer
-    model.fit(summarize=False, old_optimizer=True)
-
-    # test fixef code for 1 fixed effect
-    model = Lmer("DV ~ IV3 + IV2 + (IV2|Group)", data=df)
-    model.fit(summarize=False, control=opt_opts)
-
-    assert (model.fixef.index.astype(int) == df.Group.unique()).all()
-    assert model.fixef.shape == (47, 3)
-    assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef.mean(), atol=0.01)
-
-    # test fixef code for 0 fixed effects
-    model = Lmer("DV ~ (IV2|Group) + (1|IV3)", data=df)
-    model.fit(summarize=False, control=opt_opts)
-
-    assert isinstance(model.fixef, list)
-    assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
-    assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
-    assert model.fixef[0].shape == (47, 2)
-    assert model.fixef[1].shape == (3, 2)
 
 
 def test_contrasts():

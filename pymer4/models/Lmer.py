@@ -7,6 +7,8 @@ Main class to wrap Bambi's model interface
 
 
 from copy import copy
+import numpy as np
+import pandas as pd
 import bambi as bmb
 import arviz as az
 from pandas.api.types import CategoricalDtype
@@ -45,7 +47,7 @@ class Lmer(object):
 
     """
 
-    def __init__(self, formula, data, family="gaussian"):
+    def __init__(self, formula, data, family="gaussian", **bambi_kwargs):
 
         self.family = family
         implemented_fams = [
@@ -83,6 +85,25 @@ class Lmer(object):
         self.sig_type = None
         self.factors_prev_ = None
         self.contrasts = None
+
+        # Initialize bambi model object and extract attributes
+        self.model_obj = bmb.Model(
+            self.formula, data=self.data, family=self.family, **bambi_kwargs
+        )
+        # Fixed effects population params
+        self.design_matrix = self.model_obj._design.common.as_dataframe()
+
+        # Rfx matrix: num obs x num rfx terms (e.g. intercepts, slopes) per group
+        # E.g. with random intercepts and 10 subs this would have 10 columns
+        # E.g. with random intercepts+slopes and 10 subs this would have 20 columns
+        # E.g. with random intercepts+slopes for 10 subs and random intercepts for 5 items this would have 25 columns
+        rfx_name_slices = self.model_obj._design.group.slices
+        rfx_mat = pd.DataFrame(np.array(self.model_obj._design.group))
+        col_names = np.array(rfx_mat.columns).astype(str)
+        for rfx_name, slice_range in rfx_name_slices.items():
+            col_names[slice_range] = rfx_name
+        rfx_mat.columns = col_names
+        self.design_matrix_rfx = rfx_mat
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -224,10 +245,6 @@ class Lmer(object):
         inference_method = bambi_kwargs.pop("inference_method", "nuts_numpyro")
         draws = bambi_kwargs.pop("draws", 2000)
         tune = bambi_kwargs.pop("tune", 1000)
-        self.model_obj = bmb.Model(
-            self.formula,
-            data=self.data,
-        )
         self.fits = self.model_obj.fit(
             draws=draws,
             inference_method=inference_method,
