@@ -110,7 +110,11 @@ def test_gaussian_lmm():
         df.Group.nunique() * 2 + df.IV3.nunique(),
     )
 
-    # assert model.coefs.shape == (3, 8)
+    _ = model.fit()
+
+    assert model.coefs.shape == (3, 4)
+    assert model.fixefs.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 4)
+    assert model.ranef_vars.shape == (4, 4)
     # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
     # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
 
@@ -310,56 +314,28 @@ def test_inverse_gaussian_lmm():
     # assert model.fixef[1].shape == (3, 2)
 
 
-def test_lmer_opt_passing():
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
-    opt_opts = "optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)"
-    model.fit(summarize=False, control=opt_opts)
-    estimates = np.array([10.301072, 0.682124])
-    assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
-    # On some hardware the optimizer will still fail to converge
-    # assert len(model.warnings) == 0
-
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
-    opt_opts = "optCtrl = list(ftol_abs=1e-4, xtol_abs=1e-4)"
-    model.fit(summarize=False, control=opt_opts)
-    assert len(model.warnings) >= 1
-
-
-def test_glmer_opt_passing():
-    np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    df["DV_int"] = np.random.randint(1, 10, df.shape[0])
-    m = Lmer("DV_int ~ IV3 + (1|Group)", data=df, family="poisson")
-    m.fit(
-        summarize=False, control="optCtrl = list(FtolAbs=1e-1, FtolRel=1e-1, maxfun=10)"
-    )
-    assert len(m.warnings) >= 1
-
-
 # all or prune to suit
 # tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
-tests_ = [
-    test_gaussian_lm2,
-    test_gaussian_lm,
-    test_gaussian_lmm,
-    test_post_hoc,
-    test_logistic_lmm,
-    test_anova,
-    test_poisson_lmm,
-    test_gamma_lmm,
-    test_inverse_gaussian_lmm,
-    test_lmer_opt_passing,
-    test_glmer_opt_passing,
-]
+# tests_ = [
+#     test_gaussian_lm2,
+#     test_gaussian_lm,
+#     test_gaussian_lmm,
+#     test_post_hoc,
+#     test_logistic_lmm,
+#     test_anova,
+#     test_poisson_lmm,
+#     test_gamma_lmm,
+#     test_inverse_gaussian_lmm,
+#     test_lmer_opt_passing,
+#     test_glmer_opt_passing,
+# ]
 
 
-@pytest.mark.parametrize("model", tests_)
-def test_Pool(model):
-    from multiprocessing import get_context
+# @pytest.mark.parametrize("model", tests_)
+# def test_Pool(model):
+#     from multiprocessing import get_context
 
-    # squeeze model functions through Pool pickling
-    print("Pool", model.__name__)
-    with get_context("spawn").Pool(1) as pool:
-        _ = pool.apply(model, [])
+#     # squeeze model functions through Pool pickling
+#     print("Pool", model.__name__)
+#     with get_context("spawn").Pool(1) as pool:
+#         _ = pool.apply(model, [])

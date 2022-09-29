@@ -252,14 +252,54 @@ class Lmer(object):
             progress_bar=False,
         )
         self.coefs = az.summary(
-            self.fits, kind="stats", var_names=["~|", "~_sigma"], filter_vars="like"
-        )
+            self.fits,
+            kind="stats",
+            var_names=["~|", "~_sigma"],
+            filter_vars="like",
+            hdi_prob=0.95,
+        ).rename(
+            columns={
+                "mean": "Estimate",
+                "sd": "SD",
+                "hdi_2.5%": "2.5_ci",
+                "hdi_97.5%": "97.5_ci",
+            }
+        )[
+            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+        ]
         self.fixefs = az.summary(
-            self.fits, kind="stats", var_names=["|"], filter_vars="like"
-        )
+            self.fits, kind="stats", var_names=["|"], filter_vars="like", hdi_prob=0.95
+        ).rename(
+            columns={
+                "mean": "Estimate",
+                "sd": "SD",
+                "hdi_2.5%": "2.5_ci",
+                "hdi_97.5%": "97.5_ci",
+            }
+        )[
+            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+        ]
+        # Filter out fixefs variances manually as the az.summary still includes them
+        to_remove = self.fixefs.filter(like="_sigma", axis=0).index
+        self.fixefs = self.fixefs[~self.fixefs.index.isin(to_remove)]
+
+        # Variance of ranfx
         self.ranef_vars = az.summary(
-            self.fits, kind="stats", var_names=["_sigma"], filter_vars="like"
-        )
+            self.fits,
+            kind="stats",
+            var_names=["_sigma"],
+            filter_vars="like",
+            hdi_prob=0.95,
+        ).rename(
+            columns={
+                "mean": "Estimate",
+                "sd": "SD",
+                "hdi_2.5%": "2.5_ci",
+                "hdi_97.5%": "97.5_ci",
+            }
+        )[
+            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+        ]
         self.fitted = True
         print(self.ranef_vars)
         return self.coefs
