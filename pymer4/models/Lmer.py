@@ -253,7 +253,7 @@ class Lmer(object):
         )
         self.coefs = az.summary(
             self.fits,
-            kind="stats",
+            kind="all",
             var_names=["~|", "~_sigma"],
             filter_vars="like",
             hdi_prob=0.95,
@@ -261,23 +261,27 @@ class Lmer(object):
             columns={
                 "mean": "Estimate",
                 "sd": "SD",
+                "mcse_mean": "SE",
+                "r_hat": "Rubin_Gelman",
                 "hdi_2.5%": "2.5_ci",
                 "hdi_97.5%": "97.5_ci",
             }
         )[
-            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         self.fixefs = az.summary(
-            self.fits, kind="stats", var_names=["|"], filter_vars="like", hdi_prob=0.95
+            self.fits, kind="all", var_names=["|"], filter_vars="like", hdi_prob=0.95
         ).rename(
             columns={
                 "mean": "Estimate",
                 "sd": "SD",
+                "mcse_mean": "SE",
+                "r_hat": "Rubin_Gelman",
                 "hdi_2.5%": "2.5_ci",
                 "hdi_97.5%": "97.5_ci",
             }
         )[
-            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         # Filter out fixefs variances manually as the az.summary still includes them
         to_remove = self.fixefs.filter(like="_sigma", axis=0).index
@@ -286,7 +290,7 @@ class Lmer(object):
         # Variance of ranfx
         self.ranef_vars = az.summary(
             self.fits,
-            kind="stats",
+            kind="all",
             var_names=["_sigma"],
             filter_vars="like",
             hdi_prob=0.95,
@@ -294,18 +298,44 @@ class Lmer(object):
             columns={
                 "mean": "Estimate",
                 "sd": "SD",
+                "mcse_mean": "SE",
+                "r_hat": "Rubin_Gelman",
                 "hdi_2.5%": "2.5_ci",
                 "hdi_97.5%": "97.5_ci",
             }
         )[
-            ["Estimate", "2.5_ci", "97.5_ci", "SD"]
+            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         self.fitted = True
         print(self.ranef_vars)
+        # TODO: add warnings for RG stat > 1.05
         return self.coefs
 
     def plot_priors(self, *args, **kwargs):
         return self.model_obj.plot_priors(*args, **kwargs)
+
+    def diagnostics(self, params="coefs", **kwargs):
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to plot summary!")
+
+        if params in ["coefs", "fixefs"]:
+            var_names = ["~|", "~_sigma"]
+        elif params in ["ranefs", "rfx"]:
+            var_names = ["|"]
+        elif params in ["ranef_vars", "rfx_vars"]:
+            var_names = ["_sigma"]
+        elif params in ["rfx-all", "ranef-all", "ranefs-all"]:
+            var_names = ["|", "_sigma"]
+        else:
+            var_names = None
+        return az.summary(
+            self.fits,
+            kind="diagnostics",
+            var_names=var_names,
+            filter_vars="like",
+            **kwargs,
+        )
 
     def plot_summary(self, kind="trace", params="coefs", **kwargs):
 
@@ -314,6 +344,9 @@ class Lmer(object):
 
         if kind == "priors":
             return self.plot_priors(**kwargs)
+
+        if kind in ["ppc", "yhat"]:
+            return az.plot_ppc(self.fits, **kwargs)
 
         if params in ["coefs", "fixefs"]:
             var_names = ["~|", "~_sigma"]

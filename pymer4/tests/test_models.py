@@ -110,11 +110,12 @@ def test_gaussian_lmm():
         df.Group.nunique() * 2 + df.IV3.nunique(),
     )
 
-    _ = model.fit()
+    _ = model.fit(random_seed=10)
 
-    assert model.coefs.shape == (3, 4)
-    assert model.fixefs.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 4)
-    assert model.ranef_vars.shape == (4, 4)
+    assert model.coefs.shape == (3, 6)
+    assert model.fixefs.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
+    assert model.ranef_vars.shape == (4, 6)
+
     # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
     # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
 
