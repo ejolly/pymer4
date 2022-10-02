@@ -10,6 +10,7 @@ import pytest
 import re
 from bambi import load_data
 import matplotlib.pyplot as plt
+import arviz as az
 
 np.random.seed(10)
 
@@ -104,11 +105,14 @@ def test_gaussian_lmm():
 
     # Test against lme4 model in tutorial 1 notebook
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
-    coefs = model.fit()
-    assert coefs.loc["Intercept", "2.5_ci"] > 4.5
-    assert coefs.loc["Intercept", "97.5_ci"] < 16
-    assert coefs.loc["IV2", "2.5_ci"] > 0.5
-    assert coefs.loc["IV2", "97.5_ci"] < 0.9
+    assert model.inference_obj is None
+
+    model.fit()
+
+    assert model.coefs.loc["Intercept", "2.5_ci"] > 4
+    assert model.coefs.loc["Intercept", "97.5_ci"] < 16
+    assert model.coefs.loc["IV2", "2.5_ci"] > 0.5
+    assert model.coefs.loc["IV2", "97.5_ci"] < 0.9
 
     # Plotting
     model.plot_summary()
@@ -124,6 +128,7 @@ def test_gaussian_lmm():
     # Test shape works with random items
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
 
+    # Design matrix is build on model init
     assert model.design_matrix is not None
     assert model.design_matrix_rfx is not None
     assert model.design_matrix.shape == (df.shape[0], 3)  # including intercept
@@ -132,7 +137,7 @@ def test_gaussian_lmm():
         df.Group.nunique() * 2 + df.IV3.nunique(),
     )
 
-    _ = model.fit()
+    model.fit(summary=False)
 
     assert model.coefs.shape == (3, 6)
     assert model.ranef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
@@ -141,14 +146,38 @@ def test_gaussian_lmm():
     # Fit check against example on bambi website
     data = load_data("sleepstudy")
     model = Lmer("Reaction ~ 1 + Days + (Days | Subject)", data)
-    coefs = model.fit()
-    assert coefs.loc["Intercept", "2.5_ci"] > 233
-    assert coefs.loc["Intercept", "97.5_ci"] < 267
-    assert coefs.loc["Days", "2.5_ci"] > 6.5
-    assert coefs.loc["Days", "97.5_ci"] < 14
+    assert model.model_obj is not None
+    assert model.fits is None
+    assert model.inference_obj is None
 
-    # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
-    # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
+    model.fit(summary=False)
+
+    # Check values against bambi docs which use pymc's sampler
+    assert model.coefs.loc["Intercept", "2.5_ci"] > 233
+    assert model.coefs.loc["Intercept", "97.5_ci"] < 268
+    assert model.coefs.loc["Days", "2.5_ci"] > 6.5
+    assert model.coefs.loc["Days", "97.5_ci"] < 15
+
+    # Check fits/predictions
+    assert hasattr(model.inference_obj, "posterior")
+    assert hasattr(model.inference_obj, "posterior_predictive")
+    assert isinstance(model.fits, pd.DataFrame)
+    assert model.fits.shape == (model.data.shape[0], 5)
+
+    # Test predict
+    # Sample from mean of DV distribution using posterior
+    preds = model.predict()
+    assert preds.equals(model.fits)
+
+    # PPS and posterior mean give us the same agg stats on the training data
+    preds2 = model.predict(kind="pps")
+    assert "pps" in preds2.Kind.unique()
+    assert preds2.iloc[:, :-1].equals(preds.iloc[:, :-1])
+
+    # No aggregation of samples gives us xarray Inference Object
+    preds_obj = model.predict(summarize=False)
+    assert isinstance(preds_obj, az.data.inference_data.InferenceData)
+    assert model.inference_obj == preds_obj
 
     # assert isinstance(model.fixef, list)
     # assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()

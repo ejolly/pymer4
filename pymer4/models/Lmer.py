@@ -44,9 +44,9 @@ class Lmer(object):
         ranef_var (pd.DataFrame): random effects variances
         ranef_corr(pd.DataFrame): random effects correlations
         residuals (numpy.ndarray): model residuals
-        fits (arviz.InfereceData): xarray inference data
+        inference_obj (arviz.InfereceData): xarray inference data
         model_obj (bambi model): bambi model object
-        factors (dict): factors used to fit the model if any
+        fits (pd.DataFrame): predictions with uncertainty ("y-hats")
 
     """
 
@@ -91,6 +91,8 @@ class Lmer(object):
         self.draws = 2000
         self.tune = 1000
         self.terms = {}
+        self.fits = None
+        self.inference_obj = None
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(
@@ -283,15 +285,19 @@ class Lmer(object):
         # Hide basic compilation messages if lowest verbosity (0)
         with open(os.devnull, "w") as f:
             with redirect_stdout(f) if verbose == 0 else nullcontext():
-                self.fits = self.model_obj.fit(
+                self.inference_obj = self.model_obj.fit(
                     draws=draws,
                     inference_method=inference_method,
                     tune=tune,
                     **additional_kwargs,
                 )
+
+        # Set flag now for other internal ops like .predict call
+        self.fitted = True
+
         # Population level effects
         self.coefs = az.summary(
-            self.fits,
+            self.inference_obj,
             kind="all",
             var_names=["~|", "~_sigma"],
             filter_vars="like",
@@ -308,9 +314,14 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
+
         # Cluster level deviances from population effect
         self.ranef = az.summary(
-            self.fits, kind="all", var_names=["|"], filter_vars="like", hdi_prob=0.95
+            self.inference_obj,
+            kind="all",
+            var_names=["|"],
+            filter_vars="like",
+            hdi_prob=0.95,
         ).rename(
             columns={
                 "mean": "Estimate",
@@ -329,7 +340,7 @@ class Lmer(object):
 
         # Variance of ranfx
         self.ranef_var = az.summary(
-            self.fits,
+            self.inference_obj,
             kind="all",
             var_names=["_sigma"],
             filter_vars="like",
@@ -346,13 +357,32 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
-        self.fitted = True
+
+        # This adds a column to self.inference_obj.posterior named 'DV_mean'
+        self.model_obj.predict(
+            self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
+        )
+        # This adds a new attribute on self.inference_obj called
+        # .posterior_predictive that contains a column called 'DV'
+        self.model_obj.predict(
+            self.inference_obj, inplace=True, include_group_specific=True, kind="pps"
+        )
+        # Aggregate them by calling predict using the same data the model was estimated
+        # with. By default this uses the posterior estimates of the mean response var,
+        # instead of the posterior predictive dist. But aggregating them gives the same
+        # estimates when calculated on the same data the model was fit on
+        self.fits = self.predict(data=None, summarize=True)
+
+        self.data["fits"] = self.fits["Estimate"].copy()
+
         if summary or summarize:
             self.summary()
-        # TODO: add warnings for RG stat > 1.05
-        return self.coefs
 
-    def plot_priors(self, **kwargs):
+        # TODO: add warnings for RG stat > 1.05
+
+    def _plot_priors(self, **kwargs):
+        """Helper function for .plot_summary when requesting prior plots because this
+        calls a custom bambi method rather than an arviz function"""
         hdi_prob = kwargs.pop("hdi_prob", 0.95)
         hdi_prob = kwargs.pop("ci", 95) / 100
         params = kwargs.pop("params", "default")
@@ -373,7 +403,7 @@ class Lmer(object):
 
         var_names = _select_az_params(params)
         return az.summary(
-            self.fits,
+            self.inference_obj,
             kind="diagnostics",
             var_names=var_names,
             filter_vars="like",
@@ -389,13 +419,11 @@ class Lmer(object):
         kwargs.update({"hdi_prob": hdi_prob})
 
         if kind == "priors":
-            return self.plot_priors(**kwargs)
+            return self._plot_priors(**kwargs)
 
-        if kind in ["ppc", "yhat"]:
+        if kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
             _ = kwargs.pop("hdi_prob", None)
-            # Generate samples for plot
-            _ = self.model_obj.predict(self.fits, kind="pps")
-            return az.plot_ppc(self.fits, **kwargs)
+            return az.plot_ppc(self.inference_obj, **kwargs)
 
         var_names = _select_az_params(params)
 
@@ -416,7 +444,7 @@ class Lmer(object):
             raise ValueError(f"${kind} plot not supported")
 
         return plot_func(
-            self.fits,
+            self.inference_obj,
             var_names=var_names,
             filter_vars="like",
             **kwargs,
@@ -436,48 +464,93 @@ class Lmer(object):
         """
         pass
 
-    def predict(
-        self,
-        data,
-        use_rfx=True,
-        pred_type="response",
-        skip_data_checks=False,
-        verify_predictions=True,
-        verbose=False,
-    ):
+    def predict(self, data=None, **kwargs):
         """
-        Make predictions given new data. Input must be a dataframe that contains the
-        same columns as the model.matrix excluding the intercept (i.e. all the predictor
-        variables used to fit the model). If using random effects to make predictions,
-        input data must also contain a column for the group identifier that were used to
-        fit the model random effects terms. Using random effects to make predictions
-        only makes sense if predictions are being made about the same groups/clusters.
-        If any predictors are categorical, you can skip verifying column names by
-        setting `skip_data_checks=True`.
+        Make predictions given new data or return predictions on data model was fit to.
+        Predictions include uncertainty and are summarized using highest density
+        intervals (bayesian confidence intervals) controlled via the 'ci' kwarg.
+        data must be a dataframe that contains the same columns as the model.data
+        (i.e. all the predictor variables used to fit the model). If using random
+        effects to make predictions, input data must also contain a column for the group
+        identifier that were used to fit the model random effects terms. Using random
+        effects to make predictions only makes sense if predictions are being made about the same groups/clusters.
 
         Args:
-            data (pandas.core.frame.DataFrame): input data to make predictions on
-            use_rfx (bool): whether to condition on random effects when making
+            use_rfx (bool; optional): whether to condition on random effects when making
             predictions; Default True
-            pred_type (str): whether the prediction should be on the 'response' scale
-            (default); or on the 'link' scale of the predictors passed through the link
-            function (e.g. log-odds scale in a logit model instead of probability
-            values)
-            skip_data_checks (bool): whether to skip checks that input data have the
-            same columns as the original data the model were trained on. If predicting
-            using a model trained with categorical variables it can be helpful to set
-            this to False. Default True
-            verify_predictions (bool): whether to ensure that the predicted data are not
-            identical to original model fits. Only useful to set this to False when
-            making predictions on the same data the model was fit on, but its faster to
-            access these directly from model.fits or model.data['fits']. Default True
-            verbose (bool): whether to print R messages to console
+            kind (str; optional) the type of prediction required. Can be ``"mean"`` or
+            ``"pps"``. The first returns draws from the posterior distribution of the
+            mean, while the latter returns the draws from the posterior predictive
+            distribution (i.e. the posterior probability distribution for a new
+            observation).Defaults to ``"mean"``.
+            data (pandas.core.frame.DataFrame; optional): input data to make predictions
+            on. Defaults to using same data model was fit with
+            summarize (bool; optional): whether to aggregate predictions by stat_focus
+            and ci; Default True
+            ci (int; optional): highest density interval (bayesian confidence) interval;
+            Default to 95%
+            stat_focus (str; optional): the aggregation stat if summarize=True; Default
+            'mean'
 
         Returns:
-            np.ndarray: prediction values
+            pd.DataFrame: data frame of predictions and uncertainties. Also saved to
+            model.fits if data is None
 
         """
-        pass
+
+        use_rfx = kwargs.pop("use_rfx", True)
+        summarize = kwargs.pop("summarize", True)
+        hdi_prob = kwargs.pop("ci", 95) / 100
+        stat_focus = kwargs.pop("stat_focus", "mean")
+
+        # Only guard against external use
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to generate predictions!")
+
+        # If no data is passed, just return the predictions from the estimated
+        # posteriors and observed data. Otherwise call bambi's predict method with the
+        # new data as a kwarg
+        if kwargs.get("data", None) is None:
+            predictions = self.inference_obj
+        else:
+            predictions = self.model_obj.predict(
+                self.inference_obj,
+                inplace=False,
+                include_group_specific=use_rfx,
+                **kwargs,
+            )
+        # So we aggregate them using arviz and filter out the single row containing the
+        # sigma of the distribution of predictions, since we already have uncertainty
+        # per prediction
+        if summarize:
+            summary = (
+                az.summary(
+                    predictions,
+                    kind="stats",
+                    var_names=[self.model_obj.response.name],
+                    filter_vars="like",
+                    hdi_prob=hdi_prob,
+                    stat_focus=stat_focus,
+                )
+                .filter(regex=".*?\[.*?\].*?", axis=0)
+                .assign(Kind=kwargs.get("kind", "mean"))
+                .rename(
+                    columns={
+                        "mean": "Estimate",
+                        "sd": "SD",
+                        "hdi_2.5%": "2.5_ci",
+                        "hdi_97.5%": "97.5_ci",
+                    }
+                )
+            )[["Estimate", "SD", "2.5_ci", "97.5_ci", "Kind"]]
+
+        else:
+            summary = None
+
+        if summarize:
+            return summary
+        else:
+            return predictions
 
     def _pprint_ranef_var(self):
         """
