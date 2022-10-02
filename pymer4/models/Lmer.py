@@ -93,6 +93,8 @@ class Lmer(object):
         self.terms = {}
         self.fits = None
         self.inference_obj = None
+        self.prior_predictive = None
+        self.posterior_predictive = None
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(
@@ -358,6 +360,7 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
 
+        # Fits/predictions marginalizing over posterior
         # This adds a column to self.inference_obj.posterior named 'DV_mean'
         self.model_obj.predict(
             self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
@@ -371,12 +374,47 @@ class Lmer(object):
         # with. By default this uses the posterior estimates of the mean response var,
         # instead of the posterior predictive dist. But aggregating them gives the same
         # estimates when calculated on the same data the model was fit on
+        if verbose:
+            print("Sampling predictions marginalizing over posteriors...")
         self.fits = self.predict(data=None, summarize=True)
+        self.posterior_predictive = self.fits
 
         self.data["fits"] = self.fits["Estimate"].copy()
 
+        # Fits/predictions marginalizing over prior
+        # NOTE: Move to init?
+        if verbose:
+            print("Sampling predictions marginalizing over priors...")
+        priors = self.model_obj.prior_predictive(draws=self.draws)
+        # TODO: Fixme
+        # Storing everything in a single inference object is conveninent but plots are
+        # getting screwed up. E.g. plot with kind='trace' is incuding posterior
+        # predictive traces which take a realllly long time to plot
+        # Solution 1: Try using separate inference objects
+        # Solution 2: tweak plotting code
+        self.inference_obj.add_groups(
+            {"prior": priors.prior, "prior_predictive": priors.prior_predictive}
+        )
+        self.prior_predictive = (
+            az.summary(
+                self.inference_obj.prior_predictive,
+                kind="stats",
+                var_names=[self.model_obj.response.name],
+                filter_vars="like",
+                hdi_prob=0.95,
+                stat_focus="mean",
+            ).rename(
+                columns={
+                    "mean": "Estimate",
+                    "sd": "SD",
+                    "hdi_2.5%": "2.5_ci",
+                    "hdi_97.5%": "97.5_ci",
+                }
+            )
+        )[["Estimate", "SD", "2.5_ci", "97.5_ci"]]
+
         if summary or summarize:
-            self.summary()
+            return self.summary()
 
         # TODO: add warnings for RG stat > 1.05
 
@@ -410,7 +448,23 @@ class Lmer(object):
             **kwargs,
         )
 
-    def plot_summary(self, kind="trace", params="default", ci=95, **kwargs):
+    # def sample(self, sample_from="posterior", draws=2000, params="default", **kwargs):
+
+    #     if sample_from not in ["prior", "posterior"]:
+    #         raise ValueError("sample_from must be 'prior' or 'posterior'")
+
+    #     if sample_from == "posterior" and not self.fitted:
+    #         raise RuntimeError("Model must be fitted to sample from posterior!")
+
+    #     var_names = _select_az_params(params)
+    #     if sample_from == "prior":
+    #         samples = self.model_obj.prior_predictive(
+    #             draws=draws, var_names=var_names, **kwargs
+    #         )
+
+    def plot_summary(
+        self, kind="trace", dist="posterior", params="default", ci=95, **kwargs
+    ):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to plot summary!")
@@ -418,12 +472,13 @@ class Lmer(object):
         hdi_prob = kwargs.pop("ci", 95) / 100
         kwargs.update({"hdi_prob": hdi_prob})
 
-        if kind == "priors":
+        if dist in ["prior", "priors"] and kind in ["priors", "prior", "trace"]:
             return self._plot_priors(**kwargs)
 
         if kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
             _ = kwargs.pop("hdi_prob", None)
-            return az.plot_ppc(self.inference_obj, **kwargs)
+            _ = kwargs.pop("dist", None)
+            return az.plot_ppc(self.inference_obj, group=dist, **kwargs)
 
         var_names = _select_az_params(params)
 
