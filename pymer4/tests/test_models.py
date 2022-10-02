@@ -135,7 +135,7 @@ def test_gaussian_lmm():
     _ = model.fit()
 
     assert model.coefs.shape == (3, 6)
-    assert model.fixef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
+    assert model.ranef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
     assert model.ranef_var.shape == (4, 6)
 
     # Fit check against example on bambi website

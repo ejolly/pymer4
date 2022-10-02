@@ -23,6 +23,7 @@ __all__ = [
     "upper",
     "R2con",
     "con2R",
+    "_select_az_params",
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -639,3 +640,20 @@ def result_to_table(
         .reindex(columns=[iv_name, "b", "ci", "t", "df", "p"])
     )
     return results
+
+
+def _select_az_params(params):
+    """Helper function to more easily change whats plotted by Lmer.plot_summary"""
+
+    if params in ["coef", "coefs", "fixef", "fixefs"]:
+        return ["~|", "~_sigma"]
+    elif params in ["ranef", "ranefs", "rfx"]:
+        return ["|"]
+    elif params in ["ranef_vars", "ranefs_vars", "rfx_vars"]:
+        return ["_sigma"]
+    elif params in ["rfx_all", "ranef_all", "ranefs_all"]:
+        return ["|", "_sigma"]
+    elif params in ["default"]:
+        return ["~_sigma"]
+    else:
+        return None

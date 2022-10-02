@@ -12,6 +12,9 @@ import pandas as pd
 import bambi as bmb
 import arviz as az
 from pandas.api.types import CategoricalDtype
+from contextlib import redirect_stdout, nullcontext
+import os
+from pymer4.utils import _select_az_params
 
 
 class Lmer(object):
@@ -47,7 +50,7 @@ class Lmer(object):
 
     """
 
-    def __init__(self, formula, data, family="gaussian", **bambi_kwargs):
+    def __init__(self, formula, data, family="gaussian", **kwargs):
 
         self.family = family
         implemented_fams = ["gaussian"]
@@ -87,13 +90,26 @@ class Lmer(object):
         self.backend = None
         self.draws = 2000
         self.tune = 1000
+        self.terms = {}
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(
-            self.formula, data=self.data, family=self.family, **bambi_kwargs
+            self.formula, data=self.data, family=self.family, **kwargs
         )
-        # Fixed effects population params
+        self.model_obj.build()
+
+        # Store separate model terms for ease of reference
+        if self.model_obj.intercept_term:
+            common_terms = ["Intercept"]
+        else:
+            common_terms = []
+        common_terms += list(self.model_obj.common_terms.keys())
+        group_terms = list(self.model_obj.group_specific_terms.keys())
+        self.terms = dict(common_terms=common_terms, group_terms=group_terms)
+
+        # Fixed effects population params dm
         self.design_matrix = self.model_obj._design.common.as_dataframe()
+        self._get_ngrps()
 
         # Rfx matrix: num obs x num rfx terms (e.g. intercepts, slopes) per group
         # E.g. with random intercepts and 10 subs this would have 10 columns
@@ -232,8 +248,9 @@ class Lmer(object):
 
     def _get_ngrps(self):
         """Get the groups information from the model as a dictionary"""
-        pass
-        self.grps = None
+
+        group_terms = self.model_obj.group_specific_terms.values()
+        self.grps = {e.name.split("|")[-1]: len(e.groups) for e in group_terms}
 
     def fit(
         self,
@@ -241,26 +258,38 @@ class Lmer(object):
         ordered=False,
         rank_group="",
         rank_exclude_cols=[],
-        **bambi_kwargs,
+        verbose=0,
+        **kwargs,
     ):
 
-        inference_method = bambi_kwargs.pop("inference_method", "nuts_numpyro")
-        draws = bambi_kwargs.pop("draws", self.draws)
-        tune = bambi_kwargs.pop("tune", self.tune)
+        inference_method = kwargs.pop("inference_method", "nuts_numpyro")
+        draws = kwargs.pop("draws", self.draws)
+        tune = kwargs.pop("tune", self.tune)
+        summary = kwargs.pop("summary", True)
+        summarize = kwargs.pop("summary", True)
+        if isinstance(verbose, bool):
+            verbose = 2 if verbose else 0
+
+        # Only print progress bars if maximum verbosity (2)
         # Different backends have different kwarg names so we need to build this dict programmatically
         additional_kwargs = dict()
         if inference_method == "nuts_numpyro":
-            additional_kwargs["progress_bar"] = False
+            additional_kwargs["progress_bar"] = True if verbose > 1 else False
             self.backend = "Numpyro/Jax NUTS Sampler"
         else:
-            additional_kwargs["progressbar"] = False
+            additional_kwargs["progressbar"] = True if verbose > 1 else False
             self.backend = "PyMC MCMC"
-        self.fits = self.model_obj.fit(
-            draws=draws,
-            inference_method=inference_method,
-            tune=tune,
-            **additional_kwargs,
-        )
+
+        # Hide basic compilation messages if lowest verbosity (0)
+        with open(os.devnull, "w") as f:
+            with redirect_stdout(f) if verbose == 0 else nullcontext():
+                self.fits = self.model_obj.fit(
+                    draws=draws,
+                    inference_method=inference_method,
+                    tune=tune,
+                    **additional_kwargs,
+                )
+        # Population level effects
         self.coefs = az.summary(
             self.fits,
             kind="all",
@@ -279,7 +308,8 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
-        self.fixef = az.summary(
+        # Cluster level deviances from population effect
+        self.ranef = az.summary(
             self.fits, kind="all", var_names=["|"], filter_vars="like", hdi_prob=0.95
         ).rename(
             columns={
@@ -293,9 +323,9 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
-        # Filter out fixefs variances manually as the az.summary still includes them
-        to_remove = self.fixef.filter(like="_sigma", axis=0).index
-        self.fixef = self.fixef[~self.fixef.index.isin(to_remove)]
+        # Filter out variances manually as the az.summary still includes them
+        to_remove = self.ranef.filter(like="_sigma", axis=0).index
+        self.ranef = self.ranef[~self.ranef.index.isin(to_remove)]
 
         # Variance of ranfx
         self.ranef_var = az.summary(
@@ -317,28 +347,31 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
         self.fitted = True
-        print(self.ranef_var)
+        if summary or summarize:
+            self.summary()
         # TODO: add warnings for RG stat > 1.05
         return self.coefs
 
-    def plot_priors(self, *args, **kwargs):
-        return self.model_obj.plot_priors(*args, **kwargs)
+    def plot_priors(self, **kwargs):
+        hdi_prob = kwargs.pop("hdi_prob", 0.95)
+        hdi_prob = kwargs.pop("ci", 95) / 100
+        params = kwargs.pop("params", "default")
+        if params == "default":
+            var_names = None
+        elif params in ["coef", "coefs", "fixefs", "fixef"]:
+            var_names = self.terms["common_terms"]
+        elif params in ["ranefs", "rfx", "ranef"]:
+            var_names = self.terms["group_terms"]
+        return self.model_obj.plot_priors(
+            hdi_prob=hdi_prob, var_names=var_names, **kwargs
+        )
 
-    def diagnostics(self, params="coefs", **kwargs):
+    def diagnostics(self, params="default", **kwargs):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to plot summary!")
 
-        if params in ["coefs", "fixefs"]:
-            var_names = ["~|", "~_sigma"]
-        elif params in ["ranefs", "rfx"]:
-            var_names = ["|"]
-        elif params in ["ranef_vars", "rfx_vars"]:
-            var_names = ["_sigma"]
-        elif params in ["rfx-all", "ranef-all", "ranefs-all"]:
-            var_names = ["|", "_sigma"]
-        else:
-            var_names = None
+        var_names = _select_az_params(params)
         return az.summary(
             self.fits,
             kind="diagnostics",
@@ -347,7 +380,7 @@ class Lmer(object):
             **kwargs,
         )
 
-    def plot_summary(self, kind="trace", params="coefs", ci=95, **kwargs):
+    def plot_summary(self, kind="trace", params="default", ci=95, **kwargs):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to plot summary!")
@@ -364,16 +397,7 @@ class Lmer(object):
             _ = self.model_obj.predict(self.fits, kind="pps")
             return az.plot_ppc(self.fits, **kwargs)
 
-        if params in ["coefs", "fixefs"]:
-            var_names = ["~|", "~_sigma"]
-        elif params in ["ranefs", "rfx"]:
-            var_names = ["|"]
-        elif params in ["ranef_vars", "rfx_vars"]:
-            var_names = ["_sigma"]
-        elif params in ["rfx-all", "ranef-all", "ranefs-all"]:
-            var_names = ["|", "_sigma"]
-        else:
-            var_names = None
+        var_names = _select_az_params(params)
 
         if kind == "trace":
             if "combined" not in kwargs:
@@ -455,6 +479,36 @@ class Lmer(object):
         """
         pass
 
+    def _pprint_ranef_var(self):
+        """
+        Format model rfx variances to look like lme4. Used by .summary()
+        """
+
+        df = self.ranef_var.copy()
+        # Format index
+        new_index = []
+        names = []
+        for name in df.index:
+            n = name.split("_sigma")[0]
+            if n in self.model_obj.group_specific_terms.keys():
+                term_name, group_name = n.split("|")
+                term_name = "(Intercept)" if term_name == "1" else term_name
+                new_index.append(group_name)
+                names.append(term_name)
+            else:
+                new_index.append("Residual")
+                names.append(n)
+        df.index = new_index
+
+        # Format columns
+        df = (
+            df.assign(Name=names)
+            .drop(columns=["SD", "SE"])
+            .rename(columns={"Estimate": "Std"})
+        )[["Name", "Std", "2.5_ci", "97.5_ci", "Rubin_Gelman"]]
+
+        return df.round(3)
+
     def summary(self):
         """
         Summarize the output of a fitted model.
@@ -467,8 +521,7 @@ class Lmer(object):
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate summary!")
 
-        # TODO: Print backend info here
-        print(f"Linear mixed model fit by: {self.backend}")
+        print(f"Linear mixed model fit by: {self.backend}\n")
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\n".format(self.family))
@@ -476,47 +529,15 @@ class Lmer(object):
             "Number of observations: %s\t Groups: %s\n"
             % (self.data.shape[0], self.grps)
         )
-        print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
+        # print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
         print("Random effects:\n")
-        print("%s\n" % (self.ranef_var.round(3)))
-        if self.ranef_corr is not None:
-            print("%s\n" % (self.ranef_corr.round(3)))
-        else:
-            print("No random effect correlations specified\n")
+        print("%s\n" % (self._pprint_ranef_var()))
         if self.coefs is None:
             print("No fixed effects estimated\n")
             return
         else:
             print("Fixed effects:\n")
             return self.coefs.round(3)
-
-    # TODO Provide option to to pass lmerTest.limit = N in order to get non Inf dof when number of observations > 3000. Apparently this is a new default in emmeans. This warning is only visible when verbose=True
-    def post_hoc(
-        self,
-        marginal_vars,
-        grouping_vars=None,
-        p_adjust="tukey",
-        summarize=True,
-        verbose=False,
-    ):
-        """
-        Post-hoc pair-wise tests corrected for multiple comparisons (Tukey method) implemented using the emmeans package. This method provide both marginal means/trends along with marginal pairwise differences. More info can be found at: https://cran.r-project.org/web/packages/emmeans/emmeans.pdf
-
-        Args:
-            marginal_var (str/list): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
-            grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
-            p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
-            summarize (bool): output effects and contrasts or don't (always stored in model object as model.marginal_estimates and model.marginal_contrasts); default True
-            verbose (bool): whether to print R messages to the console
-
-        Returns:
-            Multiple:
-                - **marginal_estimates** (*pd.Dataframe*): unique factor level effects (e.g. means/coefs)
-
-                - **marginal_contrasts** (*pd.DataFrame*): contrasts between factor levels
-
-        """
-        pass
 
     def plot(
         self,
