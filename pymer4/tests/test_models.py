@@ -114,17 +114,6 @@ def test_gaussian_lmm():
     assert model.coefs.loc["IV2", "2.5_ci"] > 0.5
     assert model.coefs.loc["IV2", "97.5_ci"] < 0.9
 
-    # Plotting
-    model.plot_summary()
-    model.plot_summary(kind="trace")
-    model.plot_summary(kind="priors")
-    model.plot_summary(kind="ppc")
-    model.plot_summary(kind="forest", params="ranefs", ci=90)
-    model.plot_summary(kind="ridge")
-    model.plot_summary(kind="posterior")
-
-    plt.close("all")
-
     # Test shape works with random items
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
 
@@ -152,6 +141,10 @@ def test_gaussian_lmm():
 
     model.fit(summary=False)
 
+    assert model.fits is not None
+    assert model.posterior_predictions.equals(model.fits)
+    assert model.prior_predictions is not None
+
     # Check values against bambi docs which use pymc's sampler
     assert model.coefs.loc["Intercept", "2.5_ci"] > 233
     assert model.coefs.loc["Intercept", "97.5_ci"] < 268
@@ -162,12 +155,12 @@ def test_gaussian_lmm():
     assert hasattr(model.inference_obj, "posterior")
     assert hasattr(model.inference_obj, "posterior_predictive")
     assert isinstance(model.fits, pd.DataFrame)
-    assert model.fits.shape == (model.data.shape[0], 5)
+    assert model.fits.shape == (model.data.shape[0], 4)
 
     # Test predict
     # Sample from mean of DV distribution using posterior
     preds = model.predict()
-    assert preds.equals(model.fits)
+    assert preds.iloc[:, :-1].equals(model.fits)
 
     # PPS and posterior mean give us the same agg stats on the training data
     preds2 = model.predict(kind="pps")
@@ -178,6 +171,54 @@ def test_gaussian_lmm():
     preds_obj = model.predict(summarize=False)
     assert isinstance(preds_obj, az.data.inference_data.InferenceData)
     assert model.inference_obj == preds_obj
+
+    # Trace plots
+    # Default trace plot with common and group effect sigmas similar to lmer/summary
+    # output
+    axs = model.plot_summary()
+    assert axs.shape == (4, 2)
+
+    # Just common
+    axs = model.plot_summary(params="coef")
+    assert axs.shape == (2, 2)
+
+    # Just rfx and variances
+    axs = model.plot_summary(params="rfx")
+    assert axs.shape == (4, 2)
+
+    # Just DV and variances
+    axs = model.plot_summary(params="response")
+    assert axs.shape == (2, 2)
+    plt.close("all")
+
+    # Summary plots
+    axs = model.plot_summary(kind="summary")
+    axs = model.plot_summary(kind="forest")
+    axs = model.plot_summary(kind="ridge")
+    plt.close("all")
+
+    # Posterior distribution plots
+    ax = model.plot_summary(kind="posterior")
+    # With kwargs supported by az.plot_posterior
+    ax = model.plot_summary(kind="posterior", rope=[-1, 1])
+
+    # Prior distribution plots
+    ax = model.plot_summary(kind="prior")
+    assert ax.shape == (2, 3)
+    ax = model.plot_summary(kind="prior", params="rfx")
+    assert ax.shape == (2,)
+    plt.close("all")
+
+    # Prior/Posteriof predictive plot
+    _ = model.plot_summary(kind="ppc", dist="prior")
+    _ = model.plot_summary(kind="ppc", dist="posterior")
+
+    # Aliases
+    model.plot_priors()
+    model.plot_posterior(
+        params="coefs",
+        rope={"Intercept": [{"rope": (200, 300)}], "Days": [{"rope": (5, 10)}]},
+    )
 
     # assert isinstance(model.fixef, list)
     # assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()

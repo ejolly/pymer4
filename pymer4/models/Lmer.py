@@ -93,8 +93,8 @@ class Lmer(object):
         self.terms = {}
         self.fits = None
         self.inference_obj = None
-        self.prior_predictive = None
-        self.posterior_predictive = None
+        self.prior_predictions = None
+        self.posterior_predictions = None
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(
@@ -109,7 +109,12 @@ class Lmer(object):
             common_terms = []
         common_terms += list(self.model_obj.common_terms.keys())
         group_terms = list(self.model_obj.group_specific_terms.keys())
-        self.terms = dict(common_terms=common_terms, group_terms=group_terms)
+        response_term = [self.model_obj.response.name]
+        self.terms = dict(
+            common_terms=common_terms,
+            group_terms=group_terms,
+            response_term=response_term,
+        )
 
         # Fixed effects population params dm
         self.design_matrix = self.model_obj._design.common.as_dataframe()
@@ -366,18 +371,20 @@ class Lmer(object):
             self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
         )
         # This adds a new attribute on self.inference_obj called
-        # .posterior_predictive that contains a column called 'DV'
+        # .posterior_predictions that contains a column called 'DV'
         self.model_obj.predict(
             self.inference_obj, inplace=True, include_group_specific=True, kind="pps"
         )
         # Aggregate them by calling predict using the same data the model was estimated
         # with. By default this uses the posterior estimates of the mean response var,
-        # instead of the posterior predictive dist. But aggregating them gives the same
+        # jnstead of the posterior predictive dist. But aggregating them gives the same
         # estimates when calculated on the same data the model was fit on
         if verbose:
             print("Sampling predictions marginalizing over posteriors...")
-        self.fits = self.predict(data=None, summarize=True)
-        self.posterior_predictive = self.fits
+        self.fits = self.predict(data=None, summarize=True, kind="ppc").drop(
+            columns=["Kind"]
+        )
+        self.posterior_predictions = self.fits
 
         self.data["fits"] = self.fits["Estimate"].copy()
 
@@ -395,7 +402,7 @@ class Lmer(object):
         self.inference_obj.add_groups(
             {"prior": priors.prior, "prior_predictive": priors.prior_predictive}
         )
-        self.prior_predictive = (
+        self.prior_predictions = (
             az.summary(
                 self.inference_obj.prior_predictive,
                 kind="stats",
@@ -448,19 +455,35 @@ class Lmer(object):
             **kwargs,
         )
 
-    # def sample(self, sample_from="posterior", draws=2000, params="default", **kwargs):
+    def _get_terms_for_plotting(self, params):
+        """Helper function to aid in variable selection with az.plot_* funcs"""
 
-    #     if sample_from not in ["prior", "posterior"]:
-    #         raise ValueError("sample_from must be 'prior' or 'posterior'")
+        if params in ["default"]:
+            var_names = self.terms["common_terms"] + [
+                f"{e}_sigma" for e in self.terms["group_terms"]
+            ]
+            filter_vars = None
 
-    #     if sample_from == "posterior" and not self.fitted:
-    #         raise RuntimeError("Model must be fitted to sample from posterior!")
+        elif params in ["coef", "coefs"]:
+            var_names = self.terms["common_terms"]
+            filter_vars = None
 
-    #     var_names = _select_az_params(params)
-    #     if sample_from == "prior":
-    #         samples = self.model_obj.prior_predictive(
-    #             draws=draws, var_names=var_names, **kwargs
-    #         )
+        # TODO: split up into separate elifs after adding fixed computation
+        elif params in ["fixef", "fixefs", "ranef", "ranefs", "rfx"]:
+            var_names = self.terms["group_terms"]
+            filter_vars = "like"
+
+        elif params in ["response"]:
+            var_names = self.terms["response_term"]
+            filter_vars = "like"
+
+        elif params in [None, "all"]:
+            var_names = None
+            filter_vars = None
+        else:
+            raise ValueError(f"params = {params} not understood")
+
+        return var_names, filter_vars
 
     def plot_summary(
         self, kind="trace", dist="posterior", params="default", ci=95, **kwargs
@@ -472,38 +495,78 @@ class Lmer(object):
         hdi_prob = kwargs.pop("ci", 95) / 100
         kwargs.update({"hdi_prob": hdi_prob})
 
-        if dist in ["prior", "priors"] and kind in ["priors", "prior", "trace"]:
-            return self._plot_priors(**kwargs)
-
-        if kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
-            _ = kwargs.pop("hdi_prob", None)
-            _ = kwargs.pop("dist", None)
-            return az.plot_ppc(self.inference_obj, group=dist, **kwargs)
-
-        var_names = _select_az_params(params)
-
+        # Trace plots for inspecting sampler
         if kind == "trace":
+            if dist != "posterior":
+                raise ValueError(
+                    f"{kind} plots are only supported with dist='posterior'"
+                )
             if "combined" not in kwargs:
                 kwargs.update({"combined": False})
             _ = kwargs.pop("hdi_prob", None)
+            var_names, filter_vars = self._get_terms_for_plotting(params)
             plot_func = az.plot_trace
-        elif kind in ["forest", "summary", "ridge"]:
+
+        # Summary plots for model terms and HDIs/CIs
+        elif kind in ["summary", "forest", "ridge"]:
+            if dist != "posterior":
+                raise ValueError(
+                    f"{kind} plots are only supported with dist='posterior'"
+                )
             if "combined" not in kwargs:
                 kwargs.update({"combined": True})
-            plot_func = az.plot_forest
+            var_names, filter_vars = self._get_terms_for_plotting(params)
             if kind == "ridge":
                 kwargs.update({"kind": "ridgeplot"})
-        elif kind in ["posterior", "posteriors"]:
+            plot_func = az.plot_forest
+
+        # Posterior distribution plots
+        elif kind in ["posterior_dist", "posterior", "posteriors"]:
+            var_names, filter_vars = self._get_terms_for_plotting(params)
             plot_func = az.plot_posterior
+
+        # Prior distribution plots
+        # Different plotting call cause it's through bambi
+        elif kind in ["prior_dist", "prior", "priors"]:
+
+            # By default plot all priors
+            params = None if params == "default" else params
+            var_names, _ = self._get_terms_for_plotting(params)
+            # If requesting only rfx we need exact names so append _sigma to name
+            if params in ["fixef", "fixefs", "ranef", "ranefs", "rfx"]:
+                var_names = [f"{name}_sigma" for name in var_names]
+            _ = kwargs.pop("dist", None)
+            kwargs.update({"var_names": var_names})
+            return self.model_obj.plot_priors(**kwargs)
+
+        # Y-hat/prediction plots
+        elif kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
+            _ = kwargs.pop("hdi_prob", None)
+            _ = kwargs.pop("dist", None)
+            return az.plot_ppc(self.inference_obj, group=dist, **kwargs)
         else:
             raise ValueError(f"${kind} plot not supported")
 
         return plot_func(
             self.inference_obj,
             var_names=var_names,
-            filter_vars="like",
+            filter_vars=filter_vars,
             **kwargs,
         )
+
+    def plot_priors(self, **kwargs):
+        return self.plot_summary(kind="priors", dist="priors", **kwargs)
+
+    def plot_posteriors(self, **kwargs):
+        return self.plot_summary(kind="posteriors", dist="posteriors", **kwargs)
+
+    def plot_posterior(self, **kwargs):
+        """Alias for plot_posteriors"""
+        return self.plot_posteriors(**kwargs)
+
+    def plot_prior(self, **kwargs):
+        """Alias for plot_priors"""
+        return self.plot_prior(**kwargs)
 
     def simulate(self, num_datasets, use_rfx=True, verbose=False):
         """
