@@ -8,6 +8,7 @@ import deepdish as dd
 import pandas as pd
 import warnings
 from tables import NaturalNameWarning
+from pathlib import Path
 
 base = importr("base")
 
@@ -22,6 +23,9 @@ def save_model(model, filepath, compression="zlib", **kwargs):
         compression (string): what kind of compression to use; zlib is the default which should be universally accessible, but for example 'blosc' will be faster and produce smaller files. See more here: https://bit.ly/33x9JD7
         kwargs: optional keyword arguments to deepdish.io.save
     """
+
+    if isinstance(filePath, Path):
+        filePath = str(filePath)
 
     if filepath.endswith(".h5") or filepath.endswith(".hdf5"):
 
@@ -98,6 +102,9 @@ def load_model(filepath):
         model (pymer4.models): an instance of a pymer4 model
         filepath (str): full filepath string ending with .h5 or .hd5f
     """
+
+    if isinstance(filePath, Path):
+        filePath = str(filePath)
 
     if filepath.endswith(".h5") or filepath.endswith(".hdf5"):
         if not os.path.exists(filepath):
