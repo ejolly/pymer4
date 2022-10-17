@@ -24,12 +24,13 @@ def save_model(model, filepath, compression="zlib", **kwargs):
         kwargs: optional keyword arguments to deepdish.io.save
     """
 
-    if isinstance(filePath, Path):
-        filePath = str(filePath)
+    if isinstance(filepath, Path):
+        rds_file = filepath.parent / filepath.name.replace(".h5", "rds")
+        filepath = str(filepath)
+    else:
+        rds_file = filepath.replace(".h5", ".rds")
 
     if filepath.endswith(".h5") or filepath.endswith(".hdf5"):
-
-        filename = filepath.split(".")[0]
 
         # Separate out model attributes that are not pandas dataframes (or lists conatins dataframes) or R model objects
         simple_atts, data_atts = {}, {}
@@ -88,8 +89,8 @@ def save_model(model, filepath, compression="zlib", **kwargs):
 
         # Now deal with model object in R if needed
         if model.model_obj is not None:
-            base.saveRDS(model.model_obj, f"{filename}.rds")
-            assert os.path.exists(f"{filename}.rds")
+            base.saveRDS(model.model_obj, rds_file)
+            assert os.path.exists(rds_file)
     else:
         raise IOError("filepath must end with .h5 or .hdf5")
 
@@ -103,8 +104,11 @@ def load_model(filepath):
         filepath (str): full filepath string ending with .h5 or .hd5f
     """
 
-    if isinstance(filePath, Path):
-        filePath = str(filePath)
+    if isinstance(filepath, Path):
+        rds_file = filepath.parent / filepath.name.replace(".h5", "rds")
+        filepath = str(filepath)
+    else:
+        rds_file = filepath.replace(".h5", ".rds")
 
     if filepath.endswith(".h5") or filepath.endswith(".hdf5"):
         if not os.path.exists(filepath):
@@ -193,8 +197,7 @@ def load_model(filepath):
                     completed.extend([item_name, vals_name, idx_name, dtype_name])
         # Now deal with model object in R if needed
         if isinstance(model, Lmer):
-            filename = filepath.split(".")[0]
-            model.model_obj = base.readRDS(f"{filename}.rds")
+            model.model_obj = base.readRDS(rds_file)
         return model
     else:
         raise IOError("filepath must end with .h5 or .hdf5")
