@@ -1103,6 +1103,9 @@ class Lmer(object):
         if not isinstance(marginal_vars, list):
             marginal_vars = [marginal_vars]
 
+        if p_adjust is None:
+            p_adjust = "none"
+
         if grouping_vars and not isinstance(grouping_vars, list):
             grouping_vars = [grouping_vars]
             # Conditional vars can only be factor types
@@ -1322,22 +1325,22 @@ class Lmer(object):
             _sig_stars
         )
 
-        if (
-            p_adjust == "tukey"
-            and self.marginal_contrasts.shape[0] >= self.marginal_estimates.shape[0]
-        ):
-            print(
-                "P-values adjusted by tukey method for family of {} estimates".format(
-                    self.marginal_contrasts["Contrast"].nunique()
-                )
-            )
-        elif p_adjust != "tukey":
-            print(
-                "P-values adjusted by {} method for {} comparisons".format(
-                    p_adjust, self.marginal_contrasts["Contrast"].nunique()
-                )
-            )
         if summarize:
+            if (
+                p_adjust == "tukey"
+                and self.marginal_contrasts.shape[0] >= self.marginal_estimates.shape[0]
+            ):
+                print(
+                    "P-values adjusted by tukey method for family of {} estimates".format(
+                        self.marginal_contrasts["Contrast"].nunique()
+                    )
+                )
+            elif p_adjust != "tukey":
+                print(
+                    "P-values adjusted by {} method for {} comparisons".format(
+                        p_adjust, self.marginal_contrasts["Contrast"].nunique()
+                    )
+                )
             return self.marginal_estimates.round(3), self.marginal_contrasts.round(3)
 
     def plot_summary(

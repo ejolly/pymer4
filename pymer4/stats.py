@@ -8,6 +8,7 @@ __all__ = [
     "tost_equivalence",
     "welch_dof",
     "vif",
+    "correct_pvals",
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -645,3 +646,41 @@ def rsquared_adj(r, nobs, df_res, has_constant=True):
         return 1.0 - (nobs - 1) / df_res * (1.0 - r)
     else:
         return 1.0 - nobs / df_res * (1.0 - r)
+
+
+def correct_pvals(ps, method="holm"):
+    """
+    Provided a list of p-values return a corrected list according to specified method.
+    You can use this list to then compare against a chosen alpha (e.g. .05). Closely
+    follows the implementats in statsmodels.stats.multitest.multipletests
+
+    Args:
+        ps (list/np.ndarray): list of p-values
+        method (str, optional): correction method. Default to 'holm' for holm-bonferroni
+        step-down procedure
+
+    Returns:
+        np.ndarray: adjusted p-values
+    """
+
+    if method == "holm-bonf":
+        method = "holm"
+    supported_methods = ["holm", "bonf"]
+    if method not in supported_methods:
+        raise ValueError(f"method must be one of {supported_methods}")
+
+    pvals = np.asarray(ps)
+
+    # pval * number of tests
+    if method == "bonf":
+        return pvals * float(len(pvals))
+
+    # sorted pval * cumulative number of tests
+    elif method == "holm":
+        idx = np.argsort(pvals)
+        idx_r = np.argsort(idx)
+        sorted_pvals = pvals[idx]
+        corrected = sorted_pvals * np.arange(len(sorted_pvals), 0, -1)
+        # Set maximum p-val as the same for all tests above it
+        out = np.maximum.accumulate(corrected)
+        return out[idx_r]

@@ -580,12 +580,15 @@ def pandas2R(df):
 
 
 def result_to_table(
-    model,
+    to_format,
     drop_intercept=True,
     iv_name="Predictor",
+    comparison_name="b",
+    ci_name="ci",
     round=True,
     pval_text="< .001",
     pval_thresh=0.001,
+    fetch_name_col="index",
 ):
     """
     Nicely format the `.coefs` attribute of a fitted model. The intended use of this function is to nicely format the `.coefs` of a fitted model such that the resultant dataframe can be copied outside of python/jupyter or saved to another file (e.g. googlesheet). It's particularly well suited for use with `gspread_pandas`.
@@ -614,10 +617,13 @@ def result_to_table(
 
     """
 
-    if not model.fitted:
-        raise ValueError("model must be fit to format results")
+    if isinstance(to_format, pd.DataFrame):
+        results = to_format.copy()
+    else:
+        if not to_format.fitted:
+            raise ValueError("model must be fit to format results")
 
-    results = model.coefs.copy()
+        results = to_format.coefs.copy()
     if round:
         results = results.round(3)
     if drop_intercept:
@@ -626,10 +632,12 @@ def result_to_table(
         elif "Intercept" in results.index:
             results = results.drop(index=["Intercept"])
 
+    results = results.drop(columns=["Sig"])
+    if fetch_name_col == "index":
+        results.reset_index()
+
     results = (
-        results.drop(columns=["Sig"])
-        .reset_index()
-        .assign(
+        results.assign(
             ci=lambda df: df[["2.5_ci", "97.5_ci"]].apply(
                 lambda row: f"({' '.join(row.values.astype(str))})", axis=1
             ),
@@ -640,12 +648,13 @@ def result_to_table(
         .drop(columns=["2.5_ci", "97.5_ci", "SE", "P-val"])
         .rename(
             columns={
-                "index": iv_name,
-                "Estimate": "b",
+                fetch_name_col: iv_name,
+                "Estimate": comparison_name,
                 "T-stat": "t",
+                "ci": ci_name,
                 "DF": "df",
             }
         )
-        .reindex(columns=[iv_name, "b", "ci", "t", "df", "p"])
+        .reindex(columns=[iv_name, comparison_name, ci_name, "t", "df", "p"])
     )
     return results
