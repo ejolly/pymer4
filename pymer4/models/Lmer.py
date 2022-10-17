@@ -1041,13 +1041,13 @@ class Lmer(object):
             print("Fixed effects:\n")
             return self.coefs.round(3)
 
-    # TODO Provide option to to pass lmerTest.limit = N in order to get non Inf dof when number of observations > 3000. Apparently this is a new default in emmeans. This warning is only visible when verbose=True
     def post_hoc(
         self,
         marginal_vars,
         grouping_vars=None,
         p_adjust="tukey",
         summarize=True,
+        dof_asymptotic_at=99999,
         verbose=False,
     ):
         """
@@ -1057,7 +1057,12 @@ class Lmer(object):
             marginal_var (str/list): what variable(s) to compute marginal means/trends for; unique combinations of factor levels of these variable(s) will determine family-wise error correction
             grouping_vars (str/list): what variable(s) to group on. Trends/means/comparisons of other variable(s), will be computed at each level of these variable(s)
             p_adjust (str): multiple comparisons adjustment method. One of: tukey, bonf, fdr, hochberg, hommel, holm, dunnet, mvt (monte-carlo multi-variate T, aka exact tukey/dunnet). Default tukey
-            summarize (bool): output effects and contrasts or don't (always stored in model object as model.marginal_estimates and model.marginal_contrasts); default True
+            summarize (bool): output effects and contrasts or don't (always stored in
+            model object as model.marginal_estimates and model.marginal_contrasts);
+            default True
+            dof_asymptotic_at (int, optional): at what number of observations to
+            assuming a normal distribution and return z-stats instead of t-stats;
+            Default 100000 which differs from emmeans default of 3000
             verbose (bool): whether to print R messages to the console
 
         Returns:
@@ -1089,6 +1094,11 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate post-hoc comparisons")
+
+        if verbose and self.data.shape[0] >= dof_asymptotic_at:
+            warnings.warn(
+                f"Number of observations {self.data.shape[0]} exceeds dof_symptotic_at={dof_asymptotic_at}. Returning z-stats"
+            )
 
         if not isinstance(marginal_vars, list):
             marginal_vars = [marginal_vars]
@@ -1140,7 +1150,9 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit='"""
+                                + str(dof_asymptotic_at)
+                                + """')
                                 out
                                 }"""
                             )
@@ -1155,7 +1167,9 @@ class Lmer(object):
                                 + cont
                                 + """',adjust='"""
                                 + p_adjust
-                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit=9999)
+                                + """',options=list(),lmer.df='satterthwaite',lmerTest.limit='"""
+                                + str(dof_asymptotic_at)
+                                + """')
                                 out
                                 }"""
                             )
@@ -1180,7 +1194,9 @@ class Lmer(object):
                         + _conditional
                         + """, adjust='"""
                         + p_adjust
-                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
+                        + """',lmer.df='satterthwaite',lmerTest.limit='"""
+                        + str(dof_asymptotic_at)
+                        + """')
                         out
                         }"""
                     )
@@ -1194,7 +1210,9 @@ class Lmer(object):
                         + _marginal
                         + """,adjust='"""
                         + p_adjust
-                        + """',lmer.df='satterthwaite',lmerTest.limit=9999)
+                        + """',lmer.df='satterthwaite',lmerTest.limit='"""
+                        + str(dof_asymptotic_at)
+                        + """')
                         out
                         }"""
                     )
