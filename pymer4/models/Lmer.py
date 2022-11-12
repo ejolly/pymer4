@@ -1252,7 +1252,6 @@ class Lmer(object):
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        breakpoint()
         with localconverter(robjects.default_converter + pandas2ri.converter):
             self.marginal_estimates = robjects.conversion.rpy2py(base.summary(res)[0])
         # Resort columns
