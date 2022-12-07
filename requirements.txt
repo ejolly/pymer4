@@ -1,5 +1,5 @@
 pandas >= 1.1.0
-numpy>=1.16.0
+numpy>=1.20
 # rpy2>=3.5.3
 seaborn>=0.11.0
 matplotlib>=3.0
