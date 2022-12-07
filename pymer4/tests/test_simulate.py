@@ -1,4 +1,3 @@
-from __future__ import division
 import numpy as np
 from pymer4.models import Lm, Lmer
 from pymer4.simulate import simulate_lm, simulate_lmm

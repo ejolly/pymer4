@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 __all__ = ["models", "utils", "simulate", "stats", "io", "__version__"]
 
 from .models import Lmer, Lm, Lm2

@@ -1,4 +1,3 @@
-from __future__ import division
 from pymer4.utils import con2R, R2con, get_resource_path, result_to_table
 import pandas as pd
 import numpy as np
