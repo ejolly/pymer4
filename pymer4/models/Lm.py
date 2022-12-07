@@ -20,6 +20,7 @@ from ..utils import (
     _ols,
     _perm_find,
     _welch_ingredients,
+    _logregress,
 )
 
 
@@ -61,7 +62,10 @@ class Lm(object):
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.AIC = None
+        self.BIC = None
         self.logLike = None
+        self.rsquared = None
+        self.rsquared_adj = None
         self.warnings = []
         self.residuals = None
         self.coefs = None
@@ -205,7 +209,8 @@ class Lm(object):
         else:
             self.se_type = "non-robust"
 
-        if self.family == "gaussian":
+        # PRINT INFO
+        if self.family in ["gaussian", "binomial"]:
             if verbose:
                 if rank:
                     print_rank = "rank"
@@ -241,10 +246,6 @@ class Lm(object):
                             permute
                         )
                     )
-
-        elif self.family == "binomial":
-            # TODO: write me
-            pass
 
         self.ci_type = (
             conf_int + " (" + str(n_boot) + ")" if conf_int == "boot" else conf_int
@@ -287,9 +288,101 @@ class Lm(object):
 
         # Logistic Regression
         if self.family == "binomial":
-            b, oddratio, prob, se, t, res = _logregress(x, y, all_stats=True)
+            (
+                b,
+                ll,
+                ul,
+                se,
+                odds,
+                odds_ll,
+                odds_ul,
+                probs,
+                probs_ll,
+                probs_ul,
+                z,
+                p,
+                clf,
+            ) = _logregress(x, y, all_stats=True)
 
-            # TODO: finish me
+            # Compute sig stars
+            sig = np.array([_sig_stars(elem) for elem in p])
+
+            # Save sklearn model
+            self.model_obj = clf
+
+            # Build output df
+            results = np.column_stack(
+                [
+                    b,
+                    ll,
+                    ul,
+                    se,
+                    odds,
+                    odds_ll,
+                    odds_ul,
+                    probs,
+                    probs_ll,
+                    probs_ul,
+                    z,
+                    p,
+                    sig,
+                ]
+            )
+            results = pd.DataFrame(results)
+            results.index = x.columns
+            results.columns = [
+                "Estimate",
+                "2.5_ci",
+                "97.5_ci",
+                "SE",
+                "OR",
+                "OR_2.5_ci",
+                "OR_97.5_ci",
+                "Prob",
+                "Prob_2.5_ci",
+                "Prob_97.5_ci",
+                "Z-stat",
+                "P-val",
+                "Sig",
+            ]
+            results[
+                [
+                    "Estimate",
+                    "2.5_ci",
+                    "97.5_ci",
+                    "SE",
+                    "OR",
+                    "OR_2.5_ci",
+                    "OR_97.5_ci",
+                    "Prob",
+                    "Prob_2.5_ci",
+                    "Prob_97.5_ci",
+                    "Z-stat",
+                    "P-val",
+                ]
+            ] = results[
+                [
+                    "Estimate",
+                    "2.5_ci",
+                    "97.5_ci",
+                    "SE",
+                    "OR",
+                    "OR_2.5_ci",
+                    "OR_97.5_ci",
+                    "Prob",
+                    "Prob_2.5_ci",
+                    "Prob_97.5_ci",
+                    "Z-stat",
+                    "P-val",
+                ]
+            ].apply(
+                pd.to_numeric, args=("coerce",)
+            )
+
+            # if permute:
+            #     results = results.rename(
+            #         columns={"DF": "Num_perm", "P-val": "Perm-P-val"}
+            #     )
 
         # Linear Regression
         else:
@@ -416,33 +509,44 @@ class Lm(object):
                     columns={"DF": "Num_perm", "P-val": "Perm-P-val"}
                 )
 
+            self._calc_fit_statistics(x, y, res)
+
         self.coefs = results
         self.fitted = True
-        self.residuals = res
-        self.fits = (y.squeeze() - res).values
-        self.data["fits"] = (y.squeeze() - res).values
-        self.data["residuals"] = res
 
-        # Fit statistics
+        if summarize:
+            return self.summary()
+
+    def _calc_fit_statistics(self, x, y, residuals):
+
+        if self.family != "gaussian":
+            raise TypeError(
+                "Currently only gaussian models can calculate fit statistics"
+            )
+
+        # Save residuals
+        self.residuals = residuals
+        self.fits = (y.squeeze() - residuals).values
+        self.data["fits"] = (y.squeeze() - residuals).values
+        self.data["residuals"] = residuals
+
+        # Calculate fit statistics
         if "Intercept" in self.design_matrix.columns:
             center_tss = True
         else:
             center_tss = False
-        self.rsquared = rsquared(y.squeeze(), res, center_tss)
+        self.rsquared = rsquared(y.squeeze(), residuals, center_tss)
         self.rsquared_adj = rsquared_adj(
-            self.rsquared, len(res), len(res) - x.shape[1], center_tss
+            self.rsquared, len(residuals), len(residuals) - x.shape[1], center_tss
         )
         # self.rsquared_adj = np.nan
-        half_obs = len(res) / 2.0
-        ssr = np.dot(res, res.T)
+        half_obs = len(residuals) / 2.0
+        ssr = np.dot(residuals, residuals.T)
         self.logLike = (-np.log(ssr) * half_obs) - (
             (1 + np.log(np.pi / half_obs)) * half_obs
         )
         self.AIC = 2 * x.shape[1] - 2 * self.logLike
-        self.BIC = np.log((len(res))) * x.shape[1] - 2 * self.logLike
-
-        if summarize:
-            return self.summary()
+        self.BIC = np.log((len(residuals))) * x.shape[1] - 2 * self.logLike
 
     def summary(self):
         """
@@ -463,14 +567,18 @@ class Lm(object):
                 self.se_type, self.ci_type, self.sig_type
             )
         )
-        print(
-            "Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n"
-            % (self.data.shape[0], self.rsquared, self.rsquared_adj)
-        )
-        print(
-            "Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n"
-            % (self.logLike, self.AIC, self.BIC)
-        )
+        if self.rsquared is not None:
+            print(
+                "Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n"
+                % (self.data.shape[0], self.rsquared, self.rsquared_adj)
+            )
+        else:
+            print("Number of observations: %s\t\n" % (self.data.shape[0]))
+        if self.AIC is not None:
+            print(
+                "Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n"
+                % (self.logLike, self.AIC, self.BIC)
+            )
         print("Fixed effects:\n")
         return self.coefs.round(3)
 

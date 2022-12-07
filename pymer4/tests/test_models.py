@@ -1,12 +1,10 @@
 from pymer4.models import Lmer, Lm, Lm2
-from pymer4.utils import get_resource_path
 import pandas as pd
 import numpy as np
 from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
 import pytest
-import seaborn as sns
 from rpy2.rinterface_lib.embedded import RRuntimeError
 
 # import re

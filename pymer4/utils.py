@@ -404,7 +404,9 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
 
 
 def _logregress(x, y, all_stats=True):
-    # Design matrix already has intercept. We want no regularization and the newton solver to match as closely with R
+    # Design matrix already has intercept. We want no regularization and the newton
+    # solver to match as closely with R
+
     model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
     _ = model.fit(x, y)
     b = model.coef_
@@ -431,9 +433,37 @@ def _logregress(x, y, all_stats=True):
     ll = b - crit * se
     ul = b + crit * se
 
-    # TODO: need to convert log odds and probs. See Lmer
+    # equivalent to calling exp() then plogis() in R
+    odds, odds_ll, odds_ul, probs, probs_ll, probs_ul = _convert_odds_probs(b, ll, ul)
+
     if all_stats:
-        return b, ll, ul, se, z, p
+        return (
+            b.squeeze(),
+            ll.squeeze(),
+            ul.squeeze(),
+            se.squeeze(),
+            odds.squeeze(),
+            odds_ll.squeeze(),
+            odds_ul.squeeze(),
+            probs.squeeze(),
+            probs_ll.squeeze(),
+            probs_ul.squeeze(),
+            z.squeeze(),
+            p.squeeze(),
+            model,
+        )
+
+
+def _convert_odds_probs(b, ll, ul):
+    """converts coefficiens from a logistic regression model to odds ratios and
+    probabilities"""
+
+    from scipy.special import expit
+
+    odds, odds_ll, odds_ul = np.exp(b), np.exp(ll), np.exp(ul)
+    probs, probs_ll, probs_ul = expit(odds), expit(odds_ll), expit(odds_ul)  # plogis
+
+    return odds, odds_ll, odds_ul, probs, probs_ll, probs_ul
 
 
 def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
