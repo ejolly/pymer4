@@ -1,0 +1,8 @@
+-r requirements.txt
+black ==22.10.0
+pytest
+pytest-watch
+pytest-sugar
+pycodestyle
+ipdb
+pdbr
