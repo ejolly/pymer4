@@ -431,7 +431,7 @@ def test_inverse_gaussian_lmm(df):
     np.random.seed(1)
     df["DV_g"] = np.random.uniform(1, 2, size=df.shape[0])
     m = Lmer("DV_g ~ IV3 + (1|Group)", data=df, family="inverse_gaussian")
-    m.fit(summarize=False)
+    m.fit(summarize=False, old_optimizer=True)
     assert m.family == "inverse_gaussian"
     assert m.coefs.shape == (2, 7)
 
