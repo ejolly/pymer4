@@ -82,8 +82,7 @@ jobs:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda config --set always_yes yes --set changeps1 no
-          conda create -n pkg_test -c conda-forge python=$PY_VER 'r-lmerTest'
-          'r-emmeans' 'rpy2'
+          conda create -n pkg_test -c conda-forge python=$PY_VER 'r-lmerTest' 'r-emmeans' 'rpy2'
           conda activate pkg_test
           pip install -r requirements-dev.txt
           pip install .
