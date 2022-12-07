@@ -88,8 +88,6 @@ jobs:
       # Get code
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          ref: dev
 
       # ------------------------------------------------------------
       # Setup conda build environment and build package
