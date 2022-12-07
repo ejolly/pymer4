@@ -18,9 +18,8 @@ os.environ[
 ] = "True"  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
 
 
-def test_gaussian_lm2():
+def test_gaussian_lm2(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lm2("DV ~ IV3 + IV2", group="Group", data=df)
     model.fit(summarize=False)
     assert model.coefs.shape == (3, 8)
@@ -43,9 +42,8 @@ def test_gaussian_lm2():
     assert model.sig_type == "permutation (500)"
 
 
-def test_gaussian_lm():
+def test_gaussian_lm(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lm("DV ~ IV1 + IV3", data=df)
     model.fit(summarize=False)
 
@@ -102,106 +100,105 @@ def test_gaussian_lm():
     assert all([np.allclose(a, b) for a, b in zip(wls, scit)])
 
 
-def test_gaussian_lmm():
+def test_gaussian_lmm(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
     opt_opts = "optimizer='Nelder_Mead', optCtrl = list(FtolAbs=1e-8, XtolRel=1e-8)"
     model.fit(summarize=False, control=opt_opts)
 
-    # assert model.coefs.shape == (3, 8)
-    # estimates = np.array([12.04334602, -1.52947016, 0.67768509])
-    # assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
+    assert model.coefs.shape == (3, 8)
+    estimates = np.array([12.04334602, -1.52947016, 0.67768509])
+    assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
 
-    # assert isinstance(model.fixef, list)
-    # assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
-    # assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
-    # assert model.fixef[0].shape == (47, 3)
-    # assert model.fixef[1].shape == (3, 3)
+    assert isinstance(model.fixef, list)
+    assert (model.fixef[0].index.astype(int) == df.Group.unique()).all()
+    assert (model.fixef[1].index.astype(float) == df.IV3.unique()).all()
+    assert model.fixef[0].shape == (47, 3)
+    assert model.fixef[1].shape == (3, 3)
 
-    # assert isinstance(model.ranef, list)
-    # assert model.ranef[0].shape == (47, 2)
-    # assert model.ranef[1].shape == (3, 1)
-    # assert (model.ranef[1].index == ["0.5", "1", "1.5"]).all()
+    assert isinstance(model.ranef, list)
+    assert model.ranef[0].shape == (47, 2)
+    assert model.ranef[1].shape == (3, 1)
+    assert (model.ranef[1].index == ["0.5", "1", "1.5"]).all()
 
-    # assert model.ranef_corr.shape == (1, 3)
-    # assert model.ranef_var.shape == (4, 3)
+    assert model.ranef_corr.shape == (1, 3)
+    assert model.ranef_var.shape == (4, 3)
 
-    # assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef[0].mean(), atol=0.01)
+    assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef[0].mean(), atol=0.01)
 
-    # # Test predict
-    # # Little hairy to we test a few different cases. If a dataframe with non-matching
-    # # column names is passed in, but we only used fixed-effects to make predictions,
-    # # then R will not complain and will return population level predictions given the
-    # # model's original data. This is undesirable behavior, so pymer tries to naively
-    # # check column names in Python first and checks the predictions against the
-    # # originally fitted values second. This is works fine except when there are
-    # # categorical predictors which get expanded out to a design matrix internally in R.
-    # # Unfortunately we can't easily pre-expand this to check against the column names of
-    # # the model matrix.
+    # Test predict
+    # Little hairy to we test a few different cases. If a dataframe with non-matching
+    # column names is passed in, but we only used fixed-effects to make predictions,
+    # then R will not complain and will return population level predictions given the
+    # model's original data. This is undesirable behavior, so pymer tries to naively
+    # check column names in Python first and checks the predictions against the
+    # originally fitted values second. This is works fine except when there are
+    # categorical predictors which get expanded out to a design matrix internally in R.
+    # Unfortunately we can't easily pre-expand this to check against the column names of
+    # the model matrix.
 
-    # # Test circular prediction which should raise error
-    # with pytest.raises(ValueError):
-    #     assert np.allclose(model.predict(model.data), model.data.fits)
+    # Test circular prediction which should raise error
+    with pytest.raises(ValueError):
+        assert np.allclose(model.predict(model.data), model.data.fits)
 
-    # # Same thing, but skip the prediction verification; no error
-    # assert np.allclose(
-    #     model.predict(model.data, verify_predictions=False), model.data.fits
-    # )
+    # Same thing, but skip the prediction verification; no error
+    assert np.allclose(
+        model.predict(model.data, verify_predictions=False), model.data.fits
+    )
 
-    # # Test on data that has no matching columns;
-    # X = pd.DataFrame(np.random.randn(model.data.shape[0], model.data.shape[1] - 1))
+    # Test on data that has no matching columns;
+    X = pd.DataFrame(np.random.randn(model.data.shape[0], model.data.shape[1] - 1))
 
-    # # Should raise error no matching columns, caught by checks in Python
-    # with pytest.raises(ValueError):
-    #     model.predict(X)
+    # Should raise error no matching columns, caught by checks in Python
+    with pytest.raises(ValueError):
+        model.predict(X)
 
-    # # If user skips Python checks, then pymer raises an error if the predictions match
-    # # the population predictions from the model's original data (which is what predict()
-    # # in R will do by default).
-    # with pytest.raises(ValueError):
-    #     model.predict(X, skip_data_checks=True, use_rfx=False)
+    # If user skips Python checks, then pymer raises an error if the predictions match
+    # the population predictions from the model's original data (which is what predict()
+    # in R will do by default).
+    with pytest.raises(ValueError):
+        model.predict(X, skip_data_checks=True, use_rfx=False)
 
-    # # If the user skips check, but tries to predict with rfx then R will complain so we
-    # # can check for an exception raised from R rather than pymer
-    # with pytest.raises((RRuntimeError, ValueError)):
-    #     model.predict(X, skip_data_checks=True, use_rfx=True)
+    # If the user skips check, but tries to predict with rfx then R will complain so we
+    # can check for an exception raised from R rather than pymer
+    with pytest.raises((RRuntimeError, ValueError)):
+        model.predict(X, skip_data_checks=True, use_rfx=True)
 
-    # # Finally a user can turn off every kind of check in which case we expect circular predictions
-    # pop_preds = model.predict(model.data, use_rfx=False, verify_predictions=False)
-    # assert np.allclose(
-    #     pop_preds,
-    #     model.predict(
-    #         X,
-    #         use_rfx=False,
-    #         skip_data_checks=True,
-    #         verify_predictions=False,
-    #     ),
-    # )
+    # Finally a user can turn off every kind of check in which case we expect circular predictions
+    pop_preds = model.predict(model.data, use_rfx=False, verify_predictions=False)
+    assert np.allclose(
+        pop_preds,
+        model.predict(
+            X,
+            use_rfx=False,
+            skip_data_checks=True,
+            verify_predictions=False,
+        ),
+    )
 
-    # # Test prediction with categorical variables
-    # df["DV_ll"] = df.DV_l.apply(lambda x: "yes" if x == 1 else "no")
-    # m = Lmer("DV ~ IV3 + DV_ll + (IV2|Group) + (1|IV3)", data=df)
-    # m.fit(summarize=False)
+    # Test prediction with categorical variables
+    df["DV_ll"] = df.DV_l.apply(lambda x: "yes" if x == 1 else "no")
+    m = Lmer("DV ~ IV3 + DV_ll + (IV2|Group) + (1|IV3)", data=df)
+    m.fit(summarize=False)
 
-    # # Should fail because column name checks don't understand expanding levels of
-    # # categorical variable into new design matrix columns, as the checks are in Python
-    # # but R handles the design matrix conversion
-    # with pytest.raises(ValueError):
-    #     m.predict(m.data, verify_predictions=False)
+    # Should fail because column name checks don't understand expanding levels of
+    # categorical variable into new design matrix columns, as the checks are in Python
+    # but R handles the design matrix conversion
+    with pytest.raises(ValueError):
+        m.predict(m.data, verify_predictions=False)
 
-    # # Should fail because of circular predictions
-    # with pytest.raises(ValueError):
-    #     m.predict(m.data, skip_data_checks=True)
+    # Should fail because of circular predictions
+    with pytest.raises(ValueError):
+        m.predict(m.data, skip_data_checks=True)
 
-    # # Test simulate
-    # out = model.simulate(2)
-    # assert isinstance(out, pd.DataFrame)
-    # assert out.shape == (model.data.shape[0], 2)
+    # Test simulate
+    out = model.simulate(2)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
 
-    # out = model.simulate(2, use_rfx=True)
-    # assert isinstance(out, pd.DataFrame)
-    # assert out.shape == (model.data.shape[0], 2)
+    out = model.simulate(2, use_rfx=True)
+    assert isinstance(out, pd.DataFrame)
+    assert out.shape == (model.data.shape[0], 2)
 
     # Test confint
     # Wald confidence interval
@@ -240,12 +237,10 @@ def test_gaussian_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_contrasts():
-    df = pd.read_csv(os.path.join(get_resource_path(), "gammas.csv")).rename(
-        columns={"BOLD signal": "bold"}
-    )
-    grouped_means = df.groupby("ROI")["bold"].mean()
-    model = Lmer("bold ~ ROI + (1|subject)", data=df)
+def test_contrasts(gammas):
+
+    grouped_means = gammas.groupby("ROI")["bold"].mean()
+    model = Lmer("bold ~ ROI + (1|subject)", data=gammas)
 
     custom_contrast = grouped_means["AG"] - np.mean(
         [grouped_means["IPS"], grouped_means["V1"]]
@@ -277,9 +272,8 @@ def test_contrasts():
     assert np.allclose(model.coefs.iloc[1, 0], custom_contrast)
 
 
-def test_post_hoc():
+def test_post_hoc(df):
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df, family="gaussian")
     model.fit(
         factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False
@@ -295,9 +289,8 @@ def test_post_hoc():
     assert contrasts.shape[0] == 15
 
 
-def test_logistic_lmm():
+def test_logistic_lmm(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV_l ~ IV1+ (IV1|Group)", data=df, family="binomial")
     model.fit(summarize=False)
 
@@ -335,12 +328,11 @@ def test_logistic_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_anova():
+def test_anova(df):
 
     np.random.seed(1)
-    data = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    data["DV_l2"] = np.random.randint(0, 4, data.shape[0])
-    model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=data)
+    df["DV_l2"] = np.random.randint(0, 4, df.shape[0])
+    model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=df)
     model.fit(summarize=False)
     out = model.anova()
     assert all(out.index == ["IV3", "DV_l2", "IV3:DV_l2"])
@@ -350,9 +342,8 @@ def test_anova():
     assert out.shape == (3, 7)
 
 
-def test_poisson_lmm():
+def test_poisson_lmm(df):
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_int"] = np.random.randint(1, 10, df.shape[0])
     m = Lmer("DV_int ~ IV3 + (1|Group)", data=df, family="poisson")
     m.fit(summarize=False)
@@ -372,10 +363,9 @@ def test_poisson_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_gamma_lmm():
+def test_gamma_lmm(df):
 
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_g"] = np.random.uniform(1, 2, size=df.shape[0])
     m = Lmer("DV_g ~ IV3 + (1|Group)", data=df, family="gamma")
     m.fit(summarize=False)
@@ -395,10 +385,9 @@ def test_gamma_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_inverse_gaussian_lmm():
+def test_inverse_gaussian_lmm(df):
 
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_g"] = np.random.uniform(1, 2, size=df.shape[0])
     m = Lmer("DV_g ~ IV3 + (1|Group)", data=df, family="inverse_gaussian")
     m.fit(summarize=False)
@@ -418,8 +407,8 @@ def test_inverse_gaussian_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_lmer_opt_passing():
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
+def test_lmer_opt_passing(df):
+
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
     opt_opts = "optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)"
     model.fit(summarize=False, control=opt_opts)
@@ -428,16 +417,15 @@ def test_lmer_opt_passing():
     # On some hardware the optimizer will still fail to converge
     # assert len(model.warnings) == 0
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
     opt_opts = "optCtrl = list(ftol_abs=1e-4, xtol_abs=1e-4)"
     model.fit(summarize=False, control=opt_opts)
     assert len(model.warnings) >= 1
 
 
-def test_glmer_opt_passing():
+def test_glmer_opt_passing(df):
+
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_int"] = np.random.randint(1, 10, df.shape[0])
     m = Lmer("DV_int ~ IV3 + (1|Group)", data=df, family="poisson")
     m.fit(
@@ -464,10 +452,10 @@ tests_ = [
 
 
 @pytest.mark.parametrize("model", tests_)
-def test_Pool(model):
+def test_Pool(model, df):
     from multiprocessing import get_context
 
     # squeeze model functions through Pool pickling
     print("Pool", model.__name__)
     with get_context("spawn").Pool(1) as pool:
-        _ = pool.apply(model, [])
+        _ = pool.apply(model, [df])

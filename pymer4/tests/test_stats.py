@@ -72,9 +72,8 @@ def test_boot_func():
     assert len(result[1]) == 2
 
 
-def test_lrt():
+def test_lrt(df):
     # read the data and build 3 nexted models
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV3 + IV2 + (1|Group)", data=df)
     model.fit(summarize=False)
     model_sub = Lmer("DV ~ IV2 + (1|Group)", data=df)

@@ -4,8 +4,7 @@ from pymer4.models import Lm
 import os
 
 
-def test_result_to_table():
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
+def test_result_to_table(df):
     model = Lm("DV ~ IV1 + IV3", data=df)
     model.fit(summarize=False)
 

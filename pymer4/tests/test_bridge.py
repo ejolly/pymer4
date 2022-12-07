@@ -6,8 +6,7 @@ from pymer4.utils import get_resource_path
 import os
 
 
-def test_pandas():
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
+def test_pandas(df):
     # py -> R
     rdf = pandas2R(df)
     # py -> R -> py
