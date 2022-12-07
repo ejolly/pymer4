@@ -1,7 +1,10 @@
 Pymer4
 ======
-.. image:: https://github.com/ejolly/pymer4/actions/workflows/CI.yml/badge.svg
-    :target: https://github.com/ejolly/pymer4/actions/workflows/CI.yml
+.. image:: https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg 
+    :target: https://github.com/ejolly/pymer4/actions/workflows/Tests.yml
+
+.. image:: https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg 
+    :target: https://github.com/ejolly/pymer4/actions/workflows/Build.yml
 
 .. image:: https://badge.fury.io/py/pymer4.svg
     :target: https://badge.fury.io/py/pymer4

@@ -1,4 +1,5 @@
-[![tests & build](https://github.com/ejolly/pymer4/actions/workflows/CI.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/CI.yml)
+[![Tests](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml)
+[![Build](https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Build.yml)
 [![PyPI version](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4)
 [![Anaconda Version](https://anaconda.org/ejolly/pymer4/badges/version.svg)](https://anaconda.org/ejolly/pymer4) 
 [![Anaconda Platforms](https://anaconda.org/ejolly/pymer4/badges/platforms.svg)](https://anaconda.org/ejolly/pymer4)
