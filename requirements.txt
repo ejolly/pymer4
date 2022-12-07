@@ -7,4 +7,4 @@ patsy>=0.5.1
 joblib>=0.14
 scipy>=1.4.0
 deepdish>=0.3.6
-scikit-learn>=1.1
+scikit-learn>=1.0
