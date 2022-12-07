@@ -6,6 +6,7 @@ Main class to wrap R's lme4 library
 """
 
 
+from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.rinterface_lib import callbacks
@@ -1660,17 +1661,15 @@ class Lmer(object):
             + """,oldNames="""
             + ("""TRUE""" if oldnames else """FALSE""")
             + """))
-            list(out_ci,rownames(out_ci))
+            out_ci
             }"""
         )
         confint_func = robjects.r(rstring)
-        out_summary, out_rownames = confint_func(self.model_obj)
-        breakpoint()
-        df = pd.DataFrame(out_summary)
-        df.index = out_rownames
+        out_summary = confint_func(self.model_obj)
+        out_summary = R2pandas(out_summary)
 
         # restore outputs
         callbacks.consolewrite_warnerror = consolewrite_warning_backup
         for message in r_console:
             print(message)
-        return df
+        return out_summary
