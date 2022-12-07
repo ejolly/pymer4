@@ -582,7 +582,7 @@ def _df_meta_to_arr(df):
 def pandas2R(df):
     """Local conversion of pandas dataframe to R dataframe as recommended by rpy2"""
     with localconverter(robjects.default_converter + pandas2ri.converter):
-        data = robjects.conversion.py2rpy(df)
+        data = robjects.conversion.get_conversion().py2rpy(df)
     return data
 
 

@@ -2,6 +2,12 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.7.9
+-----
+- Unpins rpy2 and pandas versions
+- lrt for lmer models
+- logistic regression?
+
 0.7.8
 -----
 - Maintenance release that pins :code:`rpy2 >= 3.4.5,< 3.5.1` due to R -> Python dataframe conversion issue on recent :code:`rpy2` versions that causes a `recursion error <https://github.com/rpy2/rpy2/issues/866>`_. 
