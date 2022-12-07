@@ -85,9 +85,10 @@ jobs:
           conda config --set always_yes yes --set changeps1 no
           conda config --set bld_path $CONDA_BLD_PATH
           conda install -n base -q conda-build conda-verify anaconda-client
-          conda info -a
+          # conda info -a
+          which git
           echo "# ----------------BUILDING---------------------------------"
-          conda build --python=$PY_VER -c conda-forge -c defaults conda
+          conda build --python=$PY_VER conda -c conda-forge -c defaults
           tarball=$(conda build --python=$PY_VER conda --output | tail -1)
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \

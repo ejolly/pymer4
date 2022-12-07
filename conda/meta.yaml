@@ -10,7 +10,6 @@ source:
     path_url: ../ # so conda build will grab source to read version
 
 build:
-    # script: python setup.py install --single-version-externally-managed --record=record.txt
     script: pip install . -vv --no-deps
     # abandoned conda build GIT_BUILD_STRING env variable
     string: py{{environ.get("CONDA_PY", "XX")}}{{environ.get("GIT_ABBREV_COMMIT", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
@@ -21,6 +20,7 @@ requirements:
     # else test section fails during TravisCI conda build
     - python {{ python }}
     - pip
+    - numpy >=1.20
 
   run:
     - python {{ python }}
@@ -44,6 +44,7 @@ test:
    - pymer4.models
   requires:
    - pytest
+   - black
 
 about:
   home: "https://eshinjolly.com/pymer4/"
