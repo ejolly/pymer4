@@ -102,7 +102,6 @@ def test_gaussian_lm():
     assert all([np.allclose(a, b) for a, b in zip(wls, scit)])
 
 
-# FIXME: Currently failing
 def test_gaussian_lmm():
 
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
@@ -206,10 +205,7 @@ def test_gaussian_lmm():
 
     # Test confint
     # Wald confidence interval
-    wald_confint = model.confint()  # FAILS HERE
-    #  ValueError: Length mismatch: Expected axis has 2 elements, new values have 8 elements
-    # pymer4/models/Lmer.py:1702: in confint
-    # df.index = out_rownames
+    wald_confint = model.confint()
 
     assert isinstance(wald_confint, pd.DataFrame)
     assert wald_confint.shape == (8, 2)
@@ -281,7 +277,6 @@ def test_contrasts():
     assert np.allclose(model.coefs.iloc[1, 0], custom_contrast)
 
 
-# FIXME: Currently failing
 def test_post_hoc():
     np.random.seed(1)
     df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
@@ -290,12 +285,7 @@ def test_post_hoc():
         factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False
     )
 
-    marginal, contrasts = model.post_hoc(
-        marginal_vars="IV3", p_adjust="dunnet"
-    )  # FAILS HERE
-    # KeyError: 0
-    # pymer4/models/Lmer.py:1263: in post_hoc
-    # base.summary(res)[0]
+    marginal, contrasts = model.post_hoc(marginal_vars="IV3", p_adjust="dunnet")
 
     assert marginal.shape[0] == 3
     assert contrasts.shape[0] == 3
@@ -345,7 +335,6 @@ def test_logistic_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-# FIXME: Currently failing
 def test_anova():
 
     np.random.seed(1)
@@ -354,11 +343,10 @@ def test_anova():
     model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=data)
     model.fit(summarize=False)
     out = model.anova()
-    assert out.shape == (3, 7)  # FAILS HERE
-    # assert (6, 3) == (3, 7)
-    # At index 0 diff: 6 != 3
-    #
+    assert all(out.index == ["IV3", "DV_l2", "IV3:DV_l2"])
+    assert out.shape == (3, 7)
     out = model.anova(force_orthogonal=True)
+    assert all(out.index == ["IV3", "DV_l2", "IV3:DV_l2"])
     assert out.shape == (3, 7)
 
 
@@ -400,11 +388,11 @@ def test_gamma_lmm():
     # model.fit(summarize=False)
     # assert model.fixef.shape == (47, 2)
 
-    # model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="gamma")
-    # model.fit(summarize=False)
-    # assert isinstance(model.fixef, list)
-    # assert model.fixef[0].shape == (47, 2)
-    # assert model.fixef[1].shape == (3, 2)
+    model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="gamma")
+    model.fit(summarize=False)
+    assert isinstance(model.fixef, list)
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
 
 
 def test_inverse_gaussian_lmm():
@@ -419,15 +407,15 @@ def test_inverse_gaussian_lmm():
 
     # Test RFX only; these work but the optimizer in R typically crashes if the model is especially bad fit so commenting out until a better dataset is acquired
 
-    # model = Lmer("DV_g ~ 0 + (IV1|Group)", data=df, family="inverse_gaussian")
-    # model.fit(summarize=False)
-    # assert model.fixef.shape == (47, 2)
+    model = Lmer("DV_g ~ 0 + (IV1|Group)", data=df, family="inverse_gaussian")
+    model.fit(summarize=False)
+    assert model.fixef.shape == (47, 2)
 
-    # model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="inverse_gaussian")
-    # model.fit(summarize=False)
-    # assert isinstance(model.fixef, list)
-    # assert model.fixef[0].shape == (47, 2)
-    # assert model.fixef[1].shape == (3, 2)
+    model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="inverse_gaussian")
+    model.fit(summarize=False)
+    assert isinstance(model.fixef, list)
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
 
 
 def test_lmer_opt_passing():
@@ -468,7 +456,7 @@ tests_ = [
     test_logistic_lmm,
     test_anova,
     test_poisson_lmm,
-    test_gamma_lmm,
+    # test_gamma_lmm,
     test_inverse_gaussian_lmm,
     test_lmer_opt_passing,
     test_glmer_opt_passing,

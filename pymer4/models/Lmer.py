@@ -11,6 +11,8 @@ from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.rinterface_lib import callbacks
 import rpy2.rinterface as rinterface
+from rpy2.robjects.conversion import localconverter
+from rpy2.robjects import numpy2ri
 import warnings
 import traceback
 import numpy as np
@@ -189,7 +191,10 @@ class Lmer(object):
                 raise TypeError(errormsg)
         self.factors = factor_dict
         self.contrast_codes = out
-        return robjects.ListVector(out), df
+        # have to do local convertion because dict values are numpy arrays :(
+        with localconverter(robjects.default_converter + numpy2ri.converter):
+            out = robjects.ListVector(out)
+        return out, df
 
     def _refit_orthogonal(self):
         """
@@ -238,7 +243,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = pd.DataFrame(anova(self.model_obj))
+        self.anova_results = R2pandas(anova(self.model_obj))
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
@@ -718,9 +723,7 @@ class Lmer(object):
 
         # Random effect variances and correlations
         varcor_NAs = ["NA", "N", robjects.NA_Character]  # NOQA
-        # NOTE: For some reason the rpy2 converter causes a recursion error on rpy2 == 3.5.1, but casting works except the result is transposed and the column names are lost
-        df = pd.DataFrame(base.data_frame(unsum.rx2("varcor"))).T
-        df.columns = ["grp", "var1", "var2", "vcov", "sdcor"]
+        df = R2pandas(base.data_frame(unsum.rx2("varcor")))
         ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
@@ -1261,7 +1264,7 @@ class Lmer(object):
             )
 
         # Marginal Contrasts
-        self.marginal_contrasts = pd.DataFrame(base.summary(res)[1])
+        self.marginal_contrasts = R2pandas(base.summary(res)[1])
         if "t.ratio" in self.marginal_contrasts.columns:
             rename_dict = {
                 "t.ratio": "T-stat",
@@ -1304,7 +1307,7 @@ class Lmer(object):
         self.marginal_contrasts = self.marginal_contrasts.rename(columns=rename_dict)
 
         # Need to make another call to emmeans to get confidence intervals on contrasts
-        confs = pd.DataFrame(base.unclass(emmeans.confint_emmGrid(res))[1])
+        confs = R2pandas(base.unclass(emmeans.confint_emmGrid(res))[1])
         confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:

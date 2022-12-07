@@ -6,6 +6,8 @@ Historically :code:`pymer4` versioning was a bit all over the place but has sett
 -----
 - Unpins rpy2 and pandas versions
 - lrt for lmer models
+- more robust conversion of R dataframes should solve issues like
+  [#88](https://github.com/ejolly/pymer4/issues/88) and [#113](https://github.com/ejolly/pymer4/issues/113)
 - logistic regression?
 
 0.7.8
