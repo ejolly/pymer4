@@ -1,4 +1,4 @@
-name: tests & build
+name: Build (& Test)
 on:
   push:
     branches:
@@ -6,10 +6,6 @@ on:
       - main
     tags-ignore:
       - v[0-9].[0-9].[0-9]  # prevent double runs for vM.N.P releases
-  pull_request:
-    branches:
-      - master
-      - main
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -89,7 +85,14 @@ jobs:
           conda info -a
 
       # ------------------------------------------------------------
-      # 2. Build the conda package and tarballs for each OS
+      # Get code
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: dev
+
+      # ------------------------------------------------------------
+      # Setup conda build environment and build package
       # env defined here are just for convenience when writing bash commands
       - name: Build package
         id: conda-bld
@@ -97,7 +100,14 @@ jobs:
           OS: ${{ runner.os }}   
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda build --python=$PY_VER -c conda-forge -c defaults conda
+          conda config --set always_yes yes --set changeps1 no
+          conda config --set bld_path $CONDA_BLD_PATH
+          conda install -n base -q conda-build
+          conda deactivate
+          echo "# ----------------BUILDING---------------------------------"
+          conda config --show | grep bld_path
+          conda info
+          conda-build ./conda/ --python=$PY_VER -c https://conda.anaconda.org/conda-forge/ --verify
           tarball=$(conda build --python=$PY_VER conda --output | tail -1)
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
@@ -115,20 +125,20 @@ jobs:
         run: |
           conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
-          conda install black pytest-cov -c conda-forge
+          conda install black -c conda-forge
           conda list
           lscpu
           python -c 'import numpy; numpy.show_config()'
           python -c "from pymer4.test_install import test_install; test_install()"
 
-      # # 4. Run code tests, formatting, and coverage
-      - name: Run tests + coverage
+      # 4. Run code tests
+      - name: Run tests
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda activate env_$PY_VER
           black --check --verbose .
-          pytest --cov=$PACKAGE_NAME
+          pytest pymer4/tests
 
       # 5a. Build docs (only for 3.8 which handles deployment)
       # Will also run on PRs which serves as another layer of testing
