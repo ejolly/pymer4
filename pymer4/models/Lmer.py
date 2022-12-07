@@ -5,16 +5,10 @@ Pymer4 Lmer Class
 Main class to wrap R's lme4 library
 """
 
-import os
 
-# os.environ["R_HOME"] = "/Users/Esh/anaconda3/envs/pymer4_dev/lib/R"
-from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.rinterface_lib import callbacks
-
-from rpy2.robjects import numpy2ri, pandas2ri
-from rpy2.robjects.conversion import localconverter
 import rpy2.rinterface as rinterface
 import warnings
 import traceback
@@ -27,17 +21,13 @@ from ..utils import (
     _perm_find,
     _return_t,
     _to_ranks_by_group,
-    con2R,
-    pandas2R,
 )
+from ..bridge import con2R, pandas2R, R2pandas, numpy2R, R2numpy
 from pandas.api.types import CategoricalDtype
 
 # Import R libraries we need
 base = importr("base")
 stats = importr("stats")
-
-# TODO: switch to local converter
-numpy2ri.activate()
 
 # Make a reference to the default R console writer from rpy2
 consolewrite_warning_backup = callbacks.consolewrite_warnerror
@@ -460,10 +450,7 @@ class Lmer(object):
                 num_IV = 0
         # rpy2 < 3.4 returns an R matrix object with a length
         elif len(design_matrix):
-            with localconverter(robjects.default_converter + pandas2ri.converter):
-                self.design_matrix = robjects.conversion.get_conversion().rpy2py(
-                    base.data_frame(design_matrix)
-                )
+            self.design_matrix = R2pandas(base.data_frame(design_matrix))
             num_IV = self.design_matrix.shape[1]
         else:
             num_IV = 0
@@ -542,8 +529,7 @@ class Lmer(object):
                 )
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                with localconverter(robjects.default_converter + pandas2ri.converter):
-                    df = robjects.conversion.get_conversion().rpy2py(out_summary)
+                df = R2pandas(out_summary)
                 dfshape = df.shape[1]
                 df.index = list(out_rownames)
 
@@ -633,8 +619,7 @@ class Lmer(object):
 
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                with localconverter(robjects.default_converter + pandas2ri.converter):
-                    df = robjects.conversion.get_conversion().rpy2py(out_summary)
+                df = R2pandas(out_summary)
                 df.index = list(out_rownames)
                 df.columns = [
                     "Estimate",
@@ -778,11 +763,7 @@ class Lmer(object):
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
-        with localconverter(robjects.default_converter + pandas2ri.converter):
-            fixefs = [
-                robjects.conversion.get_conversion().rpy2py(e).drop(columns=["index"])
-                for e in fixefs
-            ]
+        fixefs = [R2pandas(e).drop(columns=["index"]) for e in fixefs]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []
@@ -835,20 +816,10 @@ class Lmer(object):
         """
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
-        with localconverter(robjects.default_converter + pandas2ri.converter):
-            if len(ranefs) > 1:
-                self.ranef = [
-                    robjects.conversion.get_conversion()
-                    .rpy2py(e)
-                    .drop(columns=["index"])
-                    for e in ranefs
-                ]
-            else:
-                self.ranef = (
-                    robjects.conversion.get_conversion()
-                    .rpy2py(ranefs[0])
-                    .drop(columns=["index"])
-                )
+        if len(ranefs) > 1:
+            self.ranef = [R2pandas(e).drop(columns=["index"]) for e in ranefs]
+        else:
+            self.ranef = R2pandas(ranefs[0]).drop(columns=["index"])
 
         # Model residuals
         rstring = """
@@ -924,8 +895,7 @@ class Lmer(object):
         )
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
-        with localconverter(robjects.default_converter + pandas2ri.converter):
-            out = robjects.conversion.get_conversion().rpy2py(sims)
+        out = R2pandas(sims)
         return out
 
     def predict(
@@ -1258,10 +1228,7 @@ class Lmer(object):
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        with localconverter(robjects.default_converter + pandas2ri.converter):
-            self.marginal_estimates = robjects.conversion.get_conversion().rpy2py(
-                base.summary(res)[0]
-            )
+        self.marginal_estimates = R2pandas(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -1698,6 +1665,7 @@ class Lmer(object):
         )
         confint_func = robjects.r(rstring)
         out_summary, out_rownames = confint_func(self.model_obj)
+        breakpoint()
         df = pd.DataFrame(out_summary)
         df.index = out_rownames
 
