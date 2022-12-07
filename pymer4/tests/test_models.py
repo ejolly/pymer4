@@ -1,4 +1,5 @@
 from pymer4.models import Lmer, Lm, Lm2
+from pymer4.bridge import pandas2R, R2numpy, R2pandas
 import pandas as pd
 import numpy as np
 from scipy.special import logit
@@ -6,8 +7,11 @@ from scipy.stats import ttest_ind
 import os
 import pytest
 from rpy2.rinterface_lib.embedded import RRuntimeError
+from rpy2.robjects.packages import importr
+import rpy2.robjects as ro
 
-# import re
+stats = importr("stats")
+base = importr("base")
 
 np.random.seed(10)
 
@@ -287,6 +291,45 @@ def test_post_hoc(df):
     assert contrasts.shape[0] == 15
 
 
+def test_logistic_lm(df):
+    model = Lm("DV_l ~ IV1", data=df, family="binomial")
+    model.fit(summarize=False)
+
+    # Basic checks
+    assert model.coefs.shape == (2, 13)
+    assert "OR" in model.coefs.columns and "Prob" in model.coefs.columns
+
+    # Should be able to compare to R glm()
+    rdf = pandas2R(df)
+    r_model = stats.glm("DV_l ~ IV1", family="binomial", data=rdf)
+    get_summary = ro.r(
+        """
+        function(m){
+        out <- data.frame(unclass(summary(m))$coefficients)
+        out
+        }
+        """
+    )
+    summary = R2pandas(get_summary(r_model))
+
+    # Compare output
+    for rcol, pcol in zip(
+        ["Estimate", "Std..Error", "z.value", "Pr...z.."],
+        ["Estimate", "SE", "Z-stat", "P-val"],
+    ):
+        assert np.allclose(model.coefs[pcol], summary[rcol])
+
+    # Test prediction
+    # assert np.allclose(
+    #     model.predict(model.data, use_rfx=True, verify_predictions=False),
+    #     model.data.fits,
+    # )
+    # assert np.allclose(
+    #     model.predict(model.data, use_rfx=True, pred_type="link"),
+    #     logit(model.data.fits),
+    # )
+
+
 def test_logistic_lmm(df):
 
     model = Lmer("DV_l ~ IV1+ (IV1|Group)", data=df, family="binomial")
@@ -432,8 +475,6 @@ def test_glmer_opt_passing(df):
     assert len(m.warnings) >= 1
 
 
-# all or prune to suit
-# tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
 tests_ = [
     test_gaussian_lm2,
     test_gaussian_lm,
