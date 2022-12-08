@@ -17,4 +17,5 @@ dev/
 .vscode/settings.json
 *.key
 pytest.ini
-env/
+env/*
+conda/build/*

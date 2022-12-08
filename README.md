@@ -53,6 +53,29 @@ Check out the [documentation site](http://eshinjolly.com/pymer4/) for detailed t
 
 Installing via [Anaconda](https://www.anacnda.com/products/individual) is the preferred installation method. Follow the directions [here](https://eshinjolly.com/pymer4/installation.html).  
 
+## Local build
+
+```
+conda create -n build python=3.8 pip conda-build
+conda activate build
+conda-build ./conda --python=3.8 -c https://conda.anaconda.org/conda-forge --output-folder ./conda/build --output ./conda/build
+tarball=$(conda-build ./conda --python=3.8 --output | tail -1)
+conda convert -p linux-64 -p win-64 $tarball -o ./conda/build
+```
+
+## Local upload
+
+```
+# after
+# conda install anaconda-client
+# anaconda login
+
+# pre-release
+anaconda upload ./conda/build/**/pymer4*.tar.bz2 -l "pre-release"
+
+# main
+anaconda upload ./conda/build/**/pymer4*.tar.bz2 -l "main"
+```
 
 ## Contributing
 

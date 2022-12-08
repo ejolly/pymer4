@@ -22,6 +22,7 @@ requirements:
     # - r-lmerTest
     # - r-base
     - pip
+    - numpy >=1.20
 
   run:
     - python {{ python }}
