@@ -4,8 +4,6 @@ on:
     branches:
       - master
       - main
-    tags-ignore:
-      - v[0-9].[0-9].[0-9]  # prevent double runs for vM.N.P releases
   pull_request:
     branches:
       - master
@@ -16,17 +14,12 @@ on:
         description: 'Run workflow with ssh debugging'
         required: false
         default: false
-  release:
-    types: [published]
 
   schedule:
     - cron: '0 0 * * 0'
 
 env:
   PACKAGE_NAME: pymer4
-  DEPLOY_PY_VER: 3.8  # only this job deploys docs, anaconda.org, pypi
-  DEPLOY_OS: ubuntu-latest
-  CONDA_BLD_PATH: /tmp/ci_conda_bld
 
 defaults:
   run:
@@ -41,25 +34,9 @@ jobs:
       fail-fast: true
       matrix:
         py_ver: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest, macos-11]
-
-    outputs:
-      # tarballs are py3X job-specific
-      conda-tarball: ${{ steps.conda-bld.outputs.conda-tarball }}
+        os: [ubuntu-latest]
 
     steps:
-
-      # ------------------------------------------------------------
-      # 0. Print some basic github action info
-      - name: diagnostic info
-        run: |
-          echo "OS: ${{ matrix.os }}" 
-          echo "Python: ${{ matrix.py_ver }}" 
-          echo "Conda build path: $CONDA_BLD_PATH"
-          echo "Deploy OS: $DEPLOY_OS"
-          echo "Deploy Python: $DEPLOY_PY_VER"
-          echo "GA event name: ${{ github.event_name }}"
-          echo "GA ref: ${{ github.ref }}"
 
       # ------------------------------------------------------------
       # Step up miniconda
@@ -82,7 +59,7 @@ jobs:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda config --set always_yes yes --set changeps1 no
-          conda create -n pkg_test -c conda-forge python=$PY_VER 'r-lmerTest' 'r-emmeans'
+          conda create -n pkg_test -c conda-forge python=$PY_VER 'r-lmerTest' 'r-emmeans' rpy2
           conda activate pkg_test
           pip install -r requirements-dev.txt
           pip install .
