@@ -107,20 +107,17 @@ jobs:
       # Create new conda env and install package locally
       # Test installation worked
       # Get black and pytest from pip because black version on conda lags behind
-      - name: Create and test fresh installation 
+      - name: Test installation 
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c conda-forge -c defaults
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
-          conda install black -c conda-forge
-          conda list
-          lscpu
-          python -c 'import numpy; numpy.show_config()'
+          pip install -r requirements-dev.txt
           python -c "from pymer4.test_install import test_install; test_install()"
 
       # 4. Run code tests
-      - name: Run tests
+      - name: Run Test Suite
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
