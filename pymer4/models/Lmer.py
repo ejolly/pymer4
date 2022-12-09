@@ -25,7 +25,7 @@ from ..utils import (
     _return_t,
     _to_ranks_by_group,
 )
-from ..bridge import con2R, pandas2R, R2pandas, numpy2R, R2numpy
+from ..bridge import con2R, pandas2R, R2pandas, R2numpy
 from pandas.api.types import CategoricalDtype
 
 # Import R libraries we need
@@ -481,9 +481,9 @@ class Lmer(object):
         # self.AIC = unsum.rx2("AICtab")[0]
         # the above is incorrect. The AICtab of summary.lmerMod gives the deviance (which in this context is really
         # -2 LogLik, NOT the AIC
-        self.AIC = stats.AIC(self.model_obj)
-        self.BIC = stats.BIC(self.model_obj)
-        self.logLike = unsum.rx2("logLik")[0]
+        self.AIC = R2numpy(stats.AIC(self.model_obj))[0]
+        self.BIC = R2numpy(stats.BIC(self.model_obj))[0]
+        self.logLike = R2numpy(unsum.rx2("logLik"))[0]
 
         # First check for lme4 printed messages (e.g. convergence info is usually here instead of in warnings)
         fit_messages = unsum.rx2("optinfo").rx2("conv").rx2("lme4").rx2("messages")
@@ -608,11 +608,11 @@ class Lmer(object):
                     out <- cbind(out.coef,out.ci)
                     odds <- exp(out.coef[1])
                     colnames(odds) <- "OR"
-                    probs <- data.frame(sapply(out.coef[1],plogis))
+                    probs <- odds / (1 + odds)
                     colnames(probs) <- "Prob"
                     odds.ci <- exp(out.ci)
                     colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
-                    probs.ci <- data.frame(sapply(out.ci,plogis))
+                    probs.ci <- odds.ci / (1 + odds.ci)
                     if(ncol(probs.ci) == 1){
                       probs.ci = t(probs.ci)
                     }

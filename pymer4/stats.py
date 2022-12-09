@@ -11,16 +11,12 @@ __all__ = [
     "correct_pvals",
 ]
 
-__author__ = ["Eshin Jolly"]
-__license__ = ["MIT"]
-
 import numpy as np
 import pandas as pd
 import copy
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
-from itertools import product
 from pymer4.models import Lmer
 
 from pymer4.utils import (

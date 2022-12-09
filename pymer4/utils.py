@@ -24,6 +24,7 @@ __all__ = [
     "_lrt",
     "_welch_ingredients",
     "_df_meta_to_arr",
+    "_logit2prob",
 ]
 
 import os
@@ -410,7 +411,10 @@ def _logregress(x, y, all_stats=True):
     model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
     _ = model.fit(x, y)
     b = model.coef_
-    fits = model.predict(x)
+    fits = model.decision_function(x)
+    # We only return probs for positive class
+    fit_probs = model.predict_proba(x)[:, 1]
+    fit_classes = model.predict(x)
 
     # Inference implementation from: Vallat, R. (2018). Pingouin: statistics in Python. Journal of Open Source Software, 3(31), 1026, https://doi.org/10.21105/joss.01026
     # Compute the fisher information matrix
@@ -452,19 +456,29 @@ def _logregress(x, y, all_stats=True):
             z.squeeze(),
             p.squeeze(),
             fits.squeeze(),
+            fit_probs.squeeze(),
+            fit_classes.squeeze(),
             model,
-
         )
+
+
+def _logit2prob(logit):
+    """
+    Convert logits (outputs or coefs from logistic regression) to probabilities.
+    Sources:
+    https://yury-zablotski.netlify.app/post/from-odds-to-probability/#odds
+    https://sebastiansauer.github.io/convert_logit2prob/#:~:text=Conversion%20rule,%2F%20(1%20%2B%20odds)%20.
+    """
+
+    return np.exp(logit) / (1 + np.exp(logit))
 
 
 def _convert_odds_probs(b, ll, ul):
     """converts coefficiens from a logistic regression model to odds ratios and
     probabilities"""
 
-    from scipy.special import expit
-
     odds, odds_ll, odds_ul = np.exp(b), np.exp(ll), np.exp(ul)
-    probs, probs_ll, probs_ul = expit(odds), expit(odds_ll), expit(odds_ul)  # plogis
+    probs, probs_ll, probs_ul = _logit2prob(b), _logit2prob(ll), _logit2prob(ul)
 
     return odds, odds_ll, odds_ul, probs, probs_ll, probs_ul
 

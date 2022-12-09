@@ -322,18 +322,21 @@ def test_logistic_lm(df):
     # Test prediction
     assert np.allclose(
         model.predict(model.data),
+        model.data.fit_probs,
+    )
+    assert np.allclose(
+        model.predict(model.data, pred_type="link"),
         model.data.fits,
     )
-    # assert np.allclose(
-    #     model.predict(model.data, use_rfx=True, pred_type="link"),
-    #     logit(model.data.fits),
-    # )
 
 
 def test_logistic_lmm(df):
 
     model = Lmer("DV_l ~ IV1+ (IV1|Group)", data=df, family="binomial")
-    model.fit(summarize=False)
+    model.fit(summarize=True)
+    assert np.allclose(
+        model.coefs.loc["(Intercept)", "Prob"], model.data.DV_l.mean(), atol=0.01
+    )
 
     assert model.coefs.shape == (2, 13)
     estimates = np.array([-0.16098421, 0.00296261])
@@ -348,10 +351,12 @@ def test_logistic_lmm(df):
     assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef.mean(), atol=0.01)
 
     # Test prediction
+    # By default we give back probs
     assert np.allclose(
         model.predict(model.data, use_rfx=True, verify_predictions=False),
         model.data.fits,
     )
+    # But can convert to logits like .decision_function in sklearn
     assert np.allclose(
         model.predict(model.data, use_rfx=True, pred_type="link"),
         logit(model.data.fits),

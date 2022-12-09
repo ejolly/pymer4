@@ -302,6 +302,8 @@ class Lm(object):
                 z,
                 p,
                 fits,
+                fit_probs,
+                fit_classes,
                 clf,
             ) = _logregress(x, y, all_stats=True)
 
@@ -310,6 +312,11 @@ class Lm(object):
 
             # Save sklearn model
             self.model_obj = clf
+
+            # Save all fits
+            self.data["fits"] = fits
+            self.data["fit_probs"] = fit_probs
+            self.data["fit_classes"] = fit_classes
 
             # Build output df
             results = np.column_stack(
@@ -379,7 +386,6 @@ class Lm(object):
             ].apply(
                 pd.to_numeric, args=("coerce",)
             )
-            self.data["fits"] = fits
 
             # if permute:
             #     results = results.rename(
@@ -643,12 +649,16 @@ class Lm(object):
             corrs = np.arctanh(corrs)
         return pd.Series(corrs, index=self.coefs.index)
 
-    def predict(self, data):
+    def predict(self, data, pred_type="response"):
         """
         Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). Will automatically use/ignore intercept to make a prediction if it was/was not part of the original fitted model.
 
         Args:
             data (pd.DataFrame): input data to make predictions on
+            pred_type (str): whether the prediction should be on the 'response' scale
+            (default) or on the 'link' scale of the predictors passed through the link
+            function (e.g. log-odds scale in a logit model instead of probability
+            values) or 'probs' if self.family == 'binomial'
 
         Returns:
             np.ndarray: prediction values
@@ -674,9 +684,18 @@ class Lm(object):
             X = X[["Intercept"] + cols]
 
         if self.family == "gaussian":
+            if pred_type == "link":
+                warnings.warn(
+                    "pred_type='link' is ignored when family='gaussian' as link='identity'"
+                )
             coefs = self.coefs.loc[:, "Estimate"].values
             preds = np.dot(X, coefs)
 
         elif self.family == "binomial":
-            preds = self.model_obj.predict(X)
+            if pred_type == "response":
+                # We only return probabilities for positive class
+                preds = self.model_obj.predict_proba(X)[:, 1]
+            elif pred_type == "link":
+                preds = self.model_obj.decision_function(X)
+
         return preds
