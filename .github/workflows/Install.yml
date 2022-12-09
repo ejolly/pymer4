@@ -1,0 +1,41 @@
+name: Install
+on: [workflow_dispatch]
+
+env:
+  PACKAGE_NAME: pymer4
+
+defaults:
+  run:
+    # login shell to source the conda hook in .bash_profile
+    shell:
+      bash -l {0}
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        py_ver: [3.8]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+
+      # ------------------------------------------------------------
+      # Step up miniconda
+      - name: Download Miniconda
+        uses: conda-incubator/setup-miniconda@059455a698430d8b68fa317268fa2e3da3492a98
+        with:
+          miniconda-version: "latest"
+          python-version: ${{ matrix.py_ver }}
+
+      # ------------------------------------------------------------
+      # Setup conda build environment and build package
+      # env defined here are just for convenience when writing bash commands
+      - name: Install package from pre-release
+        run: |
+          conda config --set always_yes yes --set changeps1 no
+          conda create -n pkg_test -c 'ejolly/label/pre-release' -c conda-forge pymer4
+          conda activate pkg_test
+          python -c "from pymer4.test_install import test_install; test_install()"
+
