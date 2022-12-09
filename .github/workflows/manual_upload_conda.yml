@@ -1,4 +1,4 @@
-name: manual release conda
+name: Release with Conda (not used)
 on: [workflow_dispatch]
 
 env:

@@ -1,4 +1,4 @@
-name: Build (& Test)
+name: Build with Conda (not working)
 on:
   workflow_dispatch:
     inputs:
@@ -6,11 +6,6 @@ on:
         description: 'Run workflow with ssh debugging'
         required: false
         default: false
-  release:
-    types: [published]
-
-  schedule:
-    - cron: '0 0 * * 0'
 
 env:
   PACKAGE_NAME: pymer4
