@@ -11,19 +11,21 @@ __all__ = [
     "correct_pvals",
 ]
 
-__author__ = ["Eshin Jolly"]
-__license__ = ["MIT"]
-
 import numpy as np
 import pandas as pd
+import copy
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
 from functools import partial
+from pymer4.models import Lmer
 
 from pymer4.utils import (
     _check_random_state,
     _welch_ingredients,
     _mean_diff,
+    _get_params,
+    _lrt,
+    _sig_stars,
 )
 from joblib import Parallel, delayed
 
@@ -545,62 +547,92 @@ def welch_dof(x, y):
         raise TypeError("Both x and y must be 1d numpy arrays")
 
 
-# def lrt(models):
-#     """
-#     WARNING EXPERIMENTAL!
-#     Compute a likelihood ratio test between models. This produces similar but not identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
+def lrt(models, refit=True):
+    """
+        Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
+    #     Possible additions:
+    #     1) Generalize function to perform LRT, or vuong test
+    #     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
+    #     3) Given a single model expand out to all separate term tests
+       Args:
+           models (list): a list of two Lmer models to be compared
+           refit (bool): should REML models be refitted as ML before comparison (defaults to True)
 
-#     Todo:
-#     0) Figure out discrepancy with R result
-#     1) Generalize function to perform LRT, or vuong test
-#     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
-#     3) Given a single model expand out to all separate term tests
-#     """
+       Returns:
+           df (pandas.DataFrame): dataframe of the anova results
 
-#     raise NotImplementedError("This function is not yet implemented")
+    """
+    models_list = copy.deepcopy(models)
+    if not isinstance(models_list, list):
+        models_list = [models_list]
+    if len(models_list) < 2:
+        raise ValueError("Must have 2 models to perform comparison")
+    if not all(list(map(lambda m: isinstance(m, Lmer), models_list))):
+        raise TypeError("All models are not Lmer")
 
-#     if not isinstance(models, list):
-#         models = [models]
-#     if len(models) < 2:
-#         raise ValueError("Must have at least 2 models to perform comparison")
+    # refit models if needed
+    refitted = False
+    if refit:
+        for i, m in enumerate(models_list):
+            if m._REML:
+                refitted = True
+                m.fit(REML=False, summarize=False)
+                models_list[i] = m
 
-#     # Get number of coefs for each model
-#     all_params = []
-#     for m in models:
-#         all_params.append(_get_params(m))
+    # Get number of coefs for each model
+    all_params = []
+    for m in models_list:
+        all_params.append(_get_params(m))
+    all_params = np.array(all_params)
+    idx = np.argsort(all_params)
+    all_params = all_params[idx]
+    models_list = np.array(models_list)[idx]
+    out = pd.DataFrame()
+    for i, m in enumerate(models_list):
+        df = _get_params(m) - (_get_params(models_list[i - 1])) if i > 0 else np.nan
+        chisq = (
+            ((-2 * models_list[i - 1].logLike) - (-2 * m.logLike)) if i > 0 else np.nan
+        )
+        pval = _lrt([models_list[index] for index in [i - 1, i]]) if i > 0 else np.nan
+        out = pd.concat(
+            [
+                out,
+                pd.DataFrame(
+                    {
+                        "model": m.formula,
+                        "npar": _get_params(m),
+                        "AIC": m.AIC,
+                        "BIC": m.BIC,
+                        "deviance": -2 * m.logLike,
+                        "log-likelihood": m.logLike,
+                        "Chisq": chisq,
+                        "Df": df,
+                        "P-val": pval,
+                    },
+                    index=[0],
+                ),
+            ],
+            ignore_index=True,
+        )
+    out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
+    out = out[
+        [
+            "model",
+            "npar",
+            "AIC",
+            "BIC",
+            "log-likelihood",
+            "deviance",
+            "Chisq",
+            "Df",
+            "P-val",
+            "Sig",
+        ]
+    ]
 
-#     # Sort from fewest params to most
-#     all_params = np.array(all_params)
-#     idx = np.argsort(all_params)
-#     all_params = all_params[idx]
-#     models = np.array(models)[idx]
-
-#     model_pairs = list(product(models, repeat=2))
-
-#     model_pairs = model_pairs[1 : len(models)]
-#     s = []
-#     for p in model_pairs:
-#         s.append(_lrt(p))
-#     out = pd.DataFrame()
-#     for i, m in enumerate(models):
-#         pval = s[i - 1] if i > 0 else np.nan
-#         out = out.append(
-#             pd.DataFrame(
-#                 {
-#                     "model": m.formula,
-#                     "DF": m.coefs.loc["Intercept", "DF"],
-#                     "AIC": m.AIC,
-#                     "BIC": m.BIC,
-#                     "log-likelihood": m.logLike,
-#                     "P-val": pval,
-#                 },
-#                 index=[0],
-#             ),
-#             ignore_index=True,
-#         )
-#     out["Sig"] = out["P-val"].apply(lambda x: _sig_stars(x))
-#     out = out[["model", "log-likelihood", "AIC", "BIC", "DF", "P-val", "Sig"]]
-#     return out
+    if refitted:
+        print("refitting model(s) with ML (instead of REML)")
+    return out.fillna("")
 
 
 def rsquared(y, res, has_constant=True):

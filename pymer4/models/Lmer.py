@@ -5,13 +5,14 @@ Pymer4 Lmer Class
 Main class to wrap R's lme4 library
 """
 
+
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
 from rpy2.rinterface_lib import callbacks
-
-from rpy2.robjects import numpy2ri
 import rpy2.rinterface as rinterface
+from rpy2.robjects.conversion import localconverter
+from rpy2.robjects import numpy2ri
 import warnings
 import traceback
 import numpy as np
@@ -23,16 +24,13 @@ from ..utils import (
     _perm_find,
     _return_t,
     _to_ranks_by_group,
-    con2R,
-    pandas2R,
 )
+from ..bridge import con2R, pandas2R, R2pandas, R2numpy
 from pandas.api.types import CategoricalDtype
 
 # Import R libraries we need
 base = importr("base")
 stats = importr("stats")
-
-numpy2ri.activate()
 
 # Make a reference to the default R console writer from rpy2
 consolewrite_warning_backup = callbacks.consolewrite_warnerror
@@ -55,7 +53,8 @@ class Lmer(object):
         data (pd.DataFrame): model copy of input data
         grps (dict): groups and number of observations per groups recognized by lmer
         design_matrix (pd.DataFrame): model design matrix determined by lmer
-        AIC (float): model akaike information criterion
+        AIC (float): model Akaike information criterion
+        BIC (float): model Bayesian information criterion
         logLike (float): model Log-likelihood
         family (string): model family
         warnings (list): warnings output from R or Python
@@ -90,6 +89,7 @@ class Lmer(object):
         self.data = copy(data)
         self.grps = None
         self.AIC = None
+        self.BIC = None
         self.logLike = None
         self.warnings = []
         self.ranef_var = None
@@ -191,7 +191,10 @@ class Lmer(object):
                 raise TypeError(errormsg)
         self.factors = factor_dict
         self.contrast_codes = out
-        return robjects.ListVector(out), df
+        # have to do local convertion because dict values are numpy arrays :(
+        with localconverter(robjects.default_converter + numpy2ri.converter):
+            out = robjects.ListVector(out)
+        return out, df
 
     def _refit_orthogonal(self):
         """
@@ -240,7 +243,7 @@ class Lmer(object):
             }
         """
         anova = robjects.r(rstring)
-        self.anova_results = pd.DataFrame(anova(self.model_obj))
+        self.anova_results = R2pandas(anova(self.model_obj))
         if self.anova_results.shape[1] == 6:
             self.anova_results.columns = [
                 "SS",
@@ -447,13 +450,13 @@ class Lmer(object):
         # rpy2 > 3.4 returns a numpy array that can be empty but has shape (obs x IVs)
         if isinstance(design_matrix, np.ndarray):
             if design_matrix.shape[1] > 0:
-                self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+                self.design_matrix = pd.DataFrame(design_matrix)
                 num_IV = self.design_matrix.shape[1]
             else:
                 num_IV = 0
         # rpy2 < 3.4 returns an R matrix object with a length
         elif len(design_matrix):
-            self.design_matrix = pd.DataFrame(base.data_frame(design_matrix))
+            self.design_matrix = R2pandas(base.data_frame(design_matrix))
             num_IV = self.design_matrix.shape[1]
         else:
             num_IV = 0
@@ -475,8 +478,12 @@ class Lmer(object):
                 "The rpy2, lme4, or lmerTest API appears to have changed again. Please file a bug report at https://github.com/ejolly/pymer4/issues with your R, Python, rpy2, lme4, and lmerTest versions and the OS you're running pymer4 on. Apologies."
             )
 
-        self.AIC = unsum.rx2("AICtab")[0]
-        self.logLike = unsum.rx2("logLik")[0]
+        # self.AIC = unsum.rx2("AICtab")[0]
+        # the above is incorrect. The AICtab of summary.lmerMod gives the deviance (which in this context is really
+        # -2 LogLik, NOT the AIC
+        self.AIC = R2numpy(stats.AIC(self.model_obj))[0]
+        self.BIC = R2numpy(stats.BIC(self.model_obj))[0]
+        self.logLike = R2numpy(unsum.rx2("logLik"))[0]
 
         # First check for lme4 printed messages (e.g. convergence info is usually here instead of in warnings)
         fit_messages = unsum.rx2("optinfo").rx2("conv").rx2("lme4").rx2("messages")
@@ -528,9 +535,9 @@ class Lmer(object):
                 )
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = pd.DataFrame(out_summary)
+                df = R2pandas(out_summary)
                 dfshape = df.shape[1]
-                df.index = out_rownames
+                df.index = list(out_rownames)
 
                 # gaussian
                 if dfshape == 7:
@@ -601,11 +608,11 @@ class Lmer(object):
                     out <- cbind(out.coef,out.ci)
                     odds <- exp(out.coef[1])
                     colnames(odds) <- "OR"
-                    probs <- data.frame(sapply(out.coef[1],plogis))
+                    probs <- odds / (1 + odds)
                     colnames(probs) <- "Prob"
                     odds.ci <- exp(out.ci)
                     colnames(odds.ci) <- c("OR_2.5_ci","OR_97.5_ci")
-                    probs.ci <- data.frame(sapply(out.ci,plogis))
+                    probs.ci <- odds.ci / (1 + odds.ci)
                     if(ncol(probs.ci) == 1){
                       probs.ci = t(probs.ci)
                     }
@@ -618,8 +625,8 @@ class Lmer(object):
 
                 estimates_func = robjects.r(rstring)
                 out_summary, out_rownames = estimates_func(self.model_obj)
-                df = pd.DataFrame(out_summary)
-                df.index = out_rownames
+                df = R2pandas(out_summary)
+                df.index = list(out_rownames)
                 df.columns = [
                     "Estimate",
                     "SE",
@@ -716,8 +723,7 @@ class Lmer(object):
 
         # Random effect variances and correlations
         varcor_NAs = ["NA", "N", robjects.NA_Character]  # NOQA
-        df = pd.DataFrame(base.data_frame(unsum.rx2("varcor")))
-
+        df = R2pandas(base.data_frame(unsum.rx2("varcor")))
         ran_vars = df.query("var2 in @varcor_NAs").drop("var2", axis=1)
         ran_vars.index = ran_vars["grp"]
         ran_vars.drop("grp", axis=1, inplace=True)
@@ -761,9 +767,7 @@ class Lmer(object):
         """
         fixef_func = robjects.r(rstring)
         fixefs = fixef_func(self.model_obj)
-        fixefs = [
-            pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in fixefs
-        ]
+        fixefs = [R2pandas(e).drop(columns=["index"]) for e in fixefs]
         if len(fixefs) > 1:
             if self.coefs is not None:
                 f_corrected_order = []
@@ -817,13 +821,9 @@ class Lmer(object):
         ranef_func = robjects.r(rstring)
         ranefs = ranef_func(self.model_obj)
         if len(ranefs) > 1:
-            self.ranef = [
-                pd.DataFrame(e, index=e.index).drop(columns=["index"]) for e in ranefs
-            ]
+            self.ranef = [R2pandas(e).drop(columns=["index"]) for e in ranefs]
         else:
-            self.ranef = pd.DataFrame(ranefs[0], index=ranefs[0].index).drop(
-                columns=["index"]
-            )
+            self.ranef = R2pandas(ranefs[0]).drop(columns=["index"])
 
         # Model residuals
         rstring = """
@@ -899,7 +899,8 @@ class Lmer(object):
         )
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
-        return pd.DataFrame(sims)
+        out = R2pandas(sims)
+        return out
 
     def predict(
         self,
@@ -1020,6 +1021,10 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate summary!")
+        if self._REML:
+            print("Linear mixed model fit by REML [’lmerMod’]")
+        else:
+            print("Linear mixed model fit by maximum likelihood  ['lmerMod']")
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
@@ -1227,7 +1232,7 @@ class Lmer(object):
         emmeans = importr("emmeans")
 
         # Marginal estimates
-        self.marginal_estimates = pd.DataFrame(base.summary(res)[0])
+        self.marginal_estimates = R2pandas(base.summary(res)[0])
         # Resort columns
         effect_names = list(self.marginal_estimates.columns[:-4])
         # this column name changes depending on whether we're doing post-hoc trends or means
@@ -1259,7 +1264,7 @@ class Lmer(object):
             )
 
         # Marginal Contrasts
-        self.marginal_contrasts = pd.DataFrame(base.summary(res)[1])
+        self.marginal_contrasts = R2pandas(base.summary(res)[1])
         if "t.ratio" in self.marginal_contrasts.columns:
             rename_dict = {
                 "t.ratio": "T-stat",
@@ -1302,7 +1307,7 @@ class Lmer(object):
         self.marginal_contrasts = self.marginal_contrasts.rename(columns=rename_dict)
 
         # Need to make another call to emmeans to get confidence intervals on contrasts
-        confs = pd.DataFrame(base.unclass(emmeans.confint_emmGrid(res))[1])
+        confs = R2pandas(base.unclass(emmeans.confint_emmGrid(res))[1])
         confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:
@@ -1571,3 +1576,103 @@ class Lmer(object):
         if ylabel:
             ax.set_ylabel(ylabel)
         return ax
+
+    def confint(
+        self,
+        parm=None,
+        level=0.95,
+        method="Wald",
+        zeta=None,
+        nsim=500,
+        boot_type="perc",
+        quiet=False,
+        oldnames=False,
+    ):
+        """
+        Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
+        Args:
+            self (Lmer): the Lmer object for which confidence intervals should be computed
+            parm (list of str): parameter names for which intervals are sought. Specified by an integer vector of positions
+             (leave blank to compute ci for all parameters)
+            level (float):  confidence level <1, typically above 0.90
+            method (str): which method to compute confidence intervals; 'profile', 'Wald' (default), or 'boot'
+             (parametric bootstrap)
+            zeta (float): (for method = "profile" only:) likelihood cutoff (if not specified, as by default, computed
+             from level in R).
+            nsim (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
+            boot_type (str): bootstrap confidence interval type (one of "perc","basic","norm", as defined in boot_ci in R)
+            quiet (bool): (logical) suppress messages about computationally intensive profiling?
+            oldnames: (logical) use old-style names for variance-covariance parameters, e.g. ".sig01", rather than newer
+             (more informative) names such as "sd_(Intercept)|Subject"?
+
+        Returns:
+            pd.DataFrame: confidence intervals for the parameters of interest
+
+        Examples:
+            The following examples demonstrate how to get different types of confidence intervals.
+
+            The default Wald estimates for all parameters
+
+            >>> model.confint()
+
+            Boostrap estimate for the variance component of the random intercept from factor "Group" and the error
+            variance. You will need more than 100 repeats for a real application
+
+            >>> model.confint(method="boot", nsim=100, parm=["sd_(Intercept)|Group","sigma"])
+
+            Same as above but using oldnames for those variances, which is still the devault in lme4
+
+            >>> model.confint(method="boot", nsim=100, oldnames=True, parm=[".sig01",".sigma"])
+
+        """
+
+        # record messages going to screen
+        r_console = []
+
+        def _f(x):
+            r_console.append(x)
+
+        callbacks.consolewrite_warnerror = _f
+        # create string for parm
+        parm_string = ""
+        if parm is not None:
+            parm_string = """,parm=c('"""
+            for i, this_parm in enumerate(parm):
+                if i != 0:
+                    parm_string = parm_string + """,'"""
+                parm_string = parm_string + this_parm + """'"""
+            parm_string = parm_string + """)"""
+        # create string of command
+        rstring = (
+            """
+                function(model){
+                out_ci <- as.data.frame(confint(model"""
+            + parm_string
+            + """,level="""
+            + str(level)
+            + """,method='"""
+            + method
+            + """'"""
+            + ((""",zeta=""" + str(zeta)) if zeta is not None else """""")
+            + """,nsim="""
+            + str(nsim)
+            + """,boot.type='"""
+            + boot_type
+            + """'"""
+            + """,quiet="""
+            + ("""TRUE""" if quiet else """FALSE""")
+            + """,oldNames="""
+            + ("""TRUE""" if oldnames else """FALSE""")
+            + """))
+            out_ci
+            }"""
+        )
+        confint_func = robjects.r(rstring)
+        out_summary = confint_func(self.model_obj)
+        out_summary = R2pandas(out_summary)
+
+        # restore outputs
+        callbacks.consolewrite_warnerror = consolewrite_warning_backup
+        for message in r_console:
+            print(message)
+        return out_summary

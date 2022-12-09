@@ -6,3 +6,6 @@ pytest-sugar
 pycodestyle
 ipdb
 pdbr
+sphinx
+sphinx_bootstrap_theme
+sphinx-gallery

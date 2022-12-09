@@ -20,6 +20,7 @@ from ..utils import (
     _ols,
     _perm_find,
     _welch_ingredients,
+    _logregress,
 )
 
 
@@ -54,16 +55,17 @@ class Lm(object):
     def __init__(self, formula, data, family="gaussian"):
 
         self.family = family
-        # implemented_fams = ['gaussian','binomial']
-        if self.family != "gaussian":
-            raise NotImplementedError(
-                "Currently only linear (family ='gaussian') models supported! "
-            )
+        implemented_fams = ["gaussian", "binomial"]
+        if self.family not in implemented_fams:
+            raise NotImplementedError(f"family must be one of: {implemented_fams}")
         self.fitted = False
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.AIC = None
+        self.BIC = None
         self.logLike = None
+        self.rsquared = None
+        self.rsquared_adj = None
         self.warnings = []
         self.residuals = None
         self.coefs = None
@@ -84,6 +86,77 @@ class Lm(object):
         )
         return out
 
+    def _handle_weights(self, weights):
+        """Handle weights if provided"""
+
+        if isinstance(weights, str):
+            if weights not in self.data.columns:
+                raise ValueError(
+                    "If weights is a string it must be a column that exists in the data"
+                )
+            else:
+                dv = self.formula.split("~")[0]
+                weight_groups = self.data.groupby(weights)
+                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
+        else:
+            weight_vals = weights
+            weight_groups = None
+            dv = self.formula.split("~")[0]
+
+        if weights is None:
+            self.estimator = "OLS"
+        else:
+            self.estimator = "WLS"
+        return weight_vals, weight_groups, dv
+
+    def _organize_results(self, stats, colnames, indexnames):
+        """Organize estimates into a results dataframe that's ultimately stored in model.coefs"""
+
+        results = np.column_stack(stats)
+        results = pd.DataFrame(results, index=indexnames, columns=colnames)
+        numeric_cols = list(filter(lambda col: col != "Sig", colnames))
+        results[numeric_cols] = results[numeric_cols].apply(
+            pd.to_numeric, args=("coerce",)
+        )
+        return results
+
+    def _calc_dof(self, cluster, wls_dof_correction, x, weights, weight_groups, dv):
+        """Calculate degrees of freedom and any required adjustment for WLS or
+        cluster correction"""
+
+        if cluster is not None:
+            # Cluster corrected dof (num clusters - num coef)
+            # Differs from stats and statsmodels which do num cluster - 1
+            # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
+            df = cluster.nunique() - np.linalg.matrix_rank(x)
+        else:
+            # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
+            df = x.shape[0] - np.linalg.matrix_rank(x)
+            if isinstance(weights, str) and wls_dof_correction:
+                if weight_groups.ngroups != 2:
+                    w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
+                    warnings.warn(w)
+                    self.warnings.append(w)
+                else:
+                    welch_ingredients = np.array(
+                        self.data.groupby(weights)[dv]
+                        .apply(_welch_ingredients)
+                        .values.tolist()
+                    )
+                    df = (
+                        np.power(welch_ingredients[:, 0].sum(), 2)
+                        / welch_ingredients[:, 1].sum()
+                    )
+        return df
+
+    def _calc_ols_pvals(self, df, t):
+        """Calculate p-vals given dofs and t stats"""
+
+        p = 2 * (1 - t_dist.cdf(np.abs(t), df))
+        df = np.array([df] * len(t))
+        sig = np.array([_sig_stars(elem) for elem in p])
+        return p, df, sig
+
     def fit(
         self,
         robust=False,
@@ -97,7 +170,7 @@ class Lm(object):
         cluster=None,
         weights=None,
         wls_dof_correction=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).
@@ -169,6 +242,14 @@ class Lm(object):
 
         """
 
+        # Guard against lack of feature parity between log and lin regress
+        if self.family == "binomial" and (
+            robust or permute or weights is not None or conf_int != "standard"
+        ):
+            raise ValueError(
+                "Logistic regression currently only supports standard parametric inference"
+            )
+
         # Alllow summary or summarize for compatibility
         if "summary" in kwargs and "summarize" in kwargs:
             raise ValueError(
@@ -199,7 +280,8 @@ class Lm(object):
         else:
             self.se_type = "non-robust"
 
-        if self.family == "gaussian":
+        # PRINT INFO
+        if self.family in ["gaussian", "binomial"]:
             if verbose:
                 if rank:
                     print_rank = "rank"
@@ -255,171 +337,210 @@ class Lm(object):
             self.ranked_data = False
             ddat = self.data
 
-        # Handle weights if provided
-        if isinstance(weights, str):
-            if weights not in self.data.columns:
-                raise ValueError(
-                    "If weights is a string it must be a column that exists in the data"
-                )
-            else:
-                dv = self.formula.split("~")[0]
-                weight_groups = self.data.groupby(weights)
-                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
-        else:
-            weight_vals = weights
-        if weights is None:
-            self.estimator = "OLS"
-        else:
-            self.estimator = "WLS"
+        weight_vals, weight_groups, dv = self._handle_weights(weights)
 
         y, x = dmatrices(self.formula, ddat, 1, return_type="dataframe")
         self.design_matrix = x
 
-        # Compute standard estimates
-        b, se, t, res = _ols(
-            x,
-            y,
-            robust,
-            all_stats=True,
-            n_lags=n_lags,
-            cluster=cluster,
-            weights=weight_vals,
-        )
-        if cluster is not None:
-            # Cluster corrected dof (num clusters - num coef)
-            # Differs from stats and statsmodels which do num cluster - 1
-            # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
-            df = cluster.nunique() - np.linalg.matrix_rank(x)
-        else:
-            # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
-            df = x.shape[0] - np.linalg.matrix_rank(x)
-            if isinstance(weights, str) and wls_dof_correction:
-                if weight_groups.ngroups != 2:
-                    w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
-                    warnings.warn(w)
-                    self.warnings.append(w)
-                else:
-                    welch_ingredients = np.array(
-                        self.data.groupby(weights)[dv]
-                        .apply(_welch_ingredients)
-                        .values.tolist()
-                    )
-                    df = (
-                        np.power(welch_ingredients[:, 0].sum(), 2)
-                        / welch_ingredients[:, 1].sum()
-                    )
+        # Logistic Regression
+        if self.family == "binomial":
+            (
+                b,
+                ll,
+                ul,
+                se,
+                odds,
+                odds_ll,
+                odds_ul,
+                probs,
+                probs_ll,
+                probs_ul,
+                z,
+                p,
+                sig,
+                fits,
+                fit_probs,
+                fit_classes,
+                clf,
+            ) = _logregress(x, y, all_stats=True)
 
-        p = 2 * (1 - t_dist.cdf(np.abs(t), df))
-        df = np.array([df] * len(t))
-        sig = np.array([_sig_stars(elem) for elem in p])
+            # Save sklearn model and all fits
+            self.model_obj = clf
+            self.data["fits"] = fits
+            self.data["fit_probs"] = fit_probs
+            self.data["fit_classes"] = fit_classes
 
-        if conf_int == "boot":
-
-            # Parallelize bootstrap computation for CIs
-            par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
-
-            # To make sure that parallel processes don't use the same random-number generator pass in seed (sklearn trick)
-            seeds = np.random.randint(np.iinfo(np.int32).max, size=n_boot)
-
-            # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
-            boot_betas = par_for(
-                delayed(_chunk_boot_ols_coefs)(
-                    dat=self.data, formula=self.formula, weights=weights, seed=seeds[i]
-                )
-                for i in range(n_boot)
+            # Build output df
+            results = self._organize_results(
+                [
+                    b,
+                    ll,
+                    ul,
+                    se,
+                    odds,
+                    odds_ll,
+                    odds_ul,
+                    probs,
+                    probs_ll,
+                    probs_ul,
+                    z,
+                    p,
+                    sig,
+                ],
+                [
+                    "Estimate",
+                    "2.5_ci",
+                    "97.5_ci",
+                    "SE",
+                    "OR",
+                    "OR_2.5_ci",
+                    "OR_97.5_ci",
+                    "Prob",
+                    "Prob_2.5_ci",
+                    "Prob_97.5_ci",
+                    "Z-stat",
+                    "P-val",
+                    "Sig",
+                ],
+                x.columns,
             )
 
-            boot_betas = np.array(boot_betas)
-            ci_u = np.percentile(boot_betas, 97.5, axis=0)
-            ci_l = np.percentile(boot_betas, 2.5, axis=0)
-
+        # Linear Regression
         else:
-            # Otherwise we're doing parametric CIs
-            ci_u = b + t_dist.ppf(0.975, df) * se
-            ci_l = b + t_dist.ppf(0.025, df) * se
-
-        if permute:
-            # Permuting will change degrees of freedom to num_iter and p-values
-            # Parallelize computation
-            # Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??
-            # _chunk_perm_ols -> _ols -> _robust_estimator
-            if robust:
-                n_jobs = 1
-            par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
-            seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
-            perm_ts = par_for(
-                delayed(_chunk_perm_ols)(
-                    x=x,
-                    y=y,
-                    robust=robust,
-                    n_lags=n_lags,
-                    cluster=cluster,
-                    weights=weights,
-                    seed=seeds[i],
-                )
-                for i in range(permute)
+            # Fit
+            b, se, t, res = _ols(
+                x,
+                y,
+                robust,
+                all_stats=True,
+                n_lags=n_lags,
+                cluster=cluster,
+                weights=weight_vals,
             )
-            perm_ts = np.array(perm_ts)
 
-            p = []
-            for col, fit_t in zip(range(perm_ts.shape[1]), t):
-                p.append(_perm_find(perm_ts[:, col], fit_t))
-            p = np.array(p)
-            df = np.array([permute] * len(p))
-            sig = np.array([_sig_stars(elem) for elem in p])
+            # DOF and pval calculation
+            df = self._calc_dof(
+                cluster, wls_dof_correction, x, weights, weight_groups, dv
+            )
+            p, df, sig = self._calc_ols_pvals(df, t)
 
-        # Make output df
-        results = np.column_stack([b, ci_l, ci_u, se, df, t, p, sig])
-        results = pd.DataFrame(results)
-        results.index = x.columns
-        results.columns = [
-            "Estimate",
-            "2.5_ci",
-            "97.5_ci",
-            "SE",
-            "DF",
-            "T-stat",
-            "P-val",
-            "Sig",
-        ]
-        results[
-            ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-        ] = results[
-            ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-        ].apply(
-            pd.to_numeric, args=("coerce",)
-        )
+            if conf_int == "boot":
 
-        if permute:
-            results = results.rename(columns={"DF": "Num_perm", "P-val": "Perm-P-val"})
+                # Parallelize bootstrap computation for CIs
+                par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+
+                # To make sure that parallel processes don't use the same random-number generator pass in seed (sklearn trick)
+                seeds = np.random.randint(np.iinfo(np.int32).max, size=n_boot)
+
+                # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
+                boot_betas = par_for(
+                    delayed(_chunk_boot_ols_coefs)(
+                        dat=self.data,
+                        formula=self.formula,
+                        weights=weights,
+                        seed=seeds[i],
+                    )
+                    for i in range(n_boot)
+                )
+
+                boot_betas = np.array(boot_betas)
+                ci_u = np.percentile(boot_betas, 97.5, axis=0)
+                ci_l = np.percentile(boot_betas, 2.5, axis=0)
+
+            else:
+                # Otherwise we're doing parametric CIs
+                ci_u = b + t_dist.ppf(0.975, df) * se
+                ci_l = b + t_dist.ppf(0.025, df) * se
+
+            if permute:
+                # Permuting will change degrees of freedom to num_iter and p-values
+                # Parallelize computation
+                # Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??
+                # _chunk_perm_ols -> _ols -> _robust_estimator
+                if robust:
+                    n_jobs = 1
+                par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
+                seeds = np.random.randint(np.iinfo(np.int32).max, size=permute)
+                perm_ts = par_for(
+                    delayed(_chunk_perm_ols)(
+                        x=x,
+                        y=y,
+                        robust=robust,
+                        n_lags=n_lags,
+                        cluster=cluster,
+                        weights=weights,
+                        seed=seeds[i],
+                    )
+                    for i in range(permute)
+                )
+                perm_ts = np.array(perm_ts)
+
+                p = []
+                for col, fit_t in zip(range(perm_ts.shape[1]), t):
+                    p.append(_perm_find(perm_ts[:, col], fit_t))
+                p = np.array(p)
+                df = np.array([permute] * len(p))
+                sig = np.array([_sig_stars(elem) for elem in p])
+
+            # Make output df
+            results = self._organize_results(
+                [b, ci_l, ci_u, se, df, t, p, sig],
+                [
+                    "Estimate",
+                    "2.5_ci",
+                    "97.5_ci",
+                    "SE",
+                    "DF",
+                    "T-stat",
+                    "P-val",
+                    "Sig",
+                ],
+                x.columns,
+            )
+
+            if permute:
+                results = results.rename(
+                    columns={"DF": "Num_perm", "P-val": "Perm-P-val"}
+                )
+
+            self._calc_fit_statistics(x, y, res)
 
         self.coefs = results
         self.fitted = True
-        self.residuals = res
-        self.fits = (y.squeeze() - res).values
-        self.data["fits"] = (y.squeeze() - res).values
-        self.data["residuals"] = res
 
-        # Fit statistics
+        if summarize:
+            return self.summary()
+
+    def _calc_fit_statistics(self, x, y, residuals):
+
+        if self.family != "gaussian":
+            raise TypeError(
+                "Currently only gaussian models can calculate fit statistics"
+            )
+
+        # Save residuals
+        self.residuals = residuals
+        self.fits = (y.squeeze() - residuals).values
+        self.data["fits"] = (y.squeeze() - residuals).values
+        self.data["residuals"] = residuals
+
+        # Calculate fit statistics
         if "Intercept" in self.design_matrix.columns:
             center_tss = True
         else:
             center_tss = False
-        self.rsquared = rsquared(y.squeeze(), res, center_tss)
+        self.rsquared = rsquared(y.squeeze(), residuals, center_tss)
         self.rsquared_adj = rsquared_adj(
-            self.rsquared, len(res), len(res) - x.shape[1], center_tss
+            self.rsquared, len(residuals), len(residuals) - x.shape[1], center_tss
         )
         # self.rsquared_adj = np.nan
-        half_obs = len(res) / 2.0
-        ssr = np.dot(res, res.T)
+        half_obs = len(residuals) / 2.0
+        ssr = np.dot(residuals, residuals.T)
         self.logLike = (-np.log(ssr) * half_obs) - (
             (1 + np.log(np.pi / half_obs)) * half_obs
         )
         self.AIC = 2 * x.shape[1] - 2 * self.logLike
-        self.BIC = np.log((len(res))) * x.shape[1] - 2 * self.logLike
-
-        if summarize:
-            return self.summary()
+        self.BIC = np.log((len(residuals))) * x.shape[1] - 2 * self.logLike
 
     def summary(self):
         """
@@ -440,14 +561,18 @@ class Lm(object):
                 self.se_type, self.ci_type, self.sig_type
             )
         )
-        print(
-            "Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n"
-            % (self.data.shape[0], self.rsquared, self.rsquared_adj)
-        )
-        print(
-            "Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n"
-            % (self.logLike, self.AIC, self.BIC)
-        )
+        if self.rsquared is not None:
+            print(
+                "Number of observations: %s\t R^2: %.3f\t R^2_adj: %.3f\n"
+                % (self.data.shape[0], self.rsquared, self.rsquared_adj)
+            )
+        else:
+            print("Number of observations: %s\t\n" % (self.data.shape[0]))
+        if self.AIC is not None:
+            print(
+                "Log-likelihood: %.3f \t AIC: %.3f\t BIC: %.3f\n"
+                % (self.logLike, self.AIC, self.BIC)
+            )
         print("Fixed effects:\n")
         return self.coefs.round(3)
 
@@ -468,6 +593,11 @@ class Lm(object):
             raise RuntimeError(
                 "Model must be fit before partial correlations can be computed"
             )
+        if not self.family == "gaussian":
+            raise NotImplementedError(
+                ".to_corrs is only supported for family='gaussian'"
+            )
+
         if corr_type not in ["semi", "partial"]:
             raise ValueError("corr_type must be 'semi' or 'partial'")
         from scipy.stats import pearsonr
@@ -510,25 +640,53 @@ class Lm(object):
             corrs = np.arctanh(corrs)
         return pd.Series(corrs, index=self.coefs.index)
 
-    def predict(self, data):
+    def predict(self, data, pred_type="response"):
         """
         Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). Will automatically use/ignore intercept to make a prediction if it was/was not part of the original fitted model.
 
         Args:
             data (pd.DataFrame): input data to make predictions on
+            pred_type (str): whether the prediction should be on the 'response' scale
+            (default) or on the 'link' scale of the predictors passed through the link
+            function (e.g. log-odds scale in a logit model instead of probability
+            values) or 'probs' if self.family == 'binomial'
 
         Returns:
             np.ndarray: prediction values
 
         """
 
+        if self.family not in ["gaussian", "binomial"]:
+            raise NotImplementedError(
+                "Only gaussian and binomial Lm models support .predict()"
+            )
+
         required_cols = self.design_matrix.columns[1:]
         if not all([col in data.columns for col in required_cols]):
             raise ValueError("Column names do not match all fixed effects model terms!")
+
         X = data[required_cols]
-        coefs = self.coefs.loc[:, "Estimate"].values
-        if self.coefs.index[0] == "Intercept":
-            preds = np.dot(np.column_stack([np.ones(X.shape[0]), X]), coefs)
-        else:
-            preds = np.dot(X, coefs[1:])
+        # Add intercept if needed
+        has_intercept = "Intercept" in self.coefs.index
+        if has_intercept:
+            cols = X.columns.tolist()
+            X["Intercept"] = np.ones(X.shape[0])
+            # sort
+            X = X[["Intercept"] + cols]
+
+        if self.family == "gaussian":
+            if pred_type == "link":
+                warnings.warn(
+                    "pred_type='link' is ignored when family='gaussian' as link='identity'"
+                )
+            coefs = self.coefs.loc[:, "Estimate"].values
+            preds = np.dot(X, coefs)
+
+        elif self.family == "binomial":
+            if pred_type == "response":
+                # We only return probabilities for positive class
+                preds = self.model_obj.predict_proba(X)[:, 1]
+            elif pred_type == "link":
+                preds = self.model_obj.decision_function(X)
+
         return preds

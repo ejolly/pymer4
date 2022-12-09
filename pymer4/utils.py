@@ -1,42 +1,39 @@
 """Utility functions"""
 __all__ = [
     "get_resource_path",
-    "_check_random_state",
-    "_sig_stars",
-    "_robust_estimator",
-    "_chunk_boot_ols_coefs",
-    "_chunk_perm_ols",
-    "_permute_sign",
-    "_ols",
-    "_ols_group",
-    "_corr_group",
-    "_perm_find",
-    "_mean_diff",
-    "_return_t",
-    "_get_params",
-    "_lrt",
-    "_df_meta_to_arr",
-    "_welch_ingredients",
-    "_to_ranks_by_group",
+    "result_to_table",
     "isPSD",
     "nearestPSD",
     "upper",
-    "R2con",
-    "con2R",
+    "_mean_diff",
+    "_check_random_state",
+    "_sig_stars",
+    "_robust_estimator",
+    "_whiten_wls",
+    "_ols",
+    "_logregress",
+    "_chunk_perm_ols",
+    "_permute_sign",
+    "_chunk_boot_ols_coefs",
+    "_ols_group",
+    "_corr_group",
+    "_to_ranks_by_group",
+    "_perm_find",
+    "_return_t",
+    "_get_params",
+    "_lrt",
+    "_welch_ingredients",
+    "_df_meta_to_arr",
+    "_logit2prob",
 ]
-
-__author__ = ["Eshin Jolly"]
-__license__ = "MIT"
 
 import os
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
-from scipy.stats import chi2
+from scipy.stats import chi2, norm
 from rpy2.robjects.packages import importr
-from rpy2.robjects.conversion import localconverter
-from rpy2.robjects import pandas2ri
-import rpy2.robjects as robjects
+from sklearn.linear_model import LogisticRegression
 
 base = importr("base")
 MAX_INT = np.iinfo(np.int32).max
@@ -45,6 +42,164 @@ MAX_INT = np.iinfo(np.int32).max
 def get_resource_path():
     """Get path sample data directory."""
     return os.path.join(os.path.dirname(__file__), "resources") + os.path.sep
+
+
+def result_to_table(
+    to_format,
+    drop_intercept=True,
+    iv_name="Predictor",
+    comparison_name="b",
+    ci_name="ci",
+    round=True,
+    pval_text="< .001",
+    pval_thresh=0.001,
+    fetch_name_col="index",
+):
+    """
+    Nicely format the `.coefs` attribute of a fitted model. The intended use of this function is to nicely format the `.coefs` of a fitted model such that the resultant dataframe can be copied outside of python/jupyter or saved to another file (e.g. googlesheet). It's particularly well suited for use with `gspread_pandas`.
+
+    Args:
+        model (pymer.model): pymer4 model object that's already been fit
+        drop_intercept (bool, optional): remove the model intercept results from the table; Default True
+        iv_name (str, optional): column name of the model's independent variables. Defaults to "Predictor".
+        round (bool, optional): round all numeric values to 3 decimal places. Defaults to True.
+        pval_text (str, optional): what to replace p-values with when they are < pval_thres. Defaults to "< .001".
+        pval_thresh (float, optional): threshold to replace p-values with. Primarily intended to be used for very small p-values (e.g. .0001), where the tradition is to display '< .001' instead of the exact p-values. Defaults to 0.001.
+
+    Returns:
+        pd.DataFrame: formatted dataframe of results
+
+    Example:
+
+        Send model results to a google sheet, assuming `model.fit()` has already been called:
+
+        >>> from gspread_pandas import Spread
+        >>> spread = Spread('My_Results_Sheet')
+        >>> formatted_results = result_to_table(model)
+        >>> spread.df_to_sheet(formatted_results, replace=True, index=False)
+
+        Now 'My_Results_Sheet' will have a copy of `formatted_results` which can be copy and pasted into a google doc as a nice auto-updating table. On new model fits, simple repeat the steps above to replace the values in the google sheet, thus triggering an update of the linked table in a google doc.
+
+    """
+
+    if isinstance(to_format, pd.DataFrame):
+        results = to_format.copy()
+    else:
+        if not to_format.fitted:
+            raise ValueError("model must be fit to format results")
+
+        results = to_format.coefs.copy()
+    if round:
+        results = results.round(3)
+    if drop_intercept:
+        if "(Intercept)" in results.index:
+            results = results.drop(index=["(Intercept)"])
+        elif "Intercept" in results.index:
+            results = results.drop(index=["Intercept"])
+
+    results = results.drop(columns=["Sig"])
+    if fetch_name_col == "index":
+        results.reset_index()
+
+    results = (
+        results.assign(
+            ci=lambda df: df[["2.5_ci", "97.5_ci"]].apply(
+                lambda row: f"({' '.join(row.values.astype(str))})", axis=1
+            ),
+            p=lambda df: df["P-val"].apply(
+                lambda val: pval_text if val < pval_thresh else str(val)
+            ),
+        )
+        .drop(columns=["2.5_ci", "97.5_ci", "SE", "P-val"])
+        .rename(
+            columns={
+                fetch_name_col: iv_name,
+                "Estimate": comparison_name,
+                "T-stat": "t",
+                "ci": ci_name,
+                "DF": "df",
+            }
+        )
+        .reindex(columns=[iv_name, comparison_name, ci_name, "t", "df", "p"])
+    )
+    return results
+
+
+def isPSD(mat, tol=1e-8):
+    """
+    Check if matrix is positive-semi-definite by virtue of all its eigenvalues being >= 0. The cholesky decomposition does not work for edge cases because np.linalg.cholesky fails on matrices with exactly 0 valued eigenvalues, whereas in Matlab this is not true, so that method appropriate. Ref: https://goo.gl/qKWWzJ
+
+    Args:
+        mat (np.ndarray): 2d numpy array
+
+    Returns:
+        bool: whether matrix is postive-semi-definite
+    """
+
+    # We dont assume matrix is Hermitian, i.e. real-valued and symmetric
+    # Could swap this out with np.linalg.eigvalsh(), which is faster but less general
+    e = np.linalg.eigvals(mat)
+    return np.all(e > -tol)
+
+
+def nearestPSD(mat, nit=100):
+    """
+    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Statsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
+
+    Args:
+        mat (np.ndarray): 2d numpy array
+        nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
+    Returns:
+        np.ndarray: closest positive-semi-definite 2d numpy array
+    """
+
+    n = mat.shape[0]
+    W = np.identity(n)
+
+    def _getAplus(mat):
+        eigval, eigvec = np.linalg.eig(mat)
+        Q = np.matrix(eigvec)
+        xdiag = np.matrix(np.diag(np.maximum(eigval, 0)))
+        return Q * xdiag * Q.T
+
+    def _getPs(mat, W=None):
+        W05 = np.matrix(W**0.5)
+        return W05.I * _getAplus(W05 * mat * W05) * W05.I
+
+    def _getPu(mat, W=None):
+        Aret = np.array(mat.copy())
+        Aret[W > 0] = np.array(W)[W > 0]
+        return np.matrix(Aret)
+
+    # W is the matrix used for the norm (assumed to be Identity matrix here)
+    # the algorithm should work for any diagonal W
+    deltaS = 0
+    Yk = mat.copy()
+    for _ in range(nit):
+        Rk = Yk - deltaS
+        Xk = _getPs(Rk, W=W)
+        deltaS = Xk - Rk
+        Yk = _getPu(Xk, W=W)
+    # Double check returned matrix is PSD
+    if isPSD(Yk):
+        return Yk
+    else:
+        nearestPSD(Yk)
+
+
+def upper(mat):
+    """
+    Return upper triangle of matrix. Useful for grabbing unique values from a symmetric matrix.
+
+    Args:
+        mat (np.ndarray): 2d numpy array
+
+    Returns:
+        np.array: 1d numpy array of values
+
+    """
+    idx = np.triu_indices_from(mat, k=1)
+    return mat[idx]
 
 
 def _mean_diff(x, y):
@@ -249,6 +404,87 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
         return b
 
 
+def _logregress(x, y, all_stats=True):
+    # Design matrix already has intercept. We want no regularization and the newton
+    # solver to match as closely with R
+
+    model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
+    _ = model.fit(x, y)
+    b = model.coef_
+    fits = model.decision_function(x)
+    # We only return probs for positive class
+    fit_probs = model.predict_proba(x)[:, 1]
+    fit_classes = model.predict(x)
+
+    # Inference implementation from: Vallat, R. (2018). Pingouin: statistics in Python. Journal of Open Source Software, 3(31), 1026, https://doi.org/10.21105/joss.01026
+    # Compute the fisher information matrix
+    num_feat = x.shape[1]
+    denom = 2 * (1 + np.cosh(model.decision_function(x)))
+    denom = np.tile(denom, (num_feat, 1)).T
+    fim = (x / denom).T @ x
+    crao = np.linalg.pinv(fim)
+
+    # Standard error and Z-scores
+    se = np.sqrt(np.diag(crao))
+    z = b / se
+
+    # Two-tailed p-values
+    p = 2 * norm.sf(np.fabs(z))
+    sig = np.array([_sig_stars(elem) for elem in p.squeeze()])
+
+    # Wald Confidence intervals
+    # In R: this is equivalent to confint.default(model)
+    # Note that confint(model) will however return the profile CI
+    crit = norm.ppf(1 - 0.05 / 2)
+    ll = b - crit * se
+    ul = b + crit * se
+
+    # equivalent to calling exp() then plogis() in R
+    odds, odds_ll, odds_ul, probs, probs_ll, probs_ul = _convert_odds_probs(b, ll, ul)
+
+    if all_stats:
+        return (
+            b.squeeze(),
+            ll.squeeze(),
+            ul.squeeze(),
+            se.squeeze(),
+            odds.squeeze(),
+            odds_ll.squeeze(),
+            odds_ul.squeeze(),
+            probs.squeeze(),
+            probs_ll.squeeze(),
+            probs_ul.squeeze(),
+            z.squeeze(),
+            p.squeeze(),
+            sig.squeeze(),
+            fits.squeeze(),
+            fit_probs.squeeze(),
+            fit_classes.squeeze(),
+            model,
+        )
+
+
+def _logit2prob(logit):
+    """
+    Convert logits (outputs or coefs from logistic regression) to probabilities.
+    Sources:
+    https://yury-zablotski.netlify.app/post/from-odds-to-probability/#odds
+    https://sebastiansauer.github.io/convert_logit2prob/#:~:text=Conversion%20rule,%2F%20(1%20%2B%20odds)%20.
+    """
+
+    return np.exp(logit) / (1 + np.exp(logit))
+
+
+def _convert_odds_probs(b, ll, ul):
+    """converts coefficiens from a logistic regression model to odds ratios and
+    probabilities"""
+
+    odds, odds_ll, odds_ul = np.exp(b), np.exp(ll), np.exp(ul)
+    probs, probs_ll, probs_ul = _logit2prob(b), _logit2prob(ll), _logit2prob(ul)
+
+    return odds, odds_ll, odds_ul, probs, probs_ll, probs_ul
+
+
 def _chunk_perm_ols(x, y, robust, n_lags, cluster, weights, seed):
     """
     Permuted OLS chunk.
@@ -291,7 +527,10 @@ def _ols_group(dat, formula, group_col, group, rank):
         dat = dat.rank()
     y, x = dmatrices(formula, dat, 1, return_type="dataframe")
     b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False)
-    return list(b)
+    Y, X = y.to_numpy().squeeze(), x.to_numpy()
+    pred = np.dot(X, b)
+    res = Y - pred
+    return dict(betas=list(b), pred=pred, res=res)
 
 
 def _corr_group(dat, formula, group_col, group, rank, corr_type):
@@ -374,83 +613,6 @@ def _perm_find(arr, x):
     return (np.sum(np.abs(arr) >= np.abs(x)) + 1) / (float(len(arr)) + 1)
 
 
-def isPSD(mat, tol=1e-8):
-    """
-    Check if matrix is positive-semi-definite by virtue of all its eigenvalues being >= 0. The cholesky decomposition does not work for edge cases because np.linalg.cholesky fails on matrices with exactly 0 valued eigenvalues, whereas in Matlab this is not true, so that method appropriate. Ref: https://goo.gl/qKWWzJ
-
-    Args:
-        mat (np.ndarray): 2d numpy array
-
-    Returns:
-        bool: whether matrix is postive-semi-definite
-    """
-
-    # We dont assume matrix is Hermitian, i.e. real-valued and symmetric
-    # Could swap this out with np.linalg.eigvalsh(), which is faster but less general
-    e = np.linalg.eigvals(mat)
-    return np.all(e > -tol)
-
-
-def nearestPSD(mat, nit=100):
-    """
-    Higham (2000) algorithm to find the nearest positive semi-definite matrix that minimizes the Frobenius distance/norm. Statsmodels using something very similar in corr_nearest(), but with spectral SGD to search for a local minima. Reference: https://goo.gl/Eut7UU
-
-    Args:
-        mat (np.ndarray): 2d numpy array
-        nit (int): number of iterations to run algorithm; more iterations improves accuracy but increases computation time.
-    Returns:
-        np.ndarray: closest positive-semi-definite 2d numpy array
-    """
-
-    n = mat.shape[0]
-    W = np.identity(n)
-
-    def _getAplus(mat):
-        eigval, eigvec = np.linalg.eig(mat)
-        Q = np.matrix(eigvec)
-        xdiag = np.matrix(np.diag(np.maximum(eigval, 0)))
-        return Q * xdiag * Q.T
-
-    def _getPs(mat, W=None):
-        W05 = np.matrix(W**0.5)
-        return W05.I * _getAplus(W05 * mat * W05) * W05.I
-
-    def _getPu(mat, W=None):
-        Aret = np.array(mat.copy())
-        Aret[W > 0] = np.array(W)[W > 0]
-        return np.matrix(Aret)
-
-    # W is the matrix used for the norm (assumed to be Identity matrix here)
-    # the algorithm should work for any diagonal W
-    deltaS = 0
-    Yk = mat.copy()
-    for _ in range(nit):
-        Rk = Yk - deltaS
-        Xk = _getPs(Rk, W=W)
-        deltaS = Xk - Rk
-        Yk = _getPu(Xk, W=W)
-    # Double check returned matrix is PSD
-    if isPSD(Yk):
-        return Yk
-    else:
-        nearestPSD(Yk)
-
-
-def upper(mat):
-    """
-    Return upper triangle of matrix. Useful for grabbing unique values from a symmetric matrix.
-
-    Args:
-        mat (np.ndarray): 2d numpy array
-
-    Returns:
-        np.array: 1d numpy array of values
-
-    """
-    idx = np.triu_indices_from(mat, k=1)
-    return mat[idx]
-
-
 def _return_t(model):
     """Return t or z stat from R model summary."""
     summary = base.summary(model)
@@ -460,7 +622,11 @@ def _return_t(model):
 
 def _get_params(model):
     """Get number of params in a model."""
-    return model.coefs.shape[0]
+    return (
+        model.coefs.shape[0]
+        + model.ranef_var.shape[0]
+        + (model.ranef_corr.shape[0] if (model.ranef_corr is not None) else 0)
+    )
 
 
 def _lrt(tup):
@@ -477,77 +643,6 @@ def _welch_ingredients(x):
     numerator = x.var(ddof=1) / x.size
     denominator = np.power(x.var(ddof=1) / x.size, 2) / (x.size - 1)
     return [numerator, denominator]
-
-
-def con2R(arr, names=None):
-    """
-    Convert human-readable contrasts into a form that R requires. Works like the make.contrasts() function from the gmodels package, in that it will auto-solve for the remaining orthogonal k-1 contrasts if fewer than k-1 contrasts are specified.
-
-    Arguments:
-        arr (np.ndarray): 1d or 2d numpy array with each row reflecting a unique contrast and each column a factor level
-        names (list/np.ndarray): optional list of contrast names which will cast the return object as a dataframe
-
-    Returns:
-        A 2d numpy array or dataframe useable with the contrasts argument of glmer
-    """
-
-    if isinstance(arr, list):
-        arr = np.array(arr)
-    if arr.ndim < 2:
-        arr = np.atleast_2d(arr)
-    elif arr.ndim > 2:
-        raise ValueError(
-            f"input array should be 1d or 2d but a {arr.ndim}d array was passed"
-        )
-
-    nrow, ncol = arr.shape[0], arr.shape[1]
-    if names is not None:
-        if not isinstance(names, (list, np.ndarray)):
-            raise TypeError("names should be a list or numpy array")
-        elif len(names) != nrow:
-            raise ValueError(
-                "names should have the same number of items as contrasts (rows)"
-            )
-
-    # At most k-1 contrasts are possible
-    if nrow >= ncol:
-        raise ValueError(
-            f"Too many contrasts requested ({nrow}). Must be less than the number of factor levels ({ncol})."
-        )
-
-    # Pseudo-invert request contrasts
-    value = np.linalg.pinv(arr)
-    v_nrow, v_ncol = value.shape[0], value.shape[1]
-
-    # Upper triangle of R is the same as result from qr() in R
-    Q, R = np.linalg.qr(np.column_stack([np.ones((v_nrow, 1)), value]), mode="complete")
-    if np.linalg.matrix_rank(R) != v_ncol + 1:
-        raise ValueError(
-            "Singular contrast matrix. Some of the requested contrasts are perfectly co-linear."
-        )
-    cm = Q[:, 1:ncol]
-    cm[:, :v_ncol] = value
-
-    if names is not None:
-        cm = pd.DataFrame(cm, columns=names)
-    return cm
-
-
-def R2con(arr):
-    """
-    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user. Reference: https://goo.gl/E4Mms2
-
-    Args:
-        arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
-
-    Returns:
-        np.ndarray: 2d array organized as contrasts X factor levels
-    """
-
-    intercept = np.ones((arr.shape[0], 1))
-    mat = np.column_stack([intercept, arr])
-    inv = np.linalg.inv(mat)
-    return inv
 
 
 def _df_meta_to_arr(df):
@@ -570,91 +665,3 @@ def _df_meta_to_arr(df):
         index = []
 
     return columns, index
-
-
-def pandas2R(df):
-    """Local conversion of pandas dataframe to R dataframe as recommended by rpy2"""
-    with localconverter(robjects.default_converter + pandas2ri.converter):
-        data = robjects.conversion.py2rpy(df)
-    return data
-
-
-def result_to_table(
-    to_format,
-    drop_intercept=True,
-    iv_name="Predictor",
-    comparison_name="b",
-    ci_name="ci",
-    round=True,
-    pval_text="< .001",
-    pval_thresh=0.001,
-    fetch_name_col="index",
-):
-    """
-    Nicely format the `.coefs` attribute of a fitted model. The intended use of this function is to nicely format the `.coefs` of a fitted model such that the resultant dataframe can be copied outside of python/jupyter or saved to another file (e.g. googlesheet). It's particularly well suited for use with `gspread_pandas`.
-
-    Args:
-        model (pymer.model): pymer4 model object that's already been fit
-        drop_intercept (bool, optional): remove the model intercept results from the table; Default True
-        iv_name (str, optional): column name of the model's independent variables. Defaults to "Predictor".
-        round (bool, optional): round all numeric values to 3 decimal places. Defaults to True.
-        pval_text (str, optional): what to replace p-values with when they are < pval_thres. Defaults to "< .001".
-        pval_thresh (float, optional): threshold to replace p-values with. Primarily intended to be used for very small p-values (e.g. .0001), where the tradition is to display '< .001' instead of the exact p-values. Defaults to 0.001.
-
-    Returns:
-        pd.DataFrame: formatted dataframe of results
-
-    Example:
-
-        Send model results to a google sheet, assuming `model.fit()` has already been called:
-
-        >>> from gspread_pandas import Spread
-        >>> spread = Spread('My_Results_Sheet')
-        >>> formatted_results = result_to_table(model)
-        >>> spread.df_to_sheet(formatted_results, replace=True, index=False)
-
-        Now 'My_Results_Sheet' will have a copy of `formatted_results` which can be copy and pasted into a google doc as a nice auto-updating table. On new model fits, simple repeat the steps above to replace the values in the google sheet, thus triggering an update of the linked table in a google doc.
-
-    """
-
-    if isinstance(to_format, pd.DataFrame):
-        results = to_format.copy()
-    else:
-        if not to_format.fitted:
-            raise ValueError("model must be fit to format results")
-
-        results = to_format.coefs.copy()
-    if round:
-        results = results.round(3)
-    if drop_intercept:
-        if "(Intercept)" in results.index:
-            results = results.drop(index=["(Intercept)"])
-        elif "Intercept" in results.index:
-            results = results.drop(index=["Intercept"])
-
-    results = results.drop(columns=["Sig"])
-    if fetch_name_col == "index":
-        results.reset_index()
-
-    results = (
-        results.assign(
-            ci=lambda df: df[["2.5_ci", "97.5_ci"]].apply(
-                lambda row: f"({' '.join(row.values.astype(str))})", axis=1
-            ),
-            p=lambda df: df["P-val"].apply(
-                lambda val: pval_text if val < pval_thresh else str(val)
-            ),
-        )
-        .drop(columns=["2.5_ci", "97.5_ci", "SE", "P-val"])
-        .rename(
-            columns={
-                fetch_name_col: iv_name,
-                "Estimate": comparison_name,
-                "T-stat": "t",
-                "ci": ci_name,
-                "DF": "df",
-            }
-        )
-        .reindex(columns=[iv_name, comparison_name, ci_name, "t", "df", "p"])
-    )
-    return results
