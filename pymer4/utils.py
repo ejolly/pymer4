@@ -30,7 +30,7 @@ import os
 import numpy as np
 import pandas as pd
 from patsy import dmatrices
-from scipy.stats import chi2, t, norm
+from scipy.stats import chi2, norm
 from rpy2.robjects.packages import importr
 from sklearn.linear_model import LogisticRegression
 
@@ -410,6 +410,7 @@ def _logregress(x, y, all_stats=True):
     model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
     _ = model.fit(x, y)
     b = model.coef_
+    fits = model.predict(x)
 
     # Inference implementation from: Vallat, R. (2018). Pingouin: statistics in Python. Journal of Open Source Software, 3(31), 1026, https://doi.org/10.21105/joss.01026
     # Compute the fisher information matrix
@@ -450,7 +451,9 @@ def _logregress(x, y, all_stats=True):
             probs_ul.squeeze(),
             z.squeeze(),
             p.squeeze(),
+            fits.squeeze(),
             model,
+
         )
 
 

@@ -301,6 +301,7 @@ class Lm(object):
                 probs_ul,
                 z,
                 p,
+                fits,
                 clf,
             ) = _logregress(x, y, all_stats=True)
 
@@ -378,6 +379,7 @@ class Lm(object):
             ].apply(
                 pd.to_numeric, args=("coerce",)
             )
+            self.data["fits"] = fits
 
             # if permute:
             #     results = results.rename(
@@ -653,13 +655,28 @@ class Lm(object):
 
         """
 
+        if self.family not in ["gaussian", "binomial"]:
+            raise NotImplementedError(
+                "Only gaussian and binomial Lm models support .predict()"
+            )
+
         required_cols = self.design_matrix.columns[1:]
         if not all([col in data.columns for col in required_cols]):
             raise ValueError("Column names do not match all fixed effects model terms!")
+
         X = data[required_cols]
-        coefs = self.coefs.loc[:, "Estimate"].values
-        if self.coefs.index[0] == "Intercept":
-            preds = np.dot(np.column_stack([np.ones(X.shape[0]), X]), coefs)
-        else:
-            preds = np.dot(X, coefs[1:])
+        # Add intercept if needed
+        has_intercept = "Intercept" in self.coefs.index
+        if has_intercept:
+            cols = X.columns.tolist()
+            X["Intercept"] = np.ones(X.shape[0])
+            # sort
+            X = X[["Intercept"] + cols]
+
+        if self.family == "gaussian":
+            coefs = self.coefs.loc[:, "Estimate"].values
+            preds = np.dot(X, coefs)
+
+        elif self.family == "binomial":
+            preds = self.model_obj.predict(X)
         return preds

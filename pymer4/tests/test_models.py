@@ -1,5 +1,5 @@
 from pymer4.models import Lmer, Lm, Lm2
-from pymer4.bridge import pandas2R, R2numpy, R2pandas
+from pymer4.bridge import pandas2R, R2pandas
 import pandas as pd
 import numpy as np
 from scipy.special import logit
@@ -320,10 +320,10 @@ def test_logistic_lm(df):
         assert np.allclose(model.coefs[pcol], summary[rcol])
 
     # Test prediction
-    # assert np.allclose(
-    #     model.predict(model.data, use_rfx=True, verify_predictions=False),
-    #     model.data.fits,
-    # )
+    assert np.allclose(
+        model.predict(model.data),
+        model.data.fits,
+    )
     # assert np.allclose(
     #     model.predict(model.data, use_rfx=True, pred_type="link"),
     #     logit(model.data.fits),
