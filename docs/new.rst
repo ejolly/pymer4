@@ -2,13 +2,34 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
-0.7.9
------
-- Unpins rpy2 and pandas versions
-- lrt for lmer models
-- more robust conversion of R dataframes should solve issues like
-  [#88](https://github.com/ejolly/pymer4/issues/88) and [#113](https://github.com/ejolly/pymer4/issues/113)
-- logistic regression?
+0.8.0
+----
+- **NOTE:**
+    - there was no 0.7.9 release as there were enough major changes to warrant a new
+      minor release version
+    - this version unpins the maximum versions of :code:`rpy2` and :code:`pandas`
+    - if there are install issues with the :code:`conda` release accompanying this version you should be able to successfully install into a conda environment using pip with the following: :code:`conda install 'r-lmerTest' 'r-emmeans' rpy2 -c conda-forge` followed by :code:`pip install pymer4`
+- **Bug fixes:**
+    - fixed as issue where :code:`Lmer` with :code:`family='binomial'` was not
+      converting logits into probabilities correctly
+    - fixes `#79 <https://github.com/ejolly/pymer4/issues/79>`_
+    - fixes `#88 <https://github.com/ejolly/pymer4/issues/88>`_
+    - fixes `#113 <https://github.com/ejolly/pymer4/issues/113>`_
+    - fixes `#114 <https://github.com/ejolly/pymer4/issues/114>`_ 
+    - generally more robust conversion of R types to pandas 
+    
+- **New features:**
+    - :code:`Lm` models now support :code:`family='binomial'` and uses the
+      :code:`LogisticRegression` class from scikit-learn with no regularization for
+      estimation. Estimates and errors have been verified against the :code:`glm`
+      implementation in R
+    - new :code:`lrt` function for estimating likelihood-ratio tests between
+      :code:`Lmer` models thanks to `@dramanica <https://github.com/dramanica>`_. This
+      replicates the functionality of :code:`anova()` in R for :code:`lmer` models. 
+    - new :code:`.confint()` method for :code:`Lmer` models thanks to `@dramanica
+      <https://github.com/dramanica>`_. This allows computing confidence intervals on 1
+      or more paramters of an already fit model including random effects which are not
+      computed by default when calling :code:`.fit()`
 
 0.7.8
 -----
