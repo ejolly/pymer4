@@ -86,6 +86,77 @@ class Lm(object):
         )
         return out
 
+    def _handle_weights(self, weights):
+        """Handle weights if provided"""
+
+        if isinstance(weights, str):
+            if weights not in self.data.columns:
+                raise ValueError(
+                    "If weights is a string it must be a column that exists in the data"
+                )
+            else:
+                dv = self.formula.split("~")[0]
+                weight_groups = self.data.groupby(weights)
+                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
+        else:
+            weight_vals = weights
+            weight_groups = None
+            dv = self.formula.split("~")[0]
+
+        if weights is None:
+            self.estimator = "OLS"
+        else:
+            self.estimator = "WLS"
+        return weight_vals, weight_groups, dv
+
+    def _organize_results(self, stats, colnames, indexnames):
+        """Organize estimates into a results dataframe that's ultimately stored in model.coefs"""
+
+        results = np.column_stack(stats)
+        results = pd.DataFrame(results, index=indexnames, columns=colnames)
+        numeric_cols = list(filter(lambda col: col != "Sig", colnames))
+        results[numeric_cols] = results[numeric_cols].apply(
+            pd.to_numeric, args=("coerce",)
+        )
+        return results
+
+    def _calc_dof(self, cluster, wls_dof_correction, x, weights, weight_groups, dv):
+        """Calculate degrees of freedom and any required adjustment for WLS or
+        cluster correction"""
+
+        if cluster is not None:
+            # Cluster corrected dof (num clusters - num coef)
+            # Differs from stats and statsmodels which do num cluster - 1
+            # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
+            df = cluster.nunique() - np.linalg.matrix_rank(x)
+        else:
+            # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
+            df = x.shape[0] - np.linalg.matrix_rank(x)
+            if isinstance(weights, str) and wls_dof_correction:
+                if weight_groups.ngroups != 2:
+                    w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
+                    warnings.warn(w)
+                    self.warnings.append(w)
+                else:
+                    welch_ingredients = np.array(
+                        self.data.groupby(weights)[dv]
+                        .apply(_welch_ingredients)
+                        .values.tolist()
+                    )
+                    df = (
+                        np.power(welch_ingredients[:, 0].sum(), 2)
+                        / welch_ingredients[:, 1].sum()
+                    )
+        return df
+
+    def _calc_ols_pvals(self, df, t):
+        """Calculate p-vals given dofs and t stats"""
+
+        p = 2 * (1 - t_dist.cdf(np.abs(t), df))
+        df = np.array([df] * len(t))
+        sig = np.array([_sig_stars(elem) for elem in p])
+        return p, df, sig
+
     def fit(
         self,
         robust=False,
@@ -266,22 +337,7 @@ class Lm(object):
             self.ranked_data = False
             ddat = self.data
 
-        # Handle weights if provided
-        if isinstance(weights, str):
-            if weights not in self.data.columns:
-                raise ValueError(
-                    "If weights is a string it must be a column that exists in the data"
-                )
-            else:
-                dv = self.formula.split("~")[0]
-                weight_groups = self.data.groupby(weights)
-                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
-        else:
-            weight_vals = weights
-        if weights is None:
-            self.estimator = "OLS"
-        else:
-            self.estimator = "WLS"
+        weight_vals, weight_groups, dv = self._handle_weights(weights)
 
         y, x = dmatrices(self.formula, ddat, 1, return_type="dataframe")
         self.design_matrix = x
@@ -301,25 +357,21 @@ class Lm(object):
                 probs_ul,
                 z,
                 p,
+                sig,
                 fits,
                 fit_probs,
                 fit_classes,
                 clf,
             ) = _logregress(x, y, all_stats=True)
 
-            # Compute sig stars
-            sig = np.array([_sig_stars(elem) for elem in p])
-
-            # Save sklearn model
+            # Save sklearn model and all fits
             self.model_obj = clf
-
-            # Save all fits
             self.data["fits"] = fits
             self.data["fit_probs"] = fit_probs
             self.data["fit_classes"] = fit_classes
 
             # Build output df
-            results = np.column_stack(
+            results = self._organize_results(
                 [
                     b,
                     ll,
@@ -334,26 +386,7 @@ class Lm(object):
                     z,
                     p,
                     sig,
-                ]
-            )
-            results = pd.DataFrame(results)
-            results.index = x.columns
-            results.columns = [
-                "Estimate",
-                "2.5_ci",
-                "97.5_ci",
-                "SE",
-                "OR",
-                "OR_2.5_ci",
-                "OR_97.5_ci",
-                "Prob",
-                "Prob_2.5_ci",
-                "Prob_97.5_ci",
-                "Z-stat",
-                "P-val",
-                "Sig",
-            ]
-            results[
+                ],
                 [
                     "Estimate",
                     "2.5_ci",
@@ -367,34 +400,14 @@ class Lm(object):
                     "Prob_97.5_ci",
                     "Z-stat",
                     "P-val",
-                ]
-            ] = results[
-                [
-                    "Estimate",
-                    "2.5_ci",
-                    "97.5_ci",
-                    "SE",
-                    "OR",
-                    "OR_2.5_ci",
-                    "OR_97.5_ci",
-                    "Prob",
-                    "Prob_2.5_ci",
-                    "Prob_97.5_ci",
-                    "Z-stat",
-                    "P-val",
-                ]
-            ].apply(
-                pd.to_numeric, args=("coerce",)
+                    "Sig",
+                ],
+                x.columns,
             )
-
-            # if permute:
-            #     results = results.rename(
-            #         columns={"DF": "Num_perm", "P-val": "Perm-P-val"}
-            #     )
 
         # Linear Regression
         else:
-            # Compute standard estimates
+            # Fit
             b, se, t, res = _ols(
                 x,
                 y,
@@ -404,33 +417,12 @@ class Lm(object):
                 cluster=cluster,
                 weights=weight_vals,
             )
-            if cluster is not None:
-                # Cluster corrected dof (num clusters - num coef)
-                # Differs from stats and statsmodels which do num cluster - 1
-                # Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
-                df = cluster.nunique() - np.linalg.matrix_rank(x)
-            else:
-                # Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error
-                df = x.shape[0] - np.linalg.matrix_rank(x)
-                if isinstance(weights, str) and wls_dof_correction:
-                    if weight_groups.ngroups != 2:
-                        w = "Welch-Satterthwait DOF correction only supported for 2 groups in the data"
-                        warnings.warn(w)
-                        self.warnings.append(w)
-                    else:
-                        welch_ingredients = np.array(
-                            self.data.groupby(weights)[dv]
-                            .apply(_welch_ingredients)
-                            .values.tolist()
-                        )
-                        df = (
-                            np.power(welch_ingredients[:, 0].sum(), 2)
-                            / welch_ingredients[:, 1].sum()
-                        )
 
-            p = 2 * (1 - t_dist.cdf(np.abs(t), df))
-            df = np.array([df] * len(t))
-            sig = np.array([_sig_stars(elem) for elem in p])
+            # DOF and pval calculation
+            df = self._calc_dof(
+                cluster, wls_dof_correction, x, weights, weight_groups, dv
+            )
+            p, df, sig = self._calc_ols_pvals(df, t)
 
             if conf_int == "boot":
 
@@ -491,25 +483,19 @@ class Lm(object):
                 sig = np.array([_sig_stars(elem) for elem in p])
 
             # Make output df
-            results = np.column_stack([b, ci_l, ci_u, se, df, t, p, sig])
-            results = pd.DataFrame(results)
-            results.index = x.columns
-            results.columns = [
-                "Estimate",
-                "2.5_ci",
-                "97.5_ci",
-                "SE",
-                "DF",
-                "T-stat",
-                "P-val",
-                "Sig",
-            ]
-            results[
-                ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-            ] = results[
-                ["Estimate", "2.5_ci", "97.5_ci", "SE", "DF", "T-stat", "P-val"]
-            ].apply(
-                pd.to_numeric, args=("coerce",)
+            results = self._organize_results(
+                [b, ci_l, ci_u, se, df, t, p, sig],
+                [
+                    "Estimate",
+                    "2.5_ci",
+                    "97.5_ci",
+                    "SE",
+                    "DF",
+                    "T-stat",
+                    "P-val",
+                    "Sig",
+                ],
+                x.columns,
             )
 
             if permute:
@@ -607,6 +593,11 @@ class Lm(object):
             raise RuntimeError(
                 "Model must be fit before partial correlations can be computed"
             )
+        if not self.family == "gaussian":
+            raise NotImplementedError(
+                ".to_corrs is only supported for family='gaussian'"
+            )
+
         if corr_type not in ["semi", "partial"]:
             raise ValueError("corr_type must be 'semi' or 'partial'")
         from scipy.stats import pearsonr

@@ -430,6 +430,7 @@ def _logregress(x, y, all_stats=True):
 
     # Two-tailed p-values
     p = 2 * norm.sf(np.fabs(z))
+    sig = np.array([_sig_stars(elem) for elem in p.squeeze()])
 
     # Wald Confidence intervals
     # In R: this is equivalent to confint.default(model)
@@ -455,6 +456,7 @@ def _logregress(x, y, all_stats=True):
             probs_ul.squeeze(),
             z.squeeze(),
             p.squeeze(),
+            sig.squeeze(),
             fits.squeeze(),
             fit_probs.squeeze(),
             fit_classes.squeeze(),
