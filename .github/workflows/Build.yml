@@ -1,26 +1,11 @@
-name: tests & build
+name: Build with Conda (not working)
 on:
-  push:
-    branches:
-      - master
-      - main
-    tags-ignore:
-      - v[0-9].[0-9].[0-9]  # prevent double runs for vM.N.P releases
-  pull_request:
-    branches:
-      - master
-      - main
   workflow_dispatch:
     inputs:
       debug_enabled:
         description: 'Run workflow with ssh debugging'
         required: false
         default: false
-  release:
-    types: [published]
-
-  schedule:
-    - cron: '0 0 * * 0'
 
 env:
   PACKAGE_NAME: pymer4
@@ -37,11 +22,20 @@ defaults:
 jobs:
   ci:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        py_ver: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest, macos-11]
+        py_ver: [3.8, 3.9]
+        os: [ubuntu-latest, macos-latest]
+        experimental: [false]
+        include:
+          - py_ver: 3.7
+            os: macos-latest
+            experimental: true
+          - py_ver: 3.7
+            os: ubuntu-latest
+            experimental: false
 
     outputs:
       # tarballs are py3X job-specific
@@ -62,73 +56,63 @@ jobs:
           echo "GA ref: ${{ github.ref }}"
 
       # ------------------------------------------------------------
-      # 1. Grab git repo, setup miniconda environment and packages required to build
-      - uses: actions/checkout@v2
-      - name: Setup Miniconda + Checkout code
-        run: |
-          echo "GIT_ABBREV_COMMIT=_g${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-
-          if [[ ${{ runner.os }} == Linux ]]; then \
-            miniconda_url='https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh'; \
-          fi
-          if [[ ${{ runner.os }} == macOS ]]; then \
-            miniconda_url='https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh'; \
-          fi
-
-          wget $miniconda_url -O $HOME/miniconda.sh
-          bash ~/miniconda.sh -b -p $HOME/miniconda
-          hash -r
-          $HOME/miniconda/bin/conda shell.bash hook >> ~/.bash_profile  
-          source ~/.bash_profile
-          
-          hash -r
-          conda config --set always_yes yes --set changeps1 no
-          conda config --set bld_path $CONDA_BLD_PATH
-          conda install -n base -q conda-build conda-verify anaconda-client
-          echo "# ------------------------------------------------------------"
-          conda info -a
+      # Step up miniconda
+      - name: Download Miniconda
+        uses: conda-incubator/setup-miniconda@059455a698430d8b68fa317268fa2e3da3492a98
+        with:
+          miniconda-version: "latest"
+          python-version: ${{ matrix.py_ver }}
 
       # ------------------------------------------------------------
-      # 2. Build the conda package and tarballs for each OS
+      # Get code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # ------------------------------------------------------------
+      # Setup conda build environment and build package
       # env defined here are just for convenience when writing bash commands
-      - name: Build package
-        id: conda-bld
+      - name: Setup and build package
         env:
           OS: ${{ runner.os }}   
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda build --python=$PY_VER -c conda-forge -c defaults conda
+          conda config --set always_yes yes --set changeps1 no
+          conda config --set bld_path $CONDA_BLD_PATH
+          conda install -n base -q conda-build
+          conda deactivate
+          echo "# ----------------BUILDING---------------------------------"
+          conda config --show | grep bld_path
+          conda info
+          conda-build ./conda/ --python=$PY_VER -c https://conda.anaconda.org/conda-forge/ --verify
           tarball=$(conda build --python=$PY_VER conda --output | tail -1)
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
           fi
           echo "conda build tarball" $tarball
           echo "::set-output name=conda-tarball::$tarball"
+          echo "{conda-tarball}={$tarball}" >> $GITHUB_OUTPUT
 
       # ------------------------------------------------------------
-      # 3. Create new conda env and install package locally
+      # Create new conda env and install package locally
       # Test installation worked
       # Get black and pytest from pip because black version on conda lags behind
-      - name: Create and test fresh installation 
+      - name: Test installation 
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
-          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME 'blas=*=mkl' -c $CONDA_BLD_PATH -c conda-forge -c defaults
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
-          conda install black pytest-cov -c conda-forge
-          conda list
-          lscpu
-          python -c 'import numpy; numpy.show_config()'
+          pip install -r requirements-dev.txt
           python -c "from pymer4.test_install import test_install; test_install()"
 
-      # # 4. Run code tests, formatting, and coverage
-      - name: Run tests + coverage
+      # 4. Run code tests
+      - name: Run Test Suite
         env:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda activate env_$PY_VER
           black --check --verbose .
-          pytest --cov=$PACKAGE_NAME
+          pytest pymer4/tests
 
       # 5a. Build docs (only for 3.8 which handles deployment)
       # Will also run on PRs which serves as another layer of testing

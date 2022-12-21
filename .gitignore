@@ -16,3 +16,10 @@ dev/
 .coverage
 .vscode/settings.json
 *.key
+pytest.ini
+env/*
+conda/build/*
+.pytest_cache
+.tox
+.venv
+environment.yml

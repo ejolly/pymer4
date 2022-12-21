@@ -1,16 +1,17 @@
-from __future__ import division
 from pymer4.models import Lmer, Lm, Lm2
-from pymer4.utils import get_resource_path
+from pymer4.bridge import pandas2R, R2pandas
 import pandas as pd
 import numpy as np
 from scipy.special import logit
 from scipy.stats import ttest_ind
 import os
 import pytest
-import seaborn as sns
 from rpy2.rinterface_lib.embedded import RRuntimeError
+from rpy2.robjects.packages import importr
+import rpy2.robjects as ro
 
-# import re
+stats = importr("stats")
+base = importr("base")
 
 np.random.seed(10)
 
@@ -19,9 +20,8 @@ os.environ[
 ] = "True"  # Recent versions of rpy2 sometimes cause the python kernel to die when running R code; this handles that
 
 
-def test_gaussian_lm2():
+def test_gaussian_lm2(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lm2("DV ~ IV3 + IV2", group="Group", data=df)
     model.fit(summarize=False)
     assert model.coefs.shape == (3, 8)
@@ -29,15 +29,23 @@ def test_gaussian_lm2():
     assert np.allclose(model.coefs["Estimate"], estimates, atol=0.001)
     assert model.fixef.shape == (47, 3)
 
+    assert model.rsquared is not None
+    assert model.rsquared_adj is not None
+    assert len(model.rsquared_per_group) == 47
+    assert len(model.rsquared_adj_per_group) == 47
+    assert len(model.fits) == model.data.shape[0]
+    assert len(model.residuals) == model.data.shape[0]
+    assert "fits" in model.data.columns
+    assert "residuals" in model.data.columns
+
     # Test bootstrapping and permutation tests
     model.fit(permute=500, conf_int="boot", n_boot=500, summarize=False)
     assert model.ci_type == "boot (500)"
     assert model.sig_type == "permutation (500)"
 
 
-def test_gaussian_lm():
+def test_gaussian_lm(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lm("DV ~ IV1 + IV3", data=df)
     model.fit(summarize=False)
 
@@ -94,9 +102,8 @@ def test_gaussian_lm():
     assert all([np.allclose(a, b) for a, b in zip(wls, scit)])
 
 
-def test_gaussian_lmm():
+def test_gaussian_lmm(df):
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
     opt_opts = "optimizer='Nelder_Mead', optCtrl = list(FtolAbs=1e-8, XtolRel=1e-8)"
     model.fit(summarize=False, control=opt_opts)
@@ -195,6 +202,21 @@ def test_gaussian_lmm():
     assert isinstance(out, pd.DataFrame)
     assert out.shape == (model.data.shape[0], 2)
 
+    # Test confint
+    # Wald confidence interval
+    wald_confint = model.confint()
+
+    assert isinstance(wald_confint, pd.DataFrame)
+    assert wald_confint.shape == (8, 2)
+    # there should be no estimates for the random effects
+    assert wald_confint["2.5 %"].isna().sum() == 5
+    # bootstrapped confidence intervals
+    boot_confint = model.confint(method="boot", nsim=10)
+    assert isinstance(boot_confint, pd.DataFrame)
+    assert boot_confint.shape == (8, 2)
+    # ci for random effects should be estimates by bootstrapping
+    assert boot_confint["2.5 %"].isna().sum() == 0
+
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
 
@@ -217,10 +239,10 @@ def test_gaussian_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_contrasts():
-    df = sns.load_dataset("gammas").rename(columns={"BOLD signal": "bold"})
-    grouped_means = df.groupby("ROI")["bold"].mean()
-    model = Lmer("bold ~ ROI + (1|subject)", data=df)
+def test_contrasts(gammas):
+
+    grouped_means = gammas.groupby("ROI")["bold"].mean()
+    model = Lmer("bold ~ ROI + (1|subject)", data=gammas)
 
     custom_contrast = grouped_means["AG"] - np.mean(
         [grouped_means["IPS"], grouped_means["V1"]]
@@ -252,15 +274,15 @@ def test_contrasts():
     assert np.allclose(model.coefs.iloc[1, 0], custom_contrast)
 
 
-def test_post_hoc():
+def test_post_hoc(df):
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df, family="gaussian")
     model.fit(
         factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False
     )
 
     marginal, contrasts = model.post_hoc(marginal_vars="IV3", p_adjust="dunnet")
+
     assert marginal.shape[0] == 3
     assert contrasts.shape[0] == 3
 
@@ -269,11 +291,52 @@ def test_post_hoc():
     assert contrasts.shape[0] == 15
 
 
-def test_logistic_lmm():
-
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    model = Lmer("DV_l ~ IV1+ (IV1|Group)", data=df, family="binomial")
+def test_logistic_lm(df):
+    model = Lm("DV_l ~ IV1", data=df, family="binomial")
     model.fit(summarize=False)
+
+    # Basic checks
+    assert model.coefs.shape == (2, 13)
+    assert "OR" in model.coefs.columns and "Prob" in model.coefs.columns
+
+    # Should be able to compare to R glm()
+    rdf = pandas2R(df)
+    r_model = stats.glm("DV_l ~ IV1", family="binomial", data=rdf)
+    get_summary = ro.r(
+        """
+        function(m){
+        out <- data.frame(unclass(summary(m))$coefficients)
+        out
+        }
+        """
+    )
+    summary = R2pandas(get_summary(r_model))
+
+    # Compare output
+    for rcol, pcol in zip(
+        ["Estimate", "Std..Error", "z.value", "Pr...z.."],
+        ["Estimate", "SE", "Z-stat", "P-val"],
+    ):
+        assert np.allclose(model.coefs[pcol], summary[rcol])
+
+    # Test prediction
+    assert np.allclose(
+        model.predict(model.data),
+        model.data.fit_probs,
+    )
+    assert np.allclose(
+        model.predict(model.data, pred_type="link"),
+        model.data.fits,
+    )
+
+
+def test_logistic_lmm(df):
+
+    model = Lmer("DV_l ~ IV1+ (IV1|Group)", data=df, family="binomial")
+    model.fit(summarize=True)
+    assert np.allclose(
+        model.coefs.loc["(Intercept)", "Prob"], model.data.DV_l.mean(), atol=0.01
+    )
 
     assert model.coefs.shape == (2, 13)
     estimates = np.array([-0.16098421, 0.00296261])
@@ -288,10 +351,12 @@ def test_logistic_lmm():
     assert np.allclose(model.coefs.loc[:, "Estimate"], model.fixef.mean(), atol=0.01)
 
     # Test prediction
+    # By default we give back probs
     assert np.allclose(
         model.predict(model.data, use_rfx=True, verify_predictions=False),
         model.data.fits,
     )
+    # But can convert to logits like .decision_function in sklearn
     assert np.allclose(
         model.predict(model.data, use_rfx=True, pred_type="link"),
         logit(model.data.fits),
@@ -309,22 +374,22 @@ def test_logistic_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_anova():
+def test_anova(df):
 
     np.random.seed(1)
-    data = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
-    data["DV_l2"] = np.random.randint(0, 4, data.shape[0])
-    model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=data)
+    df["DV_l2"] = np.random.randint(0, 4, df.shape[0])
+    model = Lmer("DV ~ IV3*DV_l2 + (IV3|Group)", data=df)
     model.fit(summarize=False)
     out = model.anova()
+    assert all(out.index == ["IV3", "DV_l2", "IV3:DV_l2"])
     assert out.shape == (3, 7)
     out = model.anova(force_orthogonal=True)
+    assert all(out.index == ["IV3", "DV_l2", "IV3:DV_l2"])
     assert out.shape == (3, 7)
 
 
-def test_poisson_lmm():
+def test_poisson_lmm(df):
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_int"] = np.random.randint(1, 10, df.shape[0])
     m = Lmer("DV_int ~ IV3 + (1|Group)", data=df, family="poisson")
     m.fit(summarize=False)
@@ -344,10 +409,9 @@ def test_poisson_lmm():
     assert model.fixef[1].shape == (3, 2)
 
 
-def test_gamma_lmm():
+def test_gamma_lmm(df):
 
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_g"] = np.random.uniform(1, 2, size=df.shape[0])
     m = Lmer("DV_g ~ IV3 + (1|Group)", data=df, family="gamma")
     m.fit(summarize=False)
@@ -360,20 +424,19 @@ def test_gamma_lmm():
     # model.fit(summarize=False)
     # assert model.fixef.shape == (47, 2)
 
-    # model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="gamma")
-    # model.fit(summarize=False)
-    # assert isinstance(model.fixef, list)
-    # assert model.fixef[0].shape == (47, 2)
-    # assert model.fixef[1].shape == (3, 2)
+    model = Lmer("DV_g ~ 0 + (IV1|Group) + (1|IV3)", data=df, family="gamma")
+    model.fit(summarize=False)
+    assert isinstance(model.fixef, list)
+    assert model.fixef[0].shape == (47, 2)
+    assert model.fixef[1].shape == (3, 2)
 
 
-def test_inverse_gaussian_lmm():
+def test_inverse_gaussian_lmm(df):
 
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_g"] = np.random.uniform(1, 2, size=df.shape[0])
     m = Lmer("DV_g ~ IV3 + (1|Group)", data=df, family="inverse_gaussian")
-    m.fit(summarize=False)
+    m.fit(summarize=False, old_optimizer=True)
     assert m.family == "inverse_gaussian"
     assert m.coefs.shape == (2, 7)
 
@@ -390,8 +453,8 @@ def test_inverse_gaussian_lmm():
     # assert model.fixef[1].shape == (3, 2)
 
 
-def test_lmer_opt_passing():
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
+def test_lmer_opt_passing(df):
+
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
     opt_opts = "optCtrl = list(ftol_abs=1e-8, xtol_abs=1e-8)"
     model.fit(summarize=False, control=opt_opts)
@@ -400,16 +463,15 @@ def test_lmer_opt_passing():
     # On some hardware the optimizer will still fail to converge
     # assert len(model.warnings) == 0
 
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
     opt_opts = "optCtrl = list(ftol_abs=1e-4, xtol_abs=1e-4)"
     model.fit(summarize=False, control=opt_opts)
     assert len(model.warnings) >= 1
 
 
-def test_glmer_opt_passing():
+def test_glmer_opt_passing(df):
+
     np.random.seed(1)
-    df = pd.read_csv(os.path.join(get_resource_path(), "sample_data.csv"))
     df["DV_int"] = np.random.randint(1, 10, df.shape[0])
     m = Lmer("DV_int ~ IV3 + (1|Group)", data=df, family="poisson")
     m.fit(
@@ -418,8 +480,6 @@ def test_glmer_opt_passing():
     assert len(m.warnings) >= 1
 
 
-# all or prune to suit
-# tests_ = [eval(v) for v in locals() if re.match(r"^test_",  str(v))]
 tests_ = [
     test_gaussian_lm2,
     test_gaussian_lm,
@@ -428,7 +488,7 @@ tests_ = [
     test_logistic_lmm,
     test_anova,
     test_poisson_lmm,
-    test_gamma_lmm,
+    # test_gamma_lmm,
     test_inverse_gaussian_lmm,
     test_lmer_opt_passing,
     test_glmer_opt_passing,
@@ -436,10 +496,10 @@ tests_ = [
 
 
 @pytest.mark.parametrize("model", tests_)
-def test_Pool(model):
+def test_Pool(model, df):
     from multiprocessing import get_context
 
     # squeeze model functions through Pool pickling
     print("Pool", model.__name__)
     with get_context("spawn").Pool(1) as pool:
-        _ = pool.apply(model, [])
+        _ = pool.apply(model, [df])

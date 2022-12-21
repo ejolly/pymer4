@@ -1,4 +1,4 @@
-name: manual release pypi
+name: Install
 on: [workflow_dispatch]
 
 env:
@@ -14,11 +14,13 @@ jobs:
   ci:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         py_ver: [3.8]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+
       # ------------------------------------------------------------
       # Step up miniconda
       - name: Download Miniconda
@@ -28,17 +30,12 @@ jobs:
           python-version: ${{ matrix.py_ver }}
 
       # ------------------------------------------------------------
-      # Get code
-      - name: Checkout code
-        uses: actions/checkout@v2
-      # ------------------------------------------------------------
-      - name: Build and deploy to Pypi
+      # Setup conda build environment and build package
+      # env defined here are just for convenience when writing bash commands
+      - name: Install package from pre-release
         run: |
-          pip install build
-          python -m build --sdist --wheel --outdir dist/
+          conda config --set always_yes yes --set changeps1 no
+          conda create -n pkg_test -c 'ejolly/label/pre-release' -c conda-forge pymer4
+          conda activate pkg_test
+          python -c "from pymer4.test_install import test_install; test_install()"
 
-      # 7. Deploy package to Pypi (only need to do this once on linux)
-      - name: PyPi deploy
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
