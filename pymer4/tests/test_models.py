@@ -223,7 +223,7 @@ def test_gaussian_lmm(df):
     assert not boot_df1.equals(boot_df2)
     boot_df1 = model.confint(method="boot",nsim=10, seed=123)
     boot_df2 = model.confint(method="boot",nsim=10, seed=123)
-    assert not boot_df1.equals(boot_df2)
+    assert boot_df1.equals(boot_df2)
     
 
     # Smoketest for old_optimizer
