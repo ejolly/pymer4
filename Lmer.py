@@ -1689,12 +1689,14 @@ class Lmer(object):
             self (Lmer): the Lmer object for which confidence intervals should be computed
 
         Returns:
-            np.array: Cook's distances
+            pd.DataFrame: Cook's distances
 
         Examples:
             The following examples demonstrate how to retrieve Cook's distances.
 
-             >>> model.cooks_distances()
+            The default Wald estimates for all parameters
+
+            >>> model.cooks_distances()
 
         """
 
@@ -1705,18 +1707,19 @@ class Lmer(object):
             r_console.append(x)
 
         callbacks.consolewrite_warnerror = _f
-         # Model cooks distances
-        rstring = """
-            function(model){
-            out <- cooks.distance(model)
-            out
-            }
-        """
+        rstring = (
+            """
+                function(model){
+                out_ci <- as.data.frame(cooks.distance(model))
+            out_ci
+            }"""
+        )
         cooks_func = robjects.r(rstring)
-        cooks_dist = np.array(cooks_func(self.model_obj))
+        out_summary = cooks_func(self.model_obj)
+        out_summary = R2pandas(out_summary)
 
         # restore outputs
         callbacks.consolewrite_warnerror = consolewrite_warning_backup
         for message in r_console:
             print(message)
-        return cooks_dist
+        return out_summary
