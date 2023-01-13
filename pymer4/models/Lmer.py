@@ -1587,6 +1587,7 @@ class Lmer(object):
         boot_type="perc",
         quiet=False,
         oldnames=False,
+        seed=None,
     ):
         """
         Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
@@ -1604,6 +1605,7 @@ class Lmer(object):
             quiet (bool): (logical) suppress messages about computationally intensive profiling?
             oldnames: (logical) use old-style names for variance-covariance parameters, e.g. ".sig01", rather than newer
              (more informative) names such as "sd_(Intercept)|Subject"?
+            seed (int): seed to be passed to bootMer for repeatability.
 
         Returns:
             pd.DataFrame: confidence intervals for the parameters of interest
@@ -1654,6 +1656,7 @@ class Lmer(object):
             + method
             + """'"""
             + ((""",zeta=""" + str(zeta)) if zeta is not None else """""")
+            + ((""",seed=""" + str(seed)) if seed is not None else """""")
             + """,nsim="""
             + str(nsim)
             + """,boot.type='"""

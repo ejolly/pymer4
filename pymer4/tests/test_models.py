@@ -216,6 +216,15 @@ def test_gaussian_lmm(df):
     assert boot_confint.shape == (8, 2)
     # ci for random effects should be estimates by bootstrapping
     assert boot_confint["2.5 %"].isna().sum() == 0
+    
+    # test seed for confint
+    boot_df1 = model.confint(method="boot",nsim=10)
+    boot_df2 = model.confint(method="boot",nsim=10)
+    assert not boot_df1.equals(boot_df2)
+    boot_df1 = model.confint(method="boot",nsim=10, seed=123)
+    boot_df2 = model.confint(method="boot",nsim=10, seed=123)
+    assert boot_df1.equals(boot_df2)
+    
 
     # Smoketest for old_optimizer
     model.fit(summarize=False, old_optimizer=True)
