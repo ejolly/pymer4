@@ -1684,8 +1684,7 @@ class Lmer(object):
         self,
     ):
         """
-        Compute Cook's distance for a Lmer object. Specifically, we use cooks.distance(influence(x) as discussed in 
-       https://github.com/lme4/lme4/issues/693
+        Compute Cook's distance for a Lmer object (this is a wrapper for cooks.distance in lme4).
         Args:
             self (Lmer): the Lmer object for which confidence intervals should be computed
 
@@ -1709,7 +1708,7 @@ class Lmer(object):
          # Model cooks distances
         rstring = """
             function(model){
-            out <- cooks.distance(influence(model))
+            out <- cooks.distance(model)
             out
             }
         """
