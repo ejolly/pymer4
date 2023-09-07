@@ -82,7 +82,6 @@ jobs:
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
           fi
           echo "conda build tarball" $tarball
-          echo "::set-output name=conda-tarball::$tarball"
           echo "{conda-tarball}={$tarball}" >> $GITHUB_OUTPUT
 
       # ------------------------------------------------------------
@@ -104,6 +103,7 @@ jobs:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda activate env_$PY_VER
+          black --version
           black --check --verbose .
           pytest pymer4/tests
 
