@@ -35,7 +35,19 @@ jobs:
             experimental: true
           - py_ver: 3.7
             os: ubuntu-latest
-            experimental: false
+            experimental: true
+          - py_ver: 3.10
+            os: macos-latest
+            experimental: true
+          - py_ver: 3.10
+            os: ubuntu-latest
+            experimental: true
+          - py_ver: 3.10
+            os: macos-latest
+            experimental: true
+          - py_ver: 3.10
+            os: ubuntu-latest
+            experimental: true
 
     outputs:
       # tarballs are py3X job-specific

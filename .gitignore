@@ -19,6 +19,7 @@ dev/
 pytest.ini
 env/*
 conda/build/*
+conda/build_main/*
 .pytest_cache
 .tox
 .venv
