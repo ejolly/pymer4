@@ -25,3 +25,4 @@ conda/build_main/*
 .venv
 environment.yml
 *.pickle
+*.joblib

@@ -21,11 +21,11 @@ def save_model(model, filepath, **kwargs):
     """
 
     filepath = str(filepath)
-    if not filepath.endswith('.joblib'):
+    if not filepath.endswith(".joblib"):
         raise IOError("filepath must end with .joblib")
 
     rds_file = filepath.replace(".joblib", ".rds")
-    
+
     # Save the python object
     dump(model, filepath, **kwargs)
     assert os.path.exists(filepath)
@@ -33,6 +33,7 @@ def save_model(model, filepath, **kwargs):
     if model.model_obj is not None:
         base.saveRDS(model.model_obj, rds_file)
         assert os.path.exists(rds_file)
+
 
 def load_model(filepath):
     """
@@ -44,7 +45,7 @@ def load_model(filepath):
     """
 
     filepath = str(filepath)
-    if not filepath.endswith('.joblib'):
+    if not filepath.endswith(".joblib"):
         raise IOError("filepath must end with .joblib")
 
     rds_file = filepath.replace(".joblib", ".rds")

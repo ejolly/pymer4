@@ -5,10 +5,10 @@
 
 Computation times
 =================
-**00:02.603** total execution time for **auto_examples** files:
+**00:02.957** total execution time for **auto_examples** files:
 
 +-------------------------------------------------------------------------------------------------+-----------+--------+
-| :ref:`sphx_glr_auto_examples_example_01_basic_usage.py` (``example_01_basic_usage.py``)         | 00:02.603 | 0.0 MB |
+| :ref:`sphx_glr_auto_examples_example_01_basic_usage.py` (``example_01_basic_usage.py``)         | 00:02.957 | 0.0 MB |
 +-------------------------------------------------------------------------------------------------+-----------+--------+
 | :ref:`sphx_glr_auto_examples_example_02_categorical.py` (``example_02_categorical.py``)         | 00:00.000 | 0.0 MB |
 +-------------------------------------------------------------------------------------------------+-----------+--------+

@@ -2,6 +2,15 @@ What's New
 ==========
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
+0.8.1
+----
+- **NOTE:**
+    - This version drops support for Python 3.7 and adds support for 3.9-3.11
+    - This version also uses :code:`joblib` for model saving and loading and drops supported hdf5 files previously handled with :code:`deepdish` (no longer maintained). This version will no longer be able to load models saved with versions < 0.8.1
+    - fixes `#122 <https://github.com/ejolly/pymer4/issues/122>`_
+    - fixes `#125 <https://github.com/ejolly/pymer4/issues/125>`_
+    - fixes `#119 <https://github.com/ejolly/pymer4/issues/119>`_
+
 0.8.0
 ----
 - **NOTE:**
