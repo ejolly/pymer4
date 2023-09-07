@@ -66,6 +66,8 @@ jobs:
         run: |
           conda activate pkg_test
           python -c "from pymer4.test_install import test_install; test_install()"
+          black --version
+          black --check --verbose .
           pytest pymer4/tests
 
       # ------------------------------------------------------------
