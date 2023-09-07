@@ -36,7 +36,6 @@ requirements:
     - patsy
     - joblib
     - scipy
-    - deepdish
     - scikit-learn
     # {% for req in data.get('install_requires', []) %}
     # - {{ req }}

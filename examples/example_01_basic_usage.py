@@ -156,17 +156,19 @@ model.plot_summary()
 ###############################################################################
 # Model Persistence
 # -----------------
-# All pymer4 models can be saved and loaded from disk. Doing so will persist *all* model attributes and data i.e. anything accessible with the '.' syntax. Models are saved and loaded using the `HDF5 format <https://support.hdfgroup.org/HDF5/whatishdf5.html/>`_ using the `deepdish <https://deepdish.readthedocs.io/en/latest/>`_ python library. This ensures near universal accesibility on different machines and operating systems. Therefore all filenames must end with :code:`.h5` or :code:`.hdf5`. For :code:`Lmer` models, an additional file ending in :code:`.rds` will be saved in the same directory as the HDF5 file. This is the R model object readable in R using :code:`readRDS`.
+# All pymer4 models can be saved and loaded from disk. Doing so will persist *all* model attributes and data i.e. anything accessible with the '.' syntax. Models are saved and loaded using `Joblib <https://joblib.readthedocs.io/en/latest/persistence.html#persistence>`_ Therefore all filenames must end with :code:`.joblib`. For :code:`Lmer` models, an additional file ending in :code:`.rds` will be saved in the same directory as the HDF5 file. This is the R model object readable in R using :code:`readRDS`.
 #
+# Prior to version 0.8.1 models were saved to HDF5 files using `deepdish <https://github.com/uchicago-cs/deepdish/>`_ but this library is no longer maintained. If you have old models saved as :code:`.h5` or :code:`.hdf5` files you should use the same version of pymer4 that you used to estimate those models. 
+# 
 # To persist models you can use the dedicated :code:`save_model` and :code:`load_model` functions from the :code:`pymer4.io` module
 
 # Import functions
 from pymer4.io import save_model, load_model
 
 # Save the Lm2 model above
-save_model(model, "mymodel.h5")
+save_model(model, "mymodel.joblib")
 # Load it back up
-model = load_model("mymodel.h5")
+model = load_model("mymodel.joblib")
 # Check that it looks the same
 print(model)
 

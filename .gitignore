@@ -24,3 +24,4 @@ conda/build_main/*
 .tox
 .venv
 environment.yml
+*.pickle
