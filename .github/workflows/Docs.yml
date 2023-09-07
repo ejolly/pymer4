@@ -1,9 +1,5 @@
-name: Deploy Docs
+name: Manual Deploy Docs
 on: 
-  push:
-    branches:
-      - master
-      - main
   workflow_dispatch:
 
 env:
@@ -65,8 +61,7 @@ jobs:
           cd docs && make clean && make html
           touch _build/html/.nojekyll
 
-      # 5b. Deploy docs (only for 3.8 which handles deployment)
-      # Only runs when a PR is merged into master or there's a direct push to master
+      # Deploy docs
       - name: Deploy docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

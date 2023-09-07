@@ -1,4 +1,4 @@
-name: Install
+name: Test install conda pre-release
 on: [workflow_dispatch]
 
 env:
