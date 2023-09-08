@@ -1,7 +1,5 @@
-name: Build and Deploy on release
+name: Build and Deploy
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       upload_anaconda:

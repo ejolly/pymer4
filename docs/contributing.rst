@@ -23,13 +23,12 @@ A stable release can be installed from :code:`pip` or from :code:`conda` using t
 2. A pip installable package uploaded to Pypi
 3. Documentation site deployed to github pages
 
-The primary way to create these is by publishing a new release via Github. This will **automatically** trigger the **Build** and **Build_noarch** workflows, which will:
+To create a new release:
 
-- Build, test, and upload conda packages for each platform to anaconda cloud
-- Build and upload to Pypi
-- Build and deploy docs to github-pages
+1. Publish a new release via github
+2. Manually trigger the **Build** and **Build_noarch** workflows and enable uploading to the main channel on anaconda, uploading to pypi, and deploying documentation
 
-If any issues arise in this automated process both workflows can also be triggered *manually*. Separate options exist for choosing whether to upload each artifact or simply build them (e.g. deploy docs but don't upload builds to pypi or anaconda)
+*Note: Previously this process was automated to trigger when a github release is made, but this seems to be unreliable as the commit hash is missing and causes runners to not find the built tarballs* 
 
 Packaging Development Releases
 ++++++++++++++++++++++++++++++
@@ -39,8 +38,11 @@ A development release only includes 1 artifact:
 
 1. Conda packages for multiple platforms uploaded to the :code:`ejolly/label/pre-release` channel on anaconda cloud 
 
-The primary way to create a development release is by *manually triggering* the same **Build** and **Build_noarch** workflows and choosing the "pre-release" option for uploading to anaconda cloud. The default options when manually triggering will simply build packages but perform no uploading (useful for testing package builds). 
+Development releases are created the same way as stable releases using the same **Build** and **Build_noarch** workflows, but choosing the "pre-release" option for uploading to anaconda cloud and disabling pypi and documentation deploys. The default options for these works flow will simply build packages but perform no uploading at all which can useful for testing package builds. 
 
+Updating deployed documentation
++++++++++++++++++++++++++++++++
+To deploy only documentation changes you can use *either* the **Build** workflow and enable the documentation deploy or the **Docs** workflow which is a bit faster as it skips packaging building.
 
 Code Guidelines
 ---------------
