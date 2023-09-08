@@ -35,6 +35,7 @@ jobs:
       matrix:
         py_ver: [3.9]
         os: [ubuntu-latest]
+        experimental: [true]
 
     outputs:
       # tarballs are py3X job-specific
