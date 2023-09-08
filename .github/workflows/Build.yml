@@ -78,7 +78,7 @@ jobs:
         run: |
           conda config --set always_yes yes --set changeps1 no
           conda config --set bld_path $CONDA_BLD_PATH
-          conda install -n base -q conda-build
+          conda install -n base -q conda-build anaconda-client
           conda deactivate
           echo "# ----------------BUILDING---------------------------------"
           conda config --show | grep bld_path
