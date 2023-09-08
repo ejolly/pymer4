@@ -101,6 +101,7 @@ jobs:
         run: |
           conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c conda-forge -c defaults
           conda activate env_$PY_VER
+          conda info | grep active
           pip install -r requirements-dev.txt
           python -c "from pymer4.test_install import test_install; test_install()"
 
@@ -110,6 +111,7 @@ jobs:
           PY_VER: ${{ matrix.py_ver }}
         run: |
           conda activate env_$PY_VER
+          conda info | grep active
           black --version
           black --check --verbose .
           pytest pymer4/tests
@@ -122,6 +124,7 @@ jobs:
         if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS }}
         run: |
           conda activate env_$PY_VER
+          conda info | grep active
           conda install sphinx sphinx_bootstrap_theme sphinx-gallery -c conda-forge
           cd docs && make clean && make html
           touch _build/html/.nojekyll
@@ -140,9 +143,12 @@ jobs:
       # 6. Build package for PyPi
       # Only runs on the 3.8 runner
       - name: Build for Pypi
+        env:
+          PY_VER: ${{ matrix.py_ver }}
         if: ${{ matrix.py_ver == env.DEPLOY_PY_VER && matrix.os == env.DEPLOY_OS }}
         run: |
           conda activate env_$PY_VER
+          conda info | grep active
           pip install build
           python -m build --sdist --wheel --outdir dist/
       
@@ -157,7 +163,7 @@ jobs:
       # 8a. Deploy package to main conda main channel
       # Runs when a github release is created, but can also be triggered manually
       - name: Conda main deploy 
-        if: ${{ (github.event_name == 'release') || (github.events.inputs.upload_anaconda == 'main') }}
+        if: ${{ (github.event_name == 'release') || (inputs.upload_anaconda == 'main') }}
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
@@ -169,7 +175,7 @@ jobs:
       # 8b. Deploy package to pre-release conda channel 
       # Only runs when triggered manually
       - name: Conda pre-release deploy
-        if: ${{ github.events.inputs.upload_anaconda == 'pre-release' }}
+        if: ${{ inputs.upload_anaconda == 'pre-release' }}
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
