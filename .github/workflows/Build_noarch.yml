@@ -1,4 +1,4 @@
-name: Build and Deploy noarch on release
+name: Build and Deploy noarch
 on:
   workflow_dispatch:
     inputs:
