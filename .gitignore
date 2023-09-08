@@ -2,7 +2,7 @@
 *.DS_Store
 *.ipynb_checkpoints
 *.pyc
-build/*
+build/
 docs/_build/
 docs/modules/
 .cache/*
@@ -26,3 +26,4 @@ conda/build_main/*
 environment.yml
 *.pickle
 *.joblib
+conda_noarch
