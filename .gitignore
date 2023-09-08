@@ -19,11 +19,10 @@ dev/
 pytest.ini
 env/*
 conda/build/*
-conda/build_main/*
+conda_noarch/build/*
 .pytest_cache
 .tox
 .venv
 environment.yml
 *.pickle
 *.joblib
-conda_noarch

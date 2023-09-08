@@ -3,16 +3,19 @@ What's New
 Historically :code:`pymer4` versioning was a bit all over the place but has settled down since 0.5.0. This page includes the most notable updates between versions but github is the best place to checkout more details and `releases <https://github.com/ejolly/pymer4/releases/>`_.
 
 0.8.1
-----
-- **NOTE:**
+-----
+- **Compatibility Updates:**
+    - This version includes a :code:`noarch` build that should be installable on arm-based macOS platforms (e.g. M1, M2, etc)
     - This version drops support for Python 3.7 and adds support for 3.9-3.11
-    - This version also uses :code:`joblib` for model saving and loading and drops supported hdf5 files previously handled with :code:`deepdish` (no longer maintained). This version will no longer be able to load models saved with versions < 0.8.1
-    - fixes `#122 <https://github.com/ejolly/pymer4/issues/122>`_
-    - fixes `#125 <https://github.com/ejolly/pymer4/issues/125>`_
-    - fixes `#119 <https://github.com/ejolly/pymer4/issues/119>`_
+- **Breaking changes:**
+    - This version also uses :code:`joblib` for model saving and loading and drops supported hdf5 files previously handled with the :code:`deepdish` library as it is no longer actively maintained. This means that 0.8.1 will **not** be able to load models saved with earlier versions of :code:`pymer4`!
+- **Fixes:**
+    - `#119 <https://github.com/ejolly/pymer4/issues/119>`_
+    - `#122 <https://github.com/ejolly/pymer4/issues/122>`_
+    - `#125 <https://github.com/ejolly/pymer4/issues/125>`_
 
 0.8.0
-----
+-----
 - **NOTE:**
     - there was no 0.7.9 release as there were enough major changes to warrant a new
       minor release version

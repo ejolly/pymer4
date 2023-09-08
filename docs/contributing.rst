@@ -1,37 +1,49 @@
 Contributing
 ============
-Maintaining this package is tricky because of its inter-language operability. In particular this requires keeping up with API changes to Python packages (e.g. pandas), R packages (e.g. lmerTest) as well as changes in rpy2 (which tend to break between versions), the interface package between them. For these reasons contributions are **always** welcome! Checkout the `development roadmap on Trello <https://trello.com/b/gGKmeAJ4>`_. Also note the diagram and explanation below which illustrate how code development cycles work and how automated deployment is handled through Travis CI. 
+Maintaining this package is tricky because of its inter-language operability. In particular this requires keeping up with API changes to Python packages (e.g. pandas), R packages (e.g. lmerTest) as well as changes in rpy2 (which tend to break between versions), the interface package between them. For these reasons contributions are **always** welcome! Checkout the `development roadmap on Github <https://github.com/users/ejolly/projects/1>`_. Also note the diagram and explanation below which illustrate how code development cycles work and how automated deployment is handled through Travis CI. 
 
 Development Cycle and workflow
 ------------------------------
 
-All work proceeds on the :code:`dev` branch. This can include direct commits and PRs from other (non-:code:`master`) branches. 
+All automation for testing, documentation, and packaging is handled through Github Actions. We use separate workflows to handle testing and packaging. 
 
-Each new *pre-release* should proceed by opening a pull-request (PR) the against :code:`master` branch. Merging this PR will automatically trigger a :code:`M.N.P.devX` release to :code:`ejolly/label/pre-release` on `anaconda cloud <https://anaconda.org/ejolly/repo/files?type=any&label=pre-release>`_ via Travis. Direct pushes to :code:`master` should be rare and primarily constitute documentation or devops changes rather than changes to the code base. These direct pushes will also trigger a pre-release.
+Testing
++++++++
+Any pushes or PRs against the :code:`master` branch will trigger the **Tests** GA workflow. This is a simple workflow that:
 
-Each new *stable* release should follow the following steps, the first of which can occur in two ways:  
+- sets up a :code:`conda` environment with required :code:`R` dependencies
+- installs the latest code from the :code:`master` branch
+- runs tests and builds documentation (as an additional testing layer)
 
-- Step 1: drop :code:`.devX` from version string (in :code:`pymer4/version.py`) and update the release notes page in the docs via **either**:
+Packaging Stable Releases
++++++++++++++++++++++++++
+A stable release can be installed from :code:`pip` or from :code:`conda` using the :code:`-c ejolly` channel flag. Packaging a stable release requires building 3 artifacts:
 
-  - **Pre-merge** at least one commit in :code:`dev` for the PR against master, such that the merge will include updating the version string. In the illustration below, this is depicted by the dashed borders around the final merge into :code:`master`.
+1. Conda packages for multiple platforms uploaded to the main :code:`ejolly` channel on anaconda cloud
+2. A pip installable package uploaded to Pypi
+3. Documentation site deployed to github pages
 
-  - **Post-merge** making a final commit to :code:`master` updating the version string. In the illustration below, this is depicted by the "final push" dashed commit circle on :code:`master` right before "tagged manual release" of :code:`v0.7.2`.
+The primary way to create these is by publishing a new release via Github. This will **automatically** trigger the **Build** and **Build_noarch** workflows, which will:
 
-- Step 2: manually trigger a release on Github using a :code:`vM.N.P` version string where :code:`M.N.P` matches Step 1. In the illustration below, this is depicted by the right-most, salmon-colored "tagged manual release" commit to :code:`master`. 
+- Build, test, and upload conda packages for each platform to anaconda cloud
+- Build and upload to Pypi
+- Build and deploy docs to github-pages
 
-  - **Note:** this is the version string entered *on Github* when publishing the release and should specifically contain a :code:`v` prefix. 
+If any issues arise in this automated process both workflows can also be triggered *manually*. Separate options exist for choosing whether to upload each artifact or simply build them (e.g. deploy docs but don't upload builds to pypi or anaconda)
 
-- Step 3: immediately bump the version string on :code:`dev` to :code:`M.N.P+1.dev0` where :code:`M.N.P` refers to the version string from Step 1. In the illustration below, an example is shown on the left-side of the diagram immediately to the right of the "tagged manual release" of :code:`v0.7.1` on :code:`master`.
+Packaging Development Releases
+++++++++++++++++++++++++++++++
+Development releases can be install directly from the :code:`master` branch on github using :code:`pip install git+https://github.com/ejolly/pymer4.git` or conda using the :code:`-c ejolly/label/pre-release` channel flag. 
 
-Adhering to this workflow makes it much easier to *automatically* ensure that a stable version of :code:`pymer4` is always available on conda and pypi, while a development version is available on the conda pre-release label and github master branch. Feel free to ask questions, make suggestions, or contribute changes/additions on `github <https://github.com/ejolly/pymer4/>`_. If you do so, please follow the guidelines below for structuring contributions.
+A development release only includes 1 artifact: 
 
-.. image:: pymer4_dev_cycle.jpeg
-    :width: 800
+1. Conda packages for multiple platforms uploaded to the :code:`ejolly/label/pre-release` channel on anaconda cloud 
+
+The primary way to create a development release is by *manually triggering* the same **Build** and **Build_noarch** workflows and choosing the "pre-release" option for uploading to anaconda cloud. The default options when manually triggering will simply build packages but perform no uploading (useful for testing package builds). 
+
 
 Code Guidelines
 ---------------
-Please fork and make pull requests from the `development branch <https://github.com/ejolly/pymer4/tree/dev/>`_ on github. This branch will usually have additions and bug fixes not in master and is easier to integrate with contributions.
-
 Please use the `black <https://black.readthedocs.io/en/stable/>`_ code formatter for styling code. Any easy way to check if code is formatted properly is to use a `git pre-commit hook <https://githooks.com/>`_. After installing black, just create a file called :code:`.git/hooks/pre-commit` and put the following inside:
 
     .. code-block:: bash
@@ -48,7 +60,7 @@ Please be sure to include tests with any code submissions and verify they pass u
 Versioning Guidelines
 ---------------------
 
-The current :code:`pymer4` scheme is `PEP 440 <https://www.python.org/dev/peps/pep-0440/>`_ compliant with two and only two forms of version strings: :code:`M.N.P` and :code:`M.N.P.devX`. These are pattern matched to automate builds and deployment using the following regular expression: :code:`r"^\d+\.\d+\.\d+(\.dev\d+){0,1}$"`.
+The current :code:`pymer4` scheme is `PEP 440 <https://www.python.org/dev/peps/pep-0440/>`_ compliant with two and only two forms of version strings: :code:`M.N.P` and :code:`M.N.P.devX`. Versions with the :code:`.devX` designation denote development versions typically on the :code:`master` branch or :code:`conda` pre-release channel.
 
 This simplifed scheme is not illustrated in the PEP 440 examples, but if was it would be described as "major.minor.micro" with development releases. To illustrate, the version sequence would look like this:
 
@@ -60,10 +72,6 @@ This simplifed scheme is not illustrated in the PEP 440 examples, but if was it 
         0.7.1
 
 The third digit(s) in the :code:`pymer4` scheme, i.e. PEP 440 "micro," are not strictly necessary but are useful for semantically versioned "patch" designations. The :code:`.devX` extension on the other hand denotes a sequence of incremental work in progress like the alpha, beta, developmental, release candidate system without the alphabet soup.
-
-PEP 440 specifies four categories of public release: "Any given release will be a "final release", "pre-release", "post-release" or "developmental release." The :code:`pymer4` scheme simplifies this to two release categories: final releases versioned :code:`M.N.P`, and developmental releases, versioned :code:`M.N.P.devX`.
-
-In this way, the PEP 440 "pre-release" of a stable version :code:`M.N.P` is realized as a :code:`pymer4` :code:`M.N.P.devX` release while a PEP 440 "final release" is realized as a :code:`pymer4` :code:`M.N.P+1` release.
 
 Documentation Guidelines
 ------------------------
