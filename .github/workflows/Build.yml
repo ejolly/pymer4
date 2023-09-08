@@ -94,11 +94,11 @@ jobs:
           conda config --show | grep bld_path
           conda info
           conda-build ./conda/ --python=$PY_VER -c https://conda.anaconda.org/conda-forge/ --verify
-          tarball=$(conda build --python=$PY_VER conda --output | tail -1)
+          tarball=$(conda-build --python=$PY_VER conda --output | tail -1)
+          echo "conda build tarball" $tarball
           if [[ $OS == "Linux" ]]; then \
               conda convert -p win-64 -o $CONDA_BLD_PATH $tarball; \
           fi
-          echo "conda build tarball" $tarball
           echo "{conda-tarball}={$tarball}" >> $GITHUB_OUTPUT
 
       # ------------------------------------------------------------
