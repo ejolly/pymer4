@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Pymer4 &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Features" href="features.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="#">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="auto_examples/index.html">Tutorial</a></li>
+                <li><a href="api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Pymer4</a><ul>
+<li><a class="reference internal" href="#publications">Publications</a></li>
+<li><a class="reference internal" href="#citing">Citing</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <section id="pymer4">
+<h1>Pymer4<a class="headerlink" href="#pymer4" title="Permalink to this heading">¶</a></h1>
+<a class="reference external image-reference" href="https://github.com/ejolly/pymer4/actions/workflows/Tests.yml"><img alt="https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg" src="https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg" /></a>
+<a class="reference external image-reference" href="https://github.com/ejolly/pymer4/actions/workflows/Build.yml"><img alt="https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg" src="https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg" /></a>
+<a class="reference external image-reference" href="https://badge.fury.io/py/pymer4"><img alt="https://badge.fury.io/py/pymer4.svg" src="https://badge.fury.io/py/pymer4.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/ejolly/pymer4"><img alt="https://anaconda.org/ejolly/pymer4/badges/version.svg" src="https://anaconda.org/ejolly/pymer4/badges/version.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/ejolly/pymer4"><img alt="https://anaconda.org/ejolly/pymer4/badges/platforms.svg" src="https://anaconda.org/ejolly/pymer4/badges/platforms.svg" /></a>
+<a class="reference external image-reference" href="https://pepy.tech/project/pymer4"><img alt="https://pepy.tech/badge/pymer4" src="https://pepy.tech/badge/pymer4" /></a>
+<a class="reference external image-reference" href="https://doi.org/10.21105/joss.00862"><img alt="http://joss.theoj.org/papers/10.21105/joss.00862/status.svg" src="http://joss.theoj.org/papers/10.21105/joss.00862/status.svg" /></a>
+<a class="reference external image-reference" href="https://zenodo.org/record/1523205"><img alt="https://zenodo.org/badge/90598701.svg" src="https://zenodo.org/badge/90598701.svg" /></a>
+<img alt="https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue" src="https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue" />
+<br /><a class="reference external image-reference" href="https://github.com/ejolly/pymer4/issues"><img alt="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat" /></a>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> is a statistics library for estimating various regression and multi-level models in Python. Love <a class="reference external" href="https://cran.r-project.org/web/packages/lme4/index.html">lme4</a> in R, but prefer to work in the scientific Python ecosystem? This package has got you covered!</p>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> provides a clean interface that hides the back-and-forth code required when moving between R and Python. In other words, you can work completely in Python, never having to deal with R, but get (most) of lme4’s goodness. This is accomplished using <a class="reference external" href="https://rpy2.github.io/doc/latest/html/index.html/">rpy2</a> to interface between langauges.</p>
+<p>Additionally <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> can fit various additional regression models with some bells, such as robust standard errors, and two-stage regression (summary statistics) models. See the features page for more information.</p>
+<p><strong>TL;DR</strong> This package is your new <em>simple</em> Pythonic drop-in replacement for <code class="code docutils literal notranslate"><span class="pre">lm()</span></code> or <code class="code docutils literal notranslate"><span class="pre">glmer()</span></code> in R.</p>
+<p>For an example of what’s possible check out the tutorials or <a class="reference external" href="https://eshinjolly.com/2019/02/18/rep_measures/">this blog post</a> comparing different modeling strategies for clustered/repeated-measures data.</p>
+<div class="col-md-12">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">Contents</h3>
+    </div>
+    <div class="panel-body"><div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+</div>
+    </div>
+  </div>
+</div><section id="publications">
+<h2>Publications<a class="headerlink" href="#publications" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> has been used to analyze data is several publications including but not limited to:</p>
+<ul class="simple">
+<li><p>Jolly, E., Sadhukha, S., &amp; Chang, L.J. (in press). Custom-molded headcases have limited efficacy in reducing head motion during naturalistic fMRI expreiments. <em>NeuroImage</em>.</p></li>
+<li><p>Sharon, G., Cruz, N. J., Kang, D. W., et al. (2019). Human gut microbiota from autism spectrum disorder promote behavioral symptoms in mice. <em>Cell</em>, 177(6), 1600-1618.</p></li>
+<li><p>Urbach, T. P., DeLong, K. A., Chan, W. H., &amp; Kutas, M. (2020). An exploratory data analysis of word form prediction during word-by-word reading. <em>Proceedings of the National Academy of Sciences</em>, 117(34), 20483-20494.</p></li>
+<li><p>Chen, P. H. A., Cheong, J. H., Jolly, E., Elhence, H., Wager, T. D., &amp; Chang, L. J. (2019). Socially transmitted placebo effects. <em>Nature Human Behaviour</em>, 3(12), 1295-1305.</p></li>
+</ul>
+</section>
+<section id="citing">
+<h2>Citing<a class="headerlink" href="#citing" title="Permalink to this heading">¶</a></h2>
+<p>If you use <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> in your own work, please cite:</p>
+<p>Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed Modeling. <em>Journal of Open Source Software</em>, 3(31), 862, <a class="reference external" href="https://doi.org/10.21105/joss.00862">https://doi.org/10.21105/joss.00862</a></p>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

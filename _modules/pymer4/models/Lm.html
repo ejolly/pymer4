@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pymer4.models.Lm &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../../../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../../../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../../../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../../../auto_examples/index.html">Tutorial</a></li>
+                <li><a href="../../../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pymer4.models.Lm</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Pymer4 Lm Class</span>
+<span class="sd">===============</span>
+
+<span class="sd">Main class for linear regression models</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">patsy</span> <span class="kn">import</span> <span class="n">dmatrices</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">t</span> <span class="k">as</span> <span class="n">t_dist</span>
+<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">from</span> <span class="nn">..stats</span> <span class="kn">import</span> <span class="n">rsquared</span><span class="p">,</span> <span class="n">rsquared_adj</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_sig_stars</span><span class="p">,</span>
+    <span class="n">_chunk_boot_ols_coefs</span><span class="p">,</span>
+    <span class="n">_chunk_perm_ols</span><span class="p">,</span>
+    <span class="n">_ols</span><span class="p">,</span>
+    <span class="n">_perm_find</span><span class="p">,</span>
+    <span class="n">_welch_ingredients</span><span class="p">,</span>
+    <span class="n">_logregress</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="Lm"><a class="viewcode-back" href="../../../api.html#pymer4.models.Lm">[docs]</a><span class="k">class</span> <span class="nc">Lm</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Model class to perform OLS regression. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specifiy columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        formula (str): Complete lm-style model formula</span>
+<span class="sd">        data (pandas.core.frame.DataFrame): input data</span>
+<span class="sd">        family (string): what distribution family (i.e.) link function to use for the generalized model; default is gaussian (linear model)</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        fitted (bool): whether model has been fit</span>
+<span class="sd">        formula (str): model formula</span>
+<span class="sd">        data (pd.DataFrame): model copy of input data</span>
+<span class="sd">        design_matrix (pd.DataFrame): model design matrix determined by patsy</span>
+<span class="sd">        AIC (float): model akaike information criterion</span>
+<span class="sd">        logLike (float): model Log-likelihood</span>
+<span class="sd">        family (string): model family</span>
+<span class="sd">        warnings (list): warnings output from Python</span>
+<span class="sd">        coefs (pd.DataFrame): model summary table of parameters</span>
+<span class="sd">        residuals (numpy.ndarray): model residuals</span>
+<span class="sd">        fits (numpy.ndarray): model fits/predictions</span>
+<span class="sd">        estimator (string): &#39;OLS&#39; or &#39;WLS&#39;</span>
+<span class="sd">        se_type (string): how standard errors are computed</span>
+<span class="sd">        sig_type (string): how inference is performed</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="s2">&quot;gaussian&quot;</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">=</span> <span class="n">family</span>
+        <span class="n">implemented_fams</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span> <span class="s2">&quot;binomial&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">implemented_fams</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;family must be one of: </span><span class="si">{</span><span class="n">implemented_fams</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formula</span> <span class="o">=</span> <span class="n">formula</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AIC</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BIC</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logLike</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rsquared</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rsquared_adj</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warnings</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">residuals</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_obj</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ci_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">se_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sig_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranked_data</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">(fitted=</span><span class="si">{}</span><span class="s2">, formula=</span><span class="si">{}</span><span class="s2">, family=</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__module__</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">family</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">def</span> <span class="nf">_handle_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Handle weights if provided&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">weights</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;If weights is a string it must be a column that exists in the data&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">weight_groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+                <span class="n">weight_vals</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">weight_groups</span><span class="p">[</span><span class="n">dv</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">weight_vals</span> <span class="o">=</span> <span class="n">weights</span>
+            <span class="n">weight_groups</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="s2">&quot;OLS&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="s2">&quot;WLS&quot;</span>
+        <span class="k">return</span> <span class="n">weight_vals</span><span class="p">,</span> <span class="n">weight_groups</span><span class="p">,</span> <span class="n">dv</span>
+
+    <span class="k">def</span> <span class="nf">_organize_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">colnames</span><span class="p">,</span> <span class="n">indexnames</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Organize estimates into a results dataframe that&#39;s ultimately stored in model.coefs&quot;&quot;&quot;</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">indexnames</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">colnames</span><span class="p">)</span>
+        <span class="n">numeric_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">col</span><span class="p">:</span> <span class="n">col</span> <span class="o">!=</span> <span class="s2">&quot;Sig&quot;</span><span class="p">,</span> <span class="n">colnames</span><span class="p">))</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">numeric_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">numeric_cols</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;coerce&quot;</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="k">def</span> <span class="nf">_calc_dof</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster</span><span class="p">,</span> <span class="n">wls_dof_correction</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">weight_groups</span><span class="p">,</span> <span class="n">dv</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate degrees of freedom and any required adjustment for WLS or</span>
+<span class="sd">        cluster correction&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">cluster</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Cluster corrected dof (num clusters - num coef)</span>
+            <span class="c1"># Differs from stats and statsmodels which do num cluster - 1</span>
+            <span class="c1"># Ref: http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use dof calculation that accounts for square matrices to avoid 0 division error or pval lookup error</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">wls_dof_correction</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">weight_groups</span><span class="o">.</span><span class="n">ngroups</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">w</span> <span class="o">=</span> <span class="s2">&quot;Welch-Satterthwait DOF correction only supported for 2 groups in the data&quot;</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">welch_ingredients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">weights</span><span class="p">)[</span><span class="n">dv</span><span class="p">]</span>
+                        <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_welch_ingredients</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">welch_ingredients</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+                        <span class="o">/</span> <span class="n">welch_ingredients</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                    <span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="k">def</span> <span class="nf">_calc_ols_pvals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate p-vals given dofs and t stats&quot;&quot;&quot;</span>
+
+        <span class="n">p</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">t_dist</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">df</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">df</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">_sig_stars</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">p</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sig</span>
+
+<div class="viewcode-block" id="Lm.fit"><a class="viewcode-back" href="../../../api.html#pymer4.models.Lm.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">robust</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">conf_int</span><span class="o">=</span><span class="s2">&quot;standard&quot;</span><span class="p">,</span>
+        <span class="n">permute</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">rank</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">n_boot</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">n_lags</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">cluster</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">wls_dof_correction</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit a variety of OLS models. By default will fit a model that makes parametric assumptions (under a t-distribution) replicating the output of software like R. 95% confidence intervals (CIs) are also estimated parametrically by default. However, empirical bootstrapping can also be used to compute CIs; this procedure resamples with replacement from the data themselves, not residuals or data generated from fitted parameters and will be used for inference unless permutation tests are requested. Permutation testing will shuffle observations to generate a null distribution of t-statistics to perform inference on each regressor (permuted t-test).</span>
+
+<span class="sd">        Alternatively, OLS robust to heteroscedasticity can be fit by computing sandwich standard error estimates (good ref: https://bit.ly/2VRb7jK). This is similar to Stata&#39;s robust routine. Of the choices below, &#39;hc1&#39; or &#39;hc3&#39; are amongst the more popular.</span>
+<span class="sd">        Robust estimators include:</span>
+
+<span class="sd">        - &#39;hc0&#39;: Huber (1967) original sandwich estimator</span>
+
+<span class="sd">        - &#39;hc1&#39;: Hinkley (1977) DOF adjustment to &#39;hc0&#39; to account for small sample sizes (default)</span>
+
+<span class="sd">        - &#39;hc2&#39;: different kind of small-sample adjustment of &#39;hc0&#39; by leverage values in hat matrix</span>
+
+<span class="sd">        - &#39;hc3&#39;: MacKinnon and White (1985) HC3 sandwich estimator; provides more robustness in smaller samples than hc2, Long &amp; Ervin (2000)</span>
+
+<span class="sd">        - &#39;hac&#39;: Newey-West (1987) estimator for robustness to heteroscedasticity as well as serial auto-correlation at given lags.</span>
+
+<span class="sd">        - &#39;cluster&#39; : cluster-robust standard errors (see Cameron &amp; Miller 2015 for review). Provides robustness to errors that cluster according to specific groupings (e.g. repeated observations within a person/school/site). This acts as post-modeling &quot;correction&quot; for what a multi-level model explicitly estimates and is popular in the econometrics literature. DOF correction differs slightly from stat/statsmodels which use num_clusters - 1, where as pymer4 uses num_clusters - num_coefs</span>
+
+<span class="sd">        Finally, weighted-least-squares (WLS) can be computed as an alternative to to hetereoscedasticity robust standard errors. This can be estimated by providing an array or series of weights (1 / variance of each group) with the same length as the number of observations or a column to use to compute group variances (which can be the same as the predictor column). This is often useful if some predictor(s) is categorical (e.g. dummy-coded) and taking into account unequal group variances is desired (i.e. in the simplest case this would be equivalent to peforming Welch&#39;s t-test).</span>
+
+
+<span class="sd">        Args:</span>
+<span class="sd">            robust (bool/str): whether to use heteroscedasticity robust s.e. and optionally which estimator type to use (&#39;hc0&#39;,&#39;hc1&#39;, &#39;hc2&#39;, hc3&#39;,&#39;hac&#39;,&#39;cluster&#39;). If robust = True, default robust estimator is &#39;hc1&#39;; default False</span>
+<span class="sd">            conf_int (str): whether confidence intervals should be computed through bootstrap (&#39;boot&#39;) or assuming a t-distribution (&#39;standard&#39;); default &#39;standard&#39;</span>
+<span class="sd">            permute (int): if non-zero, computes parameter significance tests by permuting t-stastics rather than parametrically; works with robust estimators</span>
+<span class="sd">            rank (bool): convert all predictors and dependent variable to ranks before estimating model; default False</span>
+<span class="sd">            summarize (bool): whether to print a model summary after fitting; default True</span>
+<span class="sd">            verbose (bool): whether to print which model, standard error, confidence interval, and inference type are being fitted</span>
+<span class="sd">            n_boot (int): how many bootstrap resamples to use for confidence intervals (ignored unless conf_int=&#39;boot&#39;)</span>
+<span class="sd">            n_jobs (int): number of cores for parallelizing bootstrapping or permutations; default 1</span>
+<span class="sd">            n_lags (int): number of lags for robust estimator type &#39;hac&#39; (ignored unless robust=&#39;hac&#39;); default 1</span>
+<span class="sd">            cluster (str): column name identifying clusters/groups for robust estimator type &#39;cluster&#39; (ignored unless robust=&#39;cluster&#39;)</span>
+<span class="sd">            weights (string/pd.Series/np.ndarray): weights to perform WLS instead of OLS. Pass in a column name in data to use to compute group variances and automatically adjust dof. Otherwise provide an array or series containing 1 / variance of each observation, in which case dof correction will not occur.</span>
+<span class="sd">            wls_dof_correction (bool): whether to apply Welch-Satterthwaite approximate correction for dof when using weights based on an existing column in the data, ignored otherwise. Set to False to force standard dof calculation</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: R/statsmodels style summary</span>
+
+
+<span class="sd">        Examples:</span>
+
+<span class="sd">            Simple multiple regression model with parametric assumptions</span>
+
+<span class="sd">            &gt;&gt;&gt; model = Lm(&#39;DV ~ IV1 + IV2&#39;, data=df)</span>
+<span class="sd">            &gt;&gt;&gt; model.fit()</span>
+
+<span class="sd">            Same as above but with robust standard errors</span>
+
+<span class="sd">            &gt;&gt;&gt; model.fit(robust=&#39;hc1&#39;)</span>
+
+<span class="sd">            Same as above but with cluster-robust standard errors. The cluster argument should refer to a column in the dataframe.</span>
+
+<span class="sd">            &gt;&gt;&gt; model.fit(robust=&#39;cluster&#39;, cluster=&#39;Group&#39;)</span>
+
+<span class="sd">            Simple regression with categorical predictor, i.e. between groups t-test assuming equal variances</span>
+
+<span class="sd">            &gt;&gt;&gt; model = Lm(&#39;DV ~ Group&#39;, data=df)</span>
+<span class="sd">            &gt;&gt;&gt; model.fit()</span>
+
+<span class="sd">            Same as above but don&#39;t assume equal variances and have pymer4 compute the between group variances automatically, i.e. WLS (preferred).</span>
+
+<span class="sd">            &gt;&gt;&gt; model.fit(weights=&#39;Group&#39;)</span>
+
+<span class="sd">            Manually compute the variance of each group and use the inverse of that as the weights. In this case WLS is estimated but dof correction won&#39;t be applied because it&#39;s not trivial to compute.</span>
+
+<span class="sd">            &gt;&gt;&gt; weights = 1 / df.groupby(&quot;Group&quot;)[&#39;DV&#39;].transform(np.var,ddof=1)</span>
+<span class="sd">            model.fit(weights=weights)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Guard against lack of feature parity between log and lin regress</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;binomial&quot;</span> <span class="ow">and</span> <span class="p">(</span>
+            <span class="n">robust</span> <span class="ow">or</span> <span class="n">permute</span> <span class="ow">or</span> <span class="n">weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">conf_int</span> <span class="o">!=</span> <span class="s2">&quot;standard&quot;</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Logistic regression currently only supports standard parametric inference&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Alllow summary or summarize for compatibility</span>
+        <span class="k">if</span> <span class="s2">&quot;summary&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="s2">&quot;summarize&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;You specified both summary and summarize, please prefer summarize&quot;</span>
+            <span class="p">)</span>
+        <span class="n">summarize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;summarize&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">summarize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="n">summarize</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">permute</span> <span class="ow">and</span> <span class="n">permute</span> <span class="o">&lt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="s2">&quot;Permutation testing &lt; 500 permutations is not recommended&quot;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">permute</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;permute should &#39;False&#39; or the number of permutations to perform&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">robust</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">robust</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="n">robust</span> <span class="o">=</span> <span class="s2">&quot;hc1&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">se_type</span> <span class="o">=</span> <span class="s2">&quot;robust&quot;</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span> <span class="o">+</span> <span class="n">robust</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+            <span class="k">if</span> <span class="n">cluster</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cluster</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;cluster identifier must be an existing column in data&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">cluster</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">se_type</span> <span class="o">=</span> <span class="s2">&quot;non-robust&quot;</span>
+
+        <span class="c1"># PRINT INFO</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span> <span class="s2">&quot;binomial&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rank</span><span class="p">:</span>
+                    <span class="n">print_rank</span> <span class="o">=</span> <span class="s2">&quot;rank&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">print_rank</span> <span class="o">=</span> <span class="s2">&quot;linear&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">robust</span><span class="p">:</span>
+                    <span class="n">print_robust</span> <span class="o">=</span> <span class="s2">&quot;non-robust&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">print_robust</span> <span class="o">=</span> <span class="s2">&quot;robust &quot;</span> <span class="o">+</span> <span class="n">robust</span>
+
+                <span class="k">if</span> <span class="n">conf_int</span> <span class="o">==</span> <span class="s2">&quot;boot&quot;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;Fitting &quot;</span>
+                        <span class="o">+</span> <span class="n">print_rank</span>
+                        <span class="o">+</span> <span class="s2">&quot; model with &quot;</span>
+                        <span class="o">+</span> <span class="n">print_robust</span>
+                        <span class="o">+</span> <span class="s2">&quot; standard errors and </span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_boot</span><span class="p">)</span>
+                        <span class="o">+</span> <span class="s2">&quot;bootstrapped 95</span><span class="si">% c</span><span class="s2">onfidence intervals...</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;Fitting &quot;</span>
+                        <span class="o">+</span> <span class="n">print_rank</span>
+                        <span class="o">+</span> <span class="s2">&quot; model with &quot;</span>
+                        <span class="o">+</span> <span class="n">print_robust</span>
+                        <span class="o">+</span> <span class="s2">&quot; standard errors</span><span class="se">\n</span><span class="s2">and 95</span><span class="si">% c</span><span class="s2">onfidence intervals...</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">permute</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;Using </span><span class="si">{}</span><span class="s2"> permutations to determine significance...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">permute</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ci_type</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">conf_int</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_boot</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span> <span class="k">if</span> <span class="n">conf_int</span> <span class="o">==</span> <span class="s2">&quot;boot&quot;</span> <span class="k">else</span> <span class="n">conf_int</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">conf_int</span> <span class="o">==</span> <span class="s2">&quot;boot&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">permute</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sig_type</span> <span class="o">=</span> <span class="s2">&quot;bootstrapped&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">permute</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sig_type</span> <span class="o">=</span> <span class="s2">&quot;permutation&quot;</span> <span class="o">+</span> <span class="s2">&quot; (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">permute</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sig_type</span> <span class="o">=</span> <span class="s2">&quot;parametric&quot;</span>
+
+        <span class="c1"># Parse formula using patsy to make design matrix</span>
+        <span class="k">if</span> <span class="n">rank</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ranked_data</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">ddat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rank</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ranked_data</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">ddat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="n">weight_vals</span><span class="p">,</span> <span class="n">weight_groups</span><span class="p">,</span> <span class="n">dv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_weights</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">dmatrices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span> <span class="n">ddat</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="c1"># Logistic Regression</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;binomial&quot;</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">b</span><span class="p">,</span>
+                <span class="n">ll</span><span class="p">,</span>
+                <span class="n">ul</span><span class="p">,</span>
+                <span class="n">se</span><span class="p">,</span>
+                <span class="n">odds</span><span class="p">,</span>
+                <span class="n">odds_ll</span><span class="p">,</span>
+                <span class="n">odds_ul</span><span class="p">,</span>
+                <span class="n">probs</span><span class="p">,</span>
+                <span class="n">probs_ll</span><span class="p">,</span>
+                <span class="n">probs_ul</span><span class="p">,</span>
+                <span class="n">z</span><span class="p">,</span>
+                <span class="n">p</span><span class="p">,</span>
+                <span class="n">sig</span><span class="p">,</span>
+                <span class="n">fits</span><span class="p">,</span>
+                <span class="n">fit_probs</span><span class="p">,</span>
+                <span class="n">fit_classes</span><span class="p">,</span>
+                <span class="n">clf</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_logregress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">all_stats</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Save sklearn model and all fits</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_obj</span> <span class="o">=</span> <span class="n">clf</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;fits&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fits</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;fit_probs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_probs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;fit_classes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_classes</span>
+
+            <span class="c1"># Build output df</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_organize_results</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">b</span><span class="p">,</span>
+                    <span class="n">ll</span><span class="p">,</span>
+                    <span class="n">ul</span><span class="p">,</span>
+                    <span class="n">se</span><span class="p">,</span>
+                    <span class="n">odds</span><span class="p">,</span>
+                    <span class="n">odds_ll</span><span class="p">,</span>
+                    <span class="n">odds_ul</span><span class="p">,</span>
+                    <span class="n">probs</span><span class="p">,</span>
+                    <span class="n">probs_ll</span><span class="p">,</span>
+                    <span class="n">probs_ul</span><span class="p">,</span>
+                    <span class="n">z</span><span class="p">,</span>
+                    <span class="n">p</span><span class="p">,</span>
+                    <span class="n">sig</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="p">[</span>
+                    <span class="s2">&quot;Estimate&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;2.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;97.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;SE&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;OR&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;OR_2.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;OR_97.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Prob&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Prob_2.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Prob_97.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Z-stat&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;P-val&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Sig&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Linear Regression</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Fit</span>
+            <span class="n">b</span><span class="p">,</span> <span class="n">se</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">res</span> <span class="o">=</span> <span class="n">_ols</span><span class="p">(</span>
+                <span class="n">x</span><span class="p">,</span>
+                <span class="n">y</span><span class="p">,</span>
+                <span class="n">robust</span><span class="p">,</span>
+                <span class="n">all_stats</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">n_lags</span><span class="o">=</span><span class="n">n_lags</span><span class="p">,</span>
+                <span class="n">cluster</span><span class="o">=</span><span class="n">cluster</span><span class="p">,</span>
+                <span class="n">weights</span><span class="o">=</span><span class="n">weight_vals</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># DOF and pval calculation</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_dof</span><span class="p">(</span>
+                <span class="n">cluster</span><span class="p">,</span> <span class="n">wls_dof_correction</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">weight_groups</span><span class="p">,</span> <span class="n">dv</span>
+            <span class="p">)</span>
+            <span class="n">p</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_ols_pvals</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">conf_int</span> <span class="o">==</span> <span class="s2">&quot;boot&quot;</span><span class="p">:</span>
+
+                <span class="c1"># Parallelize bootstrap computation for CIs</span>
+                <span class="n">par_for</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;multiprocessing&quot;</span><span class="p">)</span>
+
+                <span class="c1"># To make sure that parallel processes don&#39;t use the same random-number generator pass in seed (sklearn trick)</span>
+                <span class="n">seeds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_boot</span><span class="p">)</span>
+
+                <span class="c1"># Since we&#39;re bootstrapping coefficients themselves we don&#39;t need the robust info anymore</span>
+                <span class="n">boot_betas</span> <span class="o">=</span> <span class="n">par_for</span><span class="p">(</span>
+                    <span class="n">delayed</span><span class="p">(</span><span class="n">_chunk_boot_ols_coefs</span><span class="p">)(</span>
+                        <span class="n">dat</span><span class="o">=</span><span class="n">ddat</span><span class="p">,</span>
+                        <span class="n">formula</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
+                        <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span>
+                        <span class="n">seed</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_boot</span><span class="p">)</span>
+                <span class="p">)</span>
+
+                <span class="n">boot_betas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">boot_betas</span><span class="p">)</span>
+                <span class="n">ci_u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boot_betas</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">ci_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boot_betas</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Otherwise we&#39;re doing parametric CIs</span>
+                <span class="n">ci_u</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">t_dist</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="mf">0.975</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span> <span class="o">*</span> <span class="n">se</span>
+                <span class="n">ci_l</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">t_dist</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="mf">0.025</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span> <span class="o">*</span> <span class="n">se</span>
+
+            <span class="k">if</span> <span class="n">permute</span><span class="p">:</span>
+                <span class="c1"># Permuting will change degrees of freedom to num_iter and p-values</span>
+                <span class="c1"># Parallelize computation</span>
+                <span class="c1"># Unfortunate monkey patch that robust estimation hangs with multiple processes; maybe because of function nesting level??</span>
+                <span class="c1"># _chunk_perm_ols -&gt; _ols -&gt; _robust_estimator</span>
+                <span class="k">if</span> <span class="n">robust</span><span class="p">:</span>
+                    <span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">par_for</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;multiprocessing&quot;</span><span class="p">)</span>
+                <span class="n">seeds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">permute</span><span class="p">)</span>
+                <span class="n">perm_ts</span> <span class="o">=</span> <span class="n">par_for</span><span class="p">(</span>
+                    <span class="n">delayed</span><span class="p">(</span><span class="n">_chunk_perm_ols</span><span class="p">)(</span>
+                        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+                        <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+                        <span class="n">robust</span><span class="o">=</span><span class="n">robust</span><span class="p">,</span>
+                        <span class="n">n_lags</span><span class="o">=</span><span class="n">n_lags</span><span class="p">,</span>
+                        <span class="n">cluster</span><span class="o">=</span><span class="n">cluster</span><span class="p">,</span>
+                        <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span>
+                        <span class="n">seed</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">permute</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">perm_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">perm_ts</span><span class="p">)</span>
+
+                <span class="n">p</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">fit_t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">perm_ts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">t</span><span class="p">):</span>
+                    <span class="n">p</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_perm_find</span><span class="p">(</span><span class="n">perm_ts</span><span class="p">[:,</span> <span class="n">col</span><span class="p">],</span> <span class="n">fit_t</span><span class="p">))</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">permute</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+                <span class="n">sig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">_sig_stars</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">p</span><span class="p">])</span>
+
+            <span class="c1"># Make output df</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_organize_results</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">b</span><span class="p">,</span> <span class="n">ci_l</span><span class="p">,</span> <span class="n">ci_u</span><span class="p">,</span> <span class="n">se</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">sig</span><span class="p">],</span>
+                <span class="p">[</span>
+                    <span class="s2">&quot;Estimate&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;2.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;97.5_ci&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;SE&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;DF&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;T-stat&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;P-val&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Sig&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">permute</span><span class="p">:</span>
+                <span class="n">results</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+                    <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;DF&quot;</span><span class="p">:</span> <span class="s2">&quot;Num_perm&quot;</span><span class="p">,</span> <span class="s2">&quot;P-val&quot;</span><span class="p">:</span> <span class="s2">&quot;Perm-P-val&quot;</span><span class="p">}</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_calc_fit_statistics</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span> <span class="o">=</span> <span class="n">results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">summarize</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_calc_fit_statistics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">residuals</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">!=</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;Currently only gaussian models can calculate fit statistics&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Save residuals</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">residuals</span> <span class="o">=</span> <span class="n">residuals</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fits</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span> <span class="o">-</span> <span class="n">residuals</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;fits&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span> <span class="o">-</span> <span class="n">residuals</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;residuals&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">residuals</span>
+
+        <span class="c1"># Calculate fit statistics</span>
+        <span class="k">if</span> <span class="s2">&quot;Intercept&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">center_tss</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">center_tss</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rsquared</span> <span class="o">=</span> <span class="n">rsquared</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(),</span> <span class="n">residuals</span><span class="p">,</span> <span class="n">center_tss</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rsquared_adj</span> <span class="o">=</span> <span class="n">rsquared_adj</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rsquared</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">residuals</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">residuals</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">center_tss</span>
+        <span class="p">)</span>
+        <span class="c1"># self.rsquared_adj = np.nan</span>
+        <span class="n">half_obs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">residuals</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="n">ssr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="n">residuals</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logLike</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ssr</span><span class="p">)</span> <span class="o">*</span> <span class="n">half_obs</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span>
+            <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">half_obs</span><span class="p">))</span> <span class="o">*</span> <span class="n">half_obs</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AIC</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">logLike</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BIC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">residuals</span><span class="p">)))</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">logLike</span>
+
+<div class="viewcode-block" id="Lm.summary"><a class="viewcode-back" href="../../../api.html#pymer4.models.Lm.summary">[docs]</a>    <span class="k">def</span> <span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Summarize the output of a fitted model.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: R/statsmodels style summary</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Model must be fit to generate summary!&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Formula: </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Family: </span><span class="si">{}</span><span class="se">\t</span><span class="s2"> Estimator: </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">family</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;Std-errors: </span><span class="si">{}</span><span class="se">\t</span><span class="s2">CIs: </span><span class="si">{}</span><span class="s2"> 95%</span><span class="se">\t</span><span class="s2">Inference: </span><span class="si">{}</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">se_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sig_type</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rsquared</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;Number of observations: </span><span class="si">%s</span><span class="se">\t</span><span class="s2"> R^2: </span><span class="si">%.3f</span><span class="se">\t</span><span class="s2"> R^2_adj: </span><span class="si">%.3f</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">rsquared</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rsquared_adj</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of observations: </span><span class="si">%s</span><span class="se">\t\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">AIC</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;Log-likelihood: </span><span class="si">%.3f</span><span class="s2"> </span><span class="se">\t</span><span class="s2"> AIC: </span><span class="si">%.3f</span><span class="se">\t</span><span class="s2"> BIC: </span><span class="si">%.3f</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logLike</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">AIC</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">BIC</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Fixed effects:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Lm.to_corrs"><a class="viewcode-back" href="../../../api.html#pymer4.models.Lm.to_corrs">[docs]</a>    <span class="k">def</span> <span class="nf">to_corrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corr_type</span><span class="o">=</span><span class="s2">&quot;semi&quot;</span><span class="p">,</span> <span class="n">ztrans_corrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transform fitted model coefficients (excluding the intercept) to partial or semi-partial correlations with dependent variable. The is useful for rescaling coefficients to a correlation scale (-1 to 1) and does **not** change how inferences are performed. Semi-partial correlations are computed as the correlation between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor. They are interpretable in the same way as the original coefficients. Partial correlations reflect the unique variance a predictor explains in the DV accounting for correlations between predictors *and* what is not explained by other predictors; this value is always &gt;= the semi-partial correlation. They are *not* interpretable in the same way as the original coefficients. Partial correlations are computed as the correlations between a DV and each predictor *after* the influence of all other predictors have been regressed out from that predictor *and* the DV. Good ref: https://bit.ly/2GNwXh5</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            corr_type (string): &#39;semi&#39; or &#39;partial&#39;</span>
+<span class="sd">            ztrans_partial_corrs (bool): whether to fisher z-transform (arctan) partial correlations before reporting them; default False</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series: partial or semi-partial correlations</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;Model must be fit before partial correlations can be computed&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="s2">&quot;.to_corrs is only supported for family=&#39;gaussian&#39;&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">corr_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;semi&quot;</span><span class="p">,</span> <span class="s2">&quot;partial&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;corr_type must be &#39;semi&#39; or &#39;partial&#39;&quot;</span><span class="p">)</span>
+        <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">pearsonr</span>
+
+        <span class="n">corrs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">corrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>  <span class="c1"># don&#39;t compute for intercept</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">other_preds</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="n">e</span> <span class="o">!=</span> <span class="n">c</span><span class="p">]</span>
+            <span class="n">right_side</span> <span class="o">=</span> <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">other_preds</span><span class="p">)</span>
+            <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">dmatrices</span><span class="p">(</span>
+                <span class="n">c</span> <span class="o">+</span> <span class="s2">&quot;~&quot;</span> <span class="o">+</span> <span class="n">right_side</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span>
+            <span class="p">)</span>
+            <span class="n">pred_m_resid</span> <span class="o">=</span> <span class="n">_ols</span><span class="p">(</span>
+                <span class="n">x</span><span class="p">,</span>
+                <span class="n">y</span><span class="p">,</span>
+                <span class="n">robust</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">n_lags</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">cluster</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">all_stats</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">resid_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">dmatrices</span><span class="p">(</span>
+                <span class="n">dv</span> <span class="o">+</span> <span class="s2">&quot;~&quot;</span> <span class="o">+</span> <span class="n">right_side</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">corr_type</span> <span class="o">==</span> <span class="s2">&quot;semi&quot;</span><span class="p">:</span>
+                <span class="n">dv_m_resid</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">corr_type</span> <span class="o">==</span> <span class="s2">&quot;partial&quot;</span><span class="p">:</span>
+                <span class="n">dv_m_resid</span> <span class="o">=</span> <span class="n">_ols</span><span class="p">(</span>
+                    <span class="n">x</span><span class="p">,</span>
+                    <span class="n">y</span><span class="p">,</span>
+                    <span class="n">robust</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">n_lags</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">cluster</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">all_stats</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">resid_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="n">corrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pearsonr</span><span class="p">(</span><span class="n">dv_m_resid</span><span class="p">,</span> <span class="n">pred_m_resid</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">ztrans_corrs</span><span class="p">:</span>
+            <span class="n">corrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctanh</span><span class="p">(</span><span class="n">corrs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Lm.predict"><a class="viewcode-back" href="../../../api.html#pymer4.models.Lm.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">pred_type</span><span class="o">=</span><span class="s2">&quot;response&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Make predictions given new data. Input must be a dataframe that contains the same columns as the model.matrix excluding the intercept (i.e. all the predictor variables used to fit the model). Will automatically use/ignore intercept to make a prediction if it was/was not part of the original fitted model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (pd.DataFrame): input data to make predictions on</span>
+<span class="sd">            pred_type (str): whether the prediction should be on the &#39;response&#39; scale</span>
+<span class="sd">            (default) or on the &#39;link&#39; scale of the predictors passed through the link</span>
+<span class="sd">            function (e.g. log-odds scale in a logit model instead of probability</span>
+<span class="sd">            values) or &#39;probs&#39; if self.family == &#39;binomial&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: prediction values</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span> <span class="s2">&quot;binomial&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="s2">&quot;Only gaussian and binomial Lm models support .predict()&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">required_cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">col</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">required_cols</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column names do not match all fixed effects model terms!&quot;</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">required_cols</span><span class="p">]</span>
+        <span class="c1"># Add intercept if needed</span>
+        <span class="n">has_intercept</span> <span class="o">=</span> <span class="s2">&quot;Intercept&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">index</span>
+        <span class="k">if</span> <span class="n">has_intercept</span><span class="p">:</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">X</span><span class="p">[</span><span class="s2">&quot;Intercept&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="c1"># sort</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[[</span><span class="s2">&quot;Intercept&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">cols</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pred_type</span> <span class="o">==</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="s2">&quot;pred_type=&#39;link&#39; is ignored when family=&#39;gaussian&#39; as link=&#39;identity&#39;&quot;</span>
+                <span class="p">)</span>
+            <span class="n">coefs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefs</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;Estimate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">preds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">coefs</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;binomial&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pred_type</span> <span class="o">==</span> <span class="s2">&quot;response&quot;</span><span class="p">:</span>
+                <span class="c1"># We only return probabilities for positive class</span>
+                <span class="n">preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_obj</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">pred_type</span> <span class="o">==</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span>
+                <span class="n">preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_obj</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">preds</span></div></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

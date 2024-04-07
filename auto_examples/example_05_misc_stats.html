@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5. Additional Statistics Functions &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Lme4 Random Effects Cheat Sheet" href="../rfx_cheatsheet.html" />
+    <link rel="prev" title="4. Simulating Data" href="example_04_simulating_data.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="index.html">Tutorial</a></li>
+                <li><a href="../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../new.html">What's New</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">5. Additional Statistics Functions</a><ul>
+<li><a class="reference internal" href="#permutation-tests">Permutation Tests</a></li>
+<li><a class="reference internal" href="#bootstrap-comparisons">Bootstrap Comparisons</a></li>
+<li><a class="reference internal" href="#tost-equivalence-tests">TOST Equivalence Tests</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-example-05-misc-stats-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="additional-statistics-functions">
+<span id="sphx-glr-auto-examples-example-05-misc-stats-py"></span><h1>5. Additional Statistics Functions<a class="headerlink" href="#additional-statistics-functions" title="Permalink to this heading">¶</a></h1>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> also comes with some flexible routines for various statistical operations such as permutation testing, bootstrapping of arbitrary functions and equivalence testing. Here are a few examples:</p>
+<section id="permutation-tests">
+<h2>Permutation Tests<a class="headerlink" href="#permutation-tests" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> can compute a wide variety of one and two-sample permutation tests including mean differences, t-statistics, effect size comparisons, and correlations</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import numpy and set random number generator</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="c1"># Import stats functions</span>
+<span class="kn">from</span> <span class="nn">pymer4.stats</span> <span class="kn">import</span> <span class="n">perm_test</span>
+
+<span class="c1"># Generate two samples of data: X (M~2, SD~10, N=100) and Y (M~2.5, SD~1, N=100)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="c1"># Between groups t-test. The first value is the t-stat and the</span>
+<span class="c1"># second is the permuted p-value</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">perm_test</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;tstat&quot;</span><span class="p">,</span> <span class="n">n_perm</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>(-3.529814975986372, 0.001996007984031936)
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Spearman rank correlation. The first values is spearman&#39;s rho</span>
+<span class="c1"># and the second is the permuted p-value</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">perm_test</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;spearmanr&quot;</span><span class="p">,</span> <span class="n">n_perm</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>(0.04469246924692469, 0.6786427145708582)
+</pre></div>
+</div>
+</section>
+<section id="bootstrap-comparisons">
+<h2>Bootstrap Comparisons<a class="headerlink" href="#bootstrap-comparisons" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> can compute a bootstrap comparison using any arbitrary function that takes as input either one or two 1d numpy arrays, and returns a single value.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import stats function</span>
+<span class="kn">from</span> <span class="nn">pymer4.stats</span> <span class="kn">import</span> <span class="n">boot_func</span>
+
+
+<span class="c1"># Define a simple function for a median difference test</span>
+<span class="k">def</span> <span class="nf">med_diff</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+
+<span class="c1"># Between groups median test with resampling</span>
+<span class="c1"># The first value is the median difference and the</span>
+<span class="c1"># second is the lower and upper 95% confidence interval</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">boot_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">med_diff</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>(-0.4928648709628707, (-0.8719792375122976, -0.09680478598285287))
+</pre></div>
+</div>
+</section>
+<section id="tost-equivalence-tests">
+<h2>TOST Equivalence Tests<a class="headerlink" href="#tost-equivalence-tests" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> also has experimental support for <a class="reference external" href="https://bit.ly/33wsB5i/">two-one-sided equivalence tests</a>.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import stats function</span>
+<span class="kn">from</span> <span class="nn">pymer4.stats</span> <span class="kn">import</span> <span class="n">tost_equivalence</span>
+
+<span class="c1"># Generate some data</span>
+<span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span>
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mf">0.145</span><span class="p">,</span> <span class="mf">0.025</span><span class="p">,</span> <span class="mi">35</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mf">0.16</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mi">17</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">tost_equivalence</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1"># Print the results dictionary nicely</span>
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_example_05_misc_stats_001.png" srcset="../_images/sphx_glr_example_05_misc_stats_001.png" alt="example 05 misc stats" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>original: {&#39;m&#39;: -0.005770606287536645, &#39;t&#39;: -0.4781080137390306, &#39;p&#39;: 0.6533466533466533}
+
+lower: {&#39;m&#39;: -0.1, &#39;t&#39;: 7.807122166868652, &#39;p&#39;: 5.9293193911969926e-08}
+
+upper: {&#39;m&#39;: 0.1, &#39;t&#39;: -8.763338194346712, &#39;p&#39;: 8.999109365849837e-09}
+
+cohens_d: {&#39;m&#39;: -0.17019805423837045, &#39;CI_lb&#39;: -0.8348542426833095, &#39;CI_ub&#39;: 0.5990340538537716}
+
+In_Equivalence_Range: True
+
+Means_Are_Different: False
+</pre></div>
+</div>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-example-05-misc-stats-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/68269100b7536b0394ed8e929a3575ae/example_05_misc_stats.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">example_05_misc_stats.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/31672caa1e5dfbc69355a6409f988161/example_05_misc_stats.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">example_05_misc_stats.py</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

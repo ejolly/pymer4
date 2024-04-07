@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pymer4.io &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../../auto_examples/index.html">Tutorial</a></li>
+                <li><a href="../../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pymer4.io</h1><div class="highlight"><pre>
+<span></span><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;save_model&quot;</span><span class="p">,</span> <span class="s2">&quot;load_model&quot;</span><span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Lmer</span>
+<span class="kn">from</span> <span class="nn">rpy2.robjects.packages</span> <span class="kn">import</span> <span class="n">importr</span>
+<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">dump</span><span class="p">,</span> <span class="n">load</span>
+
+<span class="n">base</span> <span class="o">=</span> <span class="n">importr</span><span class="p">(</span><span class="s2">&quot;base&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="save_model"><a class="viewcode-back" href="../../api.html#pymer4.io.save_model">[docs]</a><span class="k">def</span> <span class="nf">save_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for saving pymer4 models. All models are saved using joblib.dump files so</span>
+<span class="sd">    filepath extensions should end with .joblib. For Lmer models an additional</span>
+<span class="sd">    filepath.robj file will be created to retain all R objects.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (pymer4.models): an instance of a pymer4 model</span>
+<span class="sd">        filepath (str): full filepath string ending .joblib</span>
+<span class="sd">        kwargs: optional keyword arguments to joblib.dump</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">filepath</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.joblib&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;filepath must end with .joblib&quot;</span><span class="p">)</span>
+
+    <span class="n">rds_file</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.joblib&quot;</span><span class="p">,</span> <span class="s2">&quot;.rds&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Save the python object</span>
+    <span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="c1"># Now deal with model object in R if needed</span>
+    <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">model_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">base</span><span class="o">.</span><span class="n">saveRDS</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">model_obj</span><span class="p">,</span> <span class="n">rds_file</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">rds_file</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load_model"><a class="viewcode-back" href="../../api.html#pymer4.io.load_model">[docs]</a><span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for loading pymer4 models. A file path ending in .joblib should be provided. For Lmer models an additional filepath.robj should be located in the same directory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (pymer4.models): an instance of a pymer4 model</span>
+<span class="sd">        filepath (str): full filepath string ending with .joblib</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">filepath</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.joblib&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;filepath must end with .joblib&quot;</span><span class="p">)</span>
+
+    <span class="n">rds_file</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.joblib&quot;</span><span class="p">,</span> <span class="s2">&quot;.rds&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Load python object</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+
+    <span class="c1"># Now deal with model object in R if needed</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Lmer</span><span class="p">):</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">model_obj</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">readRDS</span><span class="p">(</span><span class="n">rds_file</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

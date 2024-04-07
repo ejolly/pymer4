@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Features &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Pymer4" href="index.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="auto_examples/index.html">Tutorial</a></li>
+                <li><a href="api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Features</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#standard-regression-models">Standard regression models</a></li>
+<li><a class="reference internal" href="#multi-level-models">Multi-level models</a></li>
+<li><a class="reference internal" href="#other-features">Other Features</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <section id="features">
+<h1>Features<a class="headerlink" href="#features" title="Permalink to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<p>All <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> models operate on long-format <a class="reference external" href="https://pandas.pydata.org/pandas-docs/version/0.25/index.html/">pandas dataframes</a>. These dataframes should contain columns for a dependent variable, independent variable(s), and optionally a column for a group/cluster identifiers.</p>
+<p>Currently, <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> contains 3 different model classes:</p>
+<ul class="simple">
+<li><p><code class="code docutils literal notranslate"><span class="pre">Lm</span></code> for ordinary-least-squares and weighted-least-squares regression optionally with robust standard errors</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> for multi-level models estimated using <code class="code docutils literal notranslate"><span class="pre">glmer()</span></code> in R.</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> for two-stage ordinary-least-squares in which a separate <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> model is fit to every group/cluster and inference is performed on the coefficients across all groups/clusters. This is also known as the “summary statistics approach” and is an alternative to multi-level models estimated using <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code>, which implicitly allow for both random-intercepts and random-slopes but shares no information across each groups/clusters to help during estimation.</p></li>
+</ul>
+</section>
+<section id="standard-regression-models">
+<h2>Standard regression models<a class="headerlink" href="#standard-regression-models" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">Lm</span></code> models which are equivalent to <code class="code docutils literal notranslate"><span class="pre">lm()</span></code> in R with the following additional features:</p>
+<ul class="simple">
+<li><p>Automatic inclusion of confidence intervals in model output</p></li>
+<li><p>Optional empirically bootstrapped 95% confidence intervals</p></li>
+<li><p>Cluster-robust, heteroscedasticity-robust or auto-correlation-robust, ‘sandwich estimators’ for standard errors (<em>note: these are not the same as auto-regressive models</em>)</p></li>
+<li><p>Weighted-least-squares models (experimental)</p></li>
+<li><p>Permutation tests on model parameters</p></li>
+</ul>
+</section>
+<section id="multi-level-models">
+<h2>Multi-level models<a class="headerlink" href="#multi-level-models" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models which are equivalent to <code class="code docutils literal notranslate"><span class="pre">glmer()</span></code> in R with the following additional features:</p>
+<ul class="simple">
+<li><p>Automatic inclusion of p-values in model output using <a class="reference external" href="https://cran.r-project.org/web/packages/lmerTest/index.html">lmerTest</a></p></li>
+<li><p>Automatic inclusion of confidence intervals in model output</p></li>
+<li><p>Automatic conversion and calculation of odds-ratios and probabilities for logit models</p></li>
+<li><p>Easy access to group/cluster fixed and random effects as pandas dataframes</p></li>
+<li><p>Random effects plotting using seaborn</p></li>
+<li><p>Easy post-hoc tests with multiple-comparisons correction via <a class="reference external" href="https://cran.r-project.org/web/packages/emmeans/index.html">emmeans</a></p></li>
+<li><p>Easy model predictions on new data</p></li>
+<li><p>Easy generation of new data from a fitted model</p></li>
+<li><p>Optional permuted p-value computation via within cluster permutation testing (experimental)</p></li>
+<li><p><strong>note</strong> that <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code>’s usage of <code class="code docutils literal notranslate"><span class="pre">coef</span></code>, <code class="code docutils literal notranslate"><span class="pre">fixef</span></code>, and <code class="code docutils literal notranslate"><span class="pre">ranef</span></code> differs a bit from R:</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">coef</span></code> = <code class="code docutils literal notranslate"><span class="pre">summary(model)</span></code> in R, i.e. “top level” estimates, i.e. the summary output of the model that can be used to make predictions on new datasets and on which inference (i.e. p-values) are computed</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">fixef</span></code> = <code class="code docutils literal notranslate"><span class="pre">coef(model)</span></code> in R, i.e. “group/cluster” level <em>fixed effects,</em> conceptually similar to coefficients obtained from running a seperate <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> (<code class="code docutils literal notranslate"><span class="pre">lm</span></code> in R) for each group/cluster</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">ranef</span></code> = <code class="code docutils literal notranslate"><span class="pre">ranef(model)</span></code> in R, i.e. “group/cluster” level <em>random effects,</em> deviance of each cluster with respect to “top level” estimates</p></li>
+</ul>
+</section>
+<section id="other-features">
+<h2>Other Features<a class="headerlink" href="#other-features" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Highly customizable functions for simulating data useful for standard regression models and multi-level models</p></li>
+<li><p>Convenience methods for plotting model estimates, including random-effects terms in multi-level models</p></li>
+<li><p>Statistics functions for effect-size computation, permutations of various 1 and 2 sample tests, bootstrapping of various 1 and 2 sample tests, and two-one-sided equivalence tests</p></li>
+</ul>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

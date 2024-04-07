@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>1. Basic Usage Guide &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="2. Categorical Predictors" href="example_02_categorical.html" />
+    <link rel="prev" title="Usage Guide" href="index.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="index.html">Tutorial</a></li>
+                <li><a href="../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../new.html">What's New</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">1. Basic Usage Guide</a><ul>
+<li><a class="reference internal" href="#standard-regression-models">Standard regression models</a></li>
+<li><a class="reference internal" href="#robust-and-wls-estimation">Robust and WLS estimation</a></li>
+<li><a class="reference internal" href="#multi-level-models">Multi-level models</a></li>
+<li><a class="reference internal" href="#two-stage-summary-statistics-models">Two-stage summary statistics models</a></li>
+<li><a class="reference internal" href="#model-persistence">Model Persistence</a></li>
+<li><a class="reference internal" href="#wrap-up">Wrap Up</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-example-01-basic-usage-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="basic-usage-guide">
+<span id="sphx-glr-auto-examples-example-01-basic-usage-py"></span><h1>1. Basic Usage Guide<a class="headerlink" href="#basic-usage-guide" title="Permalink to this heading">¶</a></h1>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> comes with sample data for testing purposes which we’ll utilize for most of the tutorials.
+This sample data has:</p>
+<ul class="simple">
+<li><p>Two kinds of dependent variables: <em>DV</em> (continuous), <em>DV_l</em> (dichotomous)</p></li>
+<li><p>Three kinds of independent variables: <em>IV1</em> (continuous), <em>IV2</em> (continuous), <em>IV3</em> (categorical)</p></li>
+<li><p>One grouping variable for multi-level modeling: <em>Group</em>.</p></li>
+</ul>
+<p>Let’s check it out below:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import some basic libraries</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># import utility function for sample data path</span>
+<span class="kn">from</span> <span class="nn">pymer4.utils</span> <span class="kn">import</span> <span class="n">get_resource_path</span>
+
+<span class="c1"># Load and checkout sample data</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">get_resource_path</span><span class="p">(),</span> <span class="s2">&quot;sample_data.csv&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>   Group   IV1  DV_l         DV       IV2  IV3
+0      1  20.0     0   7.936508  4.563492  0.5
+1      1  20.0     0  15.277778  0.000000  1.0
+2      1  20.0     1   0.000000  0.000000  1.5
+3      1  20.0     1   9.523810  0.000000  0.5
+4      1  12.5     0   0.000000  0.000000  1.0
+</pre></div>
+</div>
+<section id="standard-regression-models">
+<h2>Standard regression models<a class="headerlink" href="#standard-regression-models" title="Permalink to this heading">¶</a></h2>
+<p>Fitting a standard regression model is accomplished using the <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> model class in <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code>. All we need to do is initialize a model with a formula, some data, and call its <code class="code docutils literal notranslate"><span class="pre">.fit()</span></code> method.</p>
+<p>By default the output of <code class="code docutils literal notranslate"><span class="pre">.fit()</span></code> has been formated to be a blend of <code class="code docutils literal notranslate"><span class="pre">summary()</span></code> in R and <code class="code docutils literal notranslate"><span class="pre">.summary()</span></code> from <a class="reference external" href="http://www.statsmodels.org/dev/index.html/">statsmodels</a>. This includes metadata about the model, data, and overall fit as well as estimates and inference results of model terms.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the linear regression model class</span>
+<span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lm</span>
+
+<span class="c1"># Initialize model using 2 predictors and sample data</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ IV1 + IV2&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># Fit it</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~IV1+IV2
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.512      R^2_adj: 0.510
+
+Log-likelihood: -2527.681        AIC: 5061.363   BIC: 5074.368
+
+Fixed effects:
+
+           Estimate  2.5_ci  97.5_ci     SE   DF  T-stat  P-val  Sig
+Intercept     1.657  -4.107    7.422  2.935  561   0.565  0.573
+IV1           0.334  -0.023    0.690  0.181  561   1.839  0.066    .
+IV2           0.747   0.686    0.807  0.031  561  24.158  0.000  ***
+</pre></div>
+</div>
+<p>All information about the model as well as data, residuals, estimated coefficients, etc are saved as attributes and can be accessed like this:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Print model AIC</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">AIC</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>5061.3629635837815
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Look at residuals (just the first 10)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">residuals</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>[-3.79994762  6.94860187 -8.32917613  1.19463387 -5.8271851  -6.88457421
+  0.40673658  9.77173122 -7.33135842 -7.37107236]
+</pre></div>
+</div>
+<p>A copy of the dataframe used to estimate the model with added columns for residuals and fits are are available at <code class="code docutils literal notranslate"><span class="pre">model.data</span></code>. Residuals and fits can also be directly accessed using <code class="code docutils literal notranslate"><span class="pre">model.residuals</span></code> and <code class="code docutils literal notranslate"><span class="pre">model.fits</span></code> respectively</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Look at model data</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>   Group   IV1  DV_l         DV       IV2  IV3       fits  residuals
+0      1  20.0     0   7.936508  4.563492  0.5  11.736456  -3.799948
+1      1  20.0     0  15.277778  0.000000  1.0   8.329176   6.948602
+2      1  20.0     1   0.000000  0.000000  1.5   8.329176  -8.329176
+3      1  20.0     1   9.523810  0.000000  0.5   8.329176   1.194634
+4      1  12.5     0   0.000000  0.000000  1.0   5.827185  -5.827185
+</pre></div>
+</div>
+<p>This makes it easy to assess overall model fit visually, for example using seaborn</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import dataviz</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="c1"># plot model predicted values against true values</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">regplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;fits&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;DV&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">fit_reg</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_example_01_basic_usage_001.png" srcset="../_images/sphx_glr_example_01_basic_usage_001.png" alt="example 01 basic usage" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;Axes: xlabel=&#39;fits&#39;, ylabel=&#39;DV&#39;&gt;
+</pre></div>
+</div>
+</section>
+<section id="robust-and-wls-estimation">
+<h2>Robust and WLS estimation<a class="headerlink" href="#robust-and-wls-estimation" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">Lm</span></code> models can also perform inference using robust-standard errors or perform weight-least-squares (experimental feature) for models with categorical predictors (equivalent to Welch’s t-test).</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Refit previous model using robust standard errors</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">robust</span><span class="o">=</span><span class="s2">&quot;hc1&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~IV1+IV2
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: robust (hc1)        CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.512      R^2_adj: 0.510
+
+Log-likelihood: -2527.681        AIC: 5061.363   BIC: 5074.368
+
+Fixed effects:
+
+           Estimate  2.5_ci  97.5_ci     SE   DF  T-stat  P-val  Sig
+Intercept     1.657  -3.429    6.744  2.590  561   0.640  0.522
+IV1           0.334  -0.026    0.693  0.183  561   1.823  0.069    .
+IV2           0.747   0.678    0.815  0.035  561  21.444  0.000  ***
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Since WLS is only supported with 2 groups for now, filter the data first</span>
+<span class="n">df_two_groups</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;IV3 in [0.5, 1.0]&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Fit new a model using a categorical predictor with unequal variances (WLS)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ IV3&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df_two_groups</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="s2">&quot;IV3&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~IV3
+
+Family: gaussian         Estimator: WLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 376      R^2: 0.999      R^2_adj: 0.999
+
+Log-likelihood: -532.518         AIC: 1069.036   BIC: 1076.896
+
+Fixed effects:
+
+           Estimate  2.5_ci  97.5_ci     SE       DF  T-stat  P-val  Sig
+Intercept    45.647  35.787   55.507  5.015  373.483   9.103  0.000  ***
+IV3          -2.926 -15.261    9.410  6.273  373.483  -0.466  0.641
+</pre></div>
+</div>
+</section>
+<section id="multi-level-models">
+<h2>Multi-level models<a class="headerlink" href="#multi-level-models" title="Permalink to this heading">¶</a></h2>
+<p>Fitting a multi-level model works similarly and actually just calls <code class="code docutils literal notranslate"><span class="pre">lmer</span></code> or <code class="code docutils literal notranslate"><span class="pre">glmer</span></code> in R behind the scenes. The corresponding output is also formatted to be very similar to output of <code class="code docutils literal notranslate"><span class="pre">summary()</span></code> in R.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the lmm model class</span>
+<span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lmer</span>
+
+<span class="c1"># Initialize model instance using 1 predictor with random intercepts and slopes</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lmer</span><span class="p">(</span><span class="s2">&quot;DV ~ IV2 + (IV2|Group)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># Fit it</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Model failed to converge with max|grad| = 0.00358015 (tol = 0.002, component 1)
+
+Linear mixed model fit by REML [’lmerMod’]
+Formula: DV~IV2+(IV2|Group)
+
+Family: gaussian         Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47.0}
+
+Log-likelihood: -2249.281        AIC: 4510.562
+
+Random effects:
+
+                 Name      Var     Std
+Group     (Intercept)  203.390  14.261
+Group             IV2    0.136   0.369
+Residual               121.537  11.024
+
+               IV1  IV2   Corr
+Group  (Intercept)  IV2 -0.585
+
+Fixed effects:
+
+             Estimate  2.5_ci  97.5_ci     SE      DF  T-stat  P-val  Sig
+(Intercept)    10.300   4.806   15.795  2.804  20.183   3.674  0.001   **
+IV2             0.682   0.556    0.808  0.064  42.402  10.599  0.000  ***
+</pre></div>
+</div>
+<p>Similar to <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> models, <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models save details in model attributes and have additional methods that can be called using the same syntax as described above.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get population level coefficients</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">coefs</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>              Estimate    2.5_ci    97.5_ci  ...     T-stat         P-val  Sig
+(Intercept)  10.300430  4.805524  15.795335  ...   3.674034  1.487605e-03   **
+IV2           0.682128  0.555987   0.808268  ...  10.598847  1.706855e-13  ***
+
+[2 rows x 8 columns]
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get group level coefficients (just the first 5)</span>
+<span class="c1"># Each row here is a unique intercept and slope</span>
+<span class="c1"># which vary because we parameterized our rfx that way above</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fixef</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>   (Intercept)       IV2
+1     4.482095  0.885138
+2    17.991023  0.622143
+3     8.706144  0.838055
+4    10.143487  0.865341
+5    10.071328  0.182101
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get group level deviates from population level coefficients (i.e. rfx)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">ranef</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>   X.Intercept.       IV2
+1     -5.818335  0.203011
+2      7.690593 -0.059985
+3     -1.594286  0.155927
+4     -0.156943  0.183213
+5     -0.229102 -0.500026
+</pre></div>
+</div>
+<p><code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models also have some basic plotting abilities that <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> models do not</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize coefficients with group/cluster fits overlaid (&quot;forest plot&quot;)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">plot_summary</span><span class="p">()</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_example_01_basic_usage_002.png" srcset="../_images/sphx_glr_example_01_basic_usage_002.png" alt="example 01 basic usage" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;Axes: xlabel=&#39;Estimate&#39;&gt;
+</pre></div>
+</div>
+<p>Plot coefficients for each group/cluster as separate regressions</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="s2">&quot;IV2&quot;</span><span class="p">,</span> <span class="n">plot_ci</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;predicted DV&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_example_01_basic_usage_003.png" srcset="../_images/sphx_glr_example_01_basic_usage_003.png" alt="example 01 basic usage" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;Axes: xlabel=&#39;IV2&#39;, ylabel=&#39;predicted DV&#39;&gt;
+</pre></div>
+</div>
+<p>Because <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models rely on R, they have also some extra arguments to the <code class="code docutils literal notranslate"><span class="pre">.fit()</span></code> method for controlling things like optimizer behavior, as well as additional methods such for post-hoc tests and ANOVAs. See tutorial 2 for information about this functionality.</p>
+</section>
+<section id="two-stage-summary-statistics-models">
+<h2>Two-stage summary statistics models<a class="headerlink" href="#two-stage-summary-statistics-models" title="Permalink to this heading">¶</a></h2>
+<p>Fitting <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models are also very similar</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the lm2 model class</span>
+<span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lm2</span>
+
+<span class="c1"># This time we use the &#39;group&#39; argument when initializing the model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm2</span><span class="p">(</span><span class="s2">&quot;DV ~ IV2&quot;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">&quot;Group&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># Fit it</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/home/runner/work/pymer4/pymer4/pymer4/stats.py:657: RuntimeWarning: invalid value encountered in scalar divide
+  return 1 - (rss / tss)
+Formula: DV~IV2
+
+Family: gaussian
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47}
+
+Fixed effects:
+
+           Estimate  2.5_ci  97.5_ci     SE  DF  T-stat  P-val  Sig
+Intercept    14.240   4.891   23.589  4.644  46   3.066  0.004   **
+IV2           0.614   0.445    0.782  0.084  46   7.340  0.000  ***
+</pre></div>
+</div>
+<p>Like <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models, <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models also store group/cluster level estimates and have some basic plotting functionality</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get group level coefficients, just the first 5</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fixef</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>       Intercept       IV2
+Group
+1       3.039903  1.781832
+2      23.388350  0.524852
+3       4.904321  0.919913
+4      23.304669  0.719425
+5      18.378387 -0.256136
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Visualize coefficients with group/cluster fits overlaid (&quot;forest plot&quot;)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">plot_summary</span><span class="p">()</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_example_01_basic_usage_004.png" srcset="../_images/sphx_glr_example_01_basic_usage_004.png" alt="example 01 basic usage" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;Axes: xlabel=&#39;Estimate&#39;&gt;
+</pre></div>
+</div>
+</section>
+<section id="model-persistence">
+<h2>Model Persistence<a class="headerlink" href="#model-persistence" title="Permalink to this heading">¶</a></h2>
+<p>All pymer4 models can be saved and loaded from disk. Doing so will persist <em>all</em> model attributes and data i.e. anything accessible with the ‘.’ syntax. Models are saved and loaded using <a class="reference external" href="https://joblib.readthedocs.io/en/latest/persistence.html#persistence">Joblib</a> Therefore all filenames must end with <code class="code docutils literal notranslate"><span class="pre">.joblib</span></code>. For <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models, an additional file ending in <code class="code docutils literal notranslate"><span class="pre">.rds</span></code> will be saved in the same directory as the HDF5 file. This is the R model object readable in R using <code class="code docutils literal notranslate"><span class="pre">readRDS</span></code>.</p>
+<p>Prior to version 0.8.1 models were saved to HDF5 files using <a class="reference external" href="https://github.com/uchicago-cs/deepdish/">deepdish</a> but this library is no longer maintained. If you have old models saved as <code class="code docutils literal notranslate"><span class="pre">.h5</span></code> or <code class="code docutils literal notranslate"><span class="pre">.hdf5</span></code> files you should use the same version of pymer4 that you used to estimate those models.</p>
+<p>To persist models you can use the dedicated <code class="code docutils literal notranslate"><span class="pre">save_model</span></code> and <code class="code docutils literal notranslate"><span class="pre">load_model</span></code> functions from the <code class="code docutils literal notranslate"><span class="pre">pymer4.io</span></code> module</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import functions</span>
+<span class="kn">from</span> <span class="nn">pymer4.io</span> <span class="kn">import</span> <span class="n">save_model</span><span class="p">,</span> <span class="n">load_model</span>
+
+<span class="c1"># Save the Lm2 model above</span>
+<span class="n">save_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;mymodel.joblib&quot;</span><span class="p">)</span>
+<span class="c1"># Load it back up</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;mymodel.joblib&quot;</span><span class="p">)</span>
+<span class="c1"># Check that it looks the same</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>pymer4.models.Lm2(fitted=True, formula=DV~IV2, family=gaussian, group=Group)
+</pre></div>
+</div>
+</section>
+<section id="wrap-up">
+<h2>Wrap Up<a class="headerlink" href="#wrap-up" title="Permalink to this heading">¶</a></h2>
+<p>This was a quick overview of the 3 major model classes in <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code>. However, it’s highly recommended to check out the API to see <em>all</em> the features and options that each model class has including things like permutation-based inference (<code class="code docutils literal notranslate"><span class="pre">Lm</span></code> and <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models) and fine-grain control of optimizer and tolerance settings (<code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models).</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-example-01-basic-usage-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/2f5ef11b55acdc3f7cfe565f64c3e9dd/example_01_basic_usage.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">example_01_basic_usage.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/b91a3847324823a0f43edeaa7b0869ae/example_01_basic_usage.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">example_01_basic_usage.py</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

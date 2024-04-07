@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>2. Categorical Predictors &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="3. ANOVA tables and post-hoc comparisons" href="example_03_posthoc.html" />
+    <link rel="prev" title="1. Basic Usage Guide" href="example_01_basic_usage.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="index.html">Tutorial</a></li>
+                <li><a href="../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../new.html">What's New</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">2. Categorical Predictors</a><ul>
+<li><a class="reference internal" href="#lm-and-lm2-models">Lm and Lm2 Models</a><ul>
+<li><a class="reference internal" href="#dummy-coded-treatment-contrasts">Dummy-coded/Treatment contrasts</a></li>
+<li><a class="reference internal" href="#orthogonal-polynomial-contrasts">Orthogonal Polynomial Contrasts</a></li>
+<li><a class="reference internal" href="#sum-to-zero-contrasts">Sum-to-zero contrasts</a></li>
+<li><a class="reference internal" href="#scaling-centering">Scaling/Centering</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lmer-models">Lmer Models</a><ul>
+<li><a class="reference internal" href="#dummy-coding-factors">Dummy-coding factors</a></li>
+<li><a class="reference internal" href="#polynomial-contrast-coding">Polynomial contrast coding</a></li>
+<li><a class="reference internal" href="#custom-contrasts">Custom contrasts</a></li>
+<li><a class="reference internal" href="#user-created-contrasts-without-r">User-created contrasts (without R)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#a-note-on-how-contrasts-in-r-work">A note on how contrasts in R work</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-example-02-categorical-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="categorical-predictors">
+<span id="sphx-glr-auto-examples-example-02-categorical-py"></span><h1>2. Categorical Predictors<a class="headerlink" href="#categorical-predictors" title="Permalink to this heading">¶</a></h1>
+<p>The syntax for handling categorical predictors is <strong>different</strong> between standard regression models/two-stage-models (i.e. <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> and <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code>) and multi-level models (<code class="code docutils literal notranslate"><span class="pre">Lmer</span></code>) in <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code>. This is because formula parsing is passed to R for <code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models, but handled by Python for other models.</p>
+<section id="lm-and-lm2-models">
+<h2>Lm and Lm2 Models<a class="headerlink" href="#lm-and-lm2-models" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">Lm</span></code> and <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models use <a class="reference external" href="https://patsy.readthedocs.io/en/latest/">patsy</a> to parse model formulae. Patsy is very powerful and has built-in support for handling categorical coding schemes by wrapping a predictor in then <code class="code docutils literal notranslate"><span class="pre">C()</span></code> <em>within</em> the module formula. Patsy can also perform some pre-processing such as scaling and standardization using special functions like <code class="code docutils literal notranslate"><span class="pre">center()</span></code>. Here are some examples.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># import basic libraries and sample data</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pymer4.utils</span> <span class="kn">import</span> <span class="n">get_resource_path</span>
+<span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lm</span>
+
+<span class="c1"># IV3 is a categorical predictors with 3 levels in the sample data</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">get_resource_path</span><span class="p">(),</span> <span class="s2">&quot;sample_data.csv&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<section id="dummy-coded-treatment-contrasts">
+<h3>Dummy-coded/Treatment contrasts<a class="headerlink" href="#dummy-coded-treatment-contrasts" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Estimate a model using Treatment contrasts (dummy-coding)</span>
+<span class="c1"># with &#39;1.0&#39; as the reference level</span>
+<span class="c1"># This is the default of the C() function</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ C(IV3, levels=[1.0, 0.5, 1.5])&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~C(IV3,levels=[1.0,0.5,1.5])
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.004      R^2_adj: 0.001
+
+Log-likelihood: -2728.620        AIC: 5463.241   BIC: 5476.246
+
+Fixed effects:
+
+                                       Estimate  2.5_ci  ...  P-val  Sig
+Intercept                                42.721  38.334  ...  0.000  ***
+C(IV3, levels=[1.0, 0.5, 1.5])[T.0.5]     1.463  -4.741  ...  0.643
+C(IV3, levels=[1.0, 0.5, 1.5])[T.1.5]    -3.419  -9.622  ...  0.280
+
+[3 rows x 8 columns]
+</pre></div>
+</div>
+</section>
+<section id="orthogonal-polynomial-contrasts">
+<h3>Orthogonal Polynomial Contrasts<a class="headerlink" href="#orthogonal-polynomial-contrasts" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Patsy can do this using the Poly argument to the</span>
+<span class="c1"># C() function</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ C(IV3, Poly)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~C(IV3,Poly)
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.004      R^2_adj: 0.001
+
+Log-likelihood: -2728.620        AIC: 5463.241   BIC: 5476.246
+
+Fixed effects:
+
+                        Estimate  2.5_ci  97.5_ci  ...  T-stat  P-val  Sig
+Intercept                 42.069  39.537   44.602  ...  32.627  0.000  ***
+C(IV3, Poly).Linear       -3.452  -7.838    0.935  ...  -1.546  0.123
+C(IV3, Poly).Quadratic    -0.798  -5.185    3.588  ...  -0.357  0.721
+
+[3 rows x 8 columns]
+</pre></div>
+</div>
+</section>
+<section id="sum-to-zero-contrasts">
+<h3>Sum-to-zero contrasts<a class="headerlink" href="#sum-to-zero-contrasts" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Similar to before but with the Sum argument</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ C(IV3, Sum)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~C(IV3,Sum)
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.004      R^2_adj: 0.001
+
+Log-likelihood: -2728.620        AIC: 5463.241   BIC: 5476.246
+
+Fixed effects:
+
+                    Estimate  2.5_ci  97.5_ci     SE   DF  T-stat  P-val  Sig
+Intercept             42.069  39.537   44.602  1.289  561  32.627  0.000  ***
+C(IV3, Sum)[S.0.5]     2.115  -1.467    5.697  1.823  561   1.160  0.247
+C(IV3, Sum)[S.1.0]     0.652  -2.930    4.234  1.823  561   0.357  0.721
+</pre></div>
+</div>
+</section>
+<section id="scaling-centering">
+<h3>Scaling/Centering<a class="headerlink" href="#scaling-centering" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Moderation with IV2, but centering IV2 first</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lm</span><span class="p">(</span><span class="s2">&quot;DV ~ center(IV2) * C(IV3, Sum)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Formula: DV~center(IV2)*C(IV3,Sum)
+
+Family: gaussian         Estimator: OLS
+
+Std-errors: non-robust  CIs: standard 95%       Inference: parametric
+
+Number of observations: 564      R^2: 0.511      R^2_adj: 0.507
+
+Log-likelihood: -2528.051        AIC: 5068.102   BIC: 5094.113
+
+Fixed effects:
+
+                                Estimate  2.5_ci  97.5_ci  ...  T-stat  P-val  Sig
+Intercept                         42.051  40.268   43.833  ...  46.329  0.000  ***
+C(IV3, Sum)[S.0.5]                 0.580  -1.942    3.102  ...   0.452  0.652
+C(IV3, Sum)[S.1.0]                 0.383  -2.136    2.903  ...   0.299  0.765
+center(IV2)                        0.746   0.685    0.807  ...  24.012  0.000  ***
+center(IV2):C(IV3, Sum)[S.0.5]     0.050  -0.037    0.137  ...   1.132  0.258
+center(IV2):C(IV3, Sum)[S.1.0]    -0.057  -0.144    0.029  ...  -1.306  0.192
+
+[6 rows x 8 columns]
+</pre></div>
+</div>
+<p>Please refer to the <a class="reference external" href="https://patsy.readthedocs.io/en/latest/categorical-coding.html">patsy documentation</a> for more details when working categorical predictors in <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> or <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models.</p>
+</section>
+</section>
+<section id="lmer-models">
+<h2>Lmer Models<a class="headerlink" href="#lmer-models" title="Permalink to this heading">¶</a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">Lmer()</span></code> models currently have support for handling categorical predictors in one of three ways based on how R’s <code class="code docutils literal notranslate"><span class="pre">factor()</span></code> works (see the note at the end of this tutorial):</p>
+<ul class="simple">
+<li><p>Dummy-coded factor levels (treatment contrasts) in which each model term is the difference between a factor level and a selected reference level</p></li>
+<li><p>Orthogonal polynomial contrasts in which each model term is a polynomial contrast across factor levels (e.g. linear, quadratic, cubic, etc)</p></li>
+<li><p>Custom contrasts for each level of a factor, which should be provided in the manner expected by R.</p></li>
+</ul>
+<p>To make re-parameterizing models easier, factor codings are passed as a dictionary to the <code class="code docutils literal notranslate"><span class="pre">factors</span></code> argument of a model’s <code class="code docutils literal notranslate"><span class="pre">.fit()</span></code>. This obviates the need for adjusting data-frame properties as in R. Note that this is <strong>different</strong> from <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> and <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> models above which expect factor codings in their formulae (because patsy does).</p>
+<p>Each of these ways also enables you to easily compute post-hoc comparisons between factor levels, as well as interactions between continuous predictors and each factor level. See tutorial 3 for more on post-hoc tests.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lmer</span>
+
+<span class="c1"># We&#39;re going to fit a multi-level logistic regression using the</span>
+<span class="c1"># dichotomous DV_l variable and the same categorical predictor (IV3)</span>
+<span class="c1"># as before</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lmer</span><span class="p">(</span><span class="s2">&quot;DV_l ~ IV3 + (IV3|Group)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="s2">&quot;binomial&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="dummy-coding-factors">
+<h3>Dummy-coding factors<a class="headerlink" href="#dummy-coding-factors" title="Permalink to this heading">¶</a></h3>
+<p>First we’ll use dummy-coding/treatment contrasts with 1.0 as the reference level. This will compute two coefficients: 0.5 &gt; 1.0 and 1.5 &gt; 1.0.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">factors</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;IV3&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="s2">&quot;0.5&quot;</span><span class="p">,</span> <span class="s2">&quot;1.5&quot;</span><span class="p">]}))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+Linear mixed model fit by maximum likelihood  [&#39;lmerMod&#39;]
+Formula: DV_l~IV3+(IV3|Group)
+
+Family: binomial         Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47.0}
+
+Log-likelihood: -389.003         AIC: 796.006
+
+Random effects:
+
+              Name    Var    Std
+Group  (Intercept)  0.022  0.148
+Group       IV30.5  0.060  0.246
+Group       IV31.5  0.038  0.196
+
+               IV1     IV2  Corr
+Group  (Intercept)  IV30.5  -1.0
+Group  (Intercept)  IV31.5  -1.0
+Group       IV30.5  IV31.5   1.0
+
+Fixed effects:
+
+             Estimate  2.5_ci  97.5_ci     SE  ...  Prob_97.5_ci  Z-stat  P-val  Sig
+(Intercept)    -0.129  -0.419    0.162  0.148  ...         0.540  -0.867  0.386
+IV31            0.129  -0.283    0.540  0.210  ...         0.632   0.612  0.541
+IV32           -0.128  -0.539    0.283  0.210  ...         0.570  -0.612  0.541
+
+[3 rows x 13 columns]
+</pre></div>
+</div>
+</section>
+<section id="polynomial-contrast-coding">
+<h3>Polynomial contrast coding<a class="headerlink" href="#polynomial-contrast-coding" title="Permalink to this heading">¶</a></h3>
+<p>Second we’ll use orthogonal polynomial contrasts. This is accomplished using the <code class="code docutils literal notranslate"><span class="pre">ordered=True</span></code> argument and specifying the order of the <em>linear</em> contrast in increasing order. R will automatically compute higher order polynomial contrats that are orthogonal to this linear contrast. In this example, since there are 3 factor levels this will result in two polynomial terms: a linear contrast we specify below corresponding to 0.5 &lt; 1.0 &lt; 1.5 and an orthogonal quadratic contrast automatically determined by R, corresponding to 0.5 &gt; 1 &lt; 1.5</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">factors</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;IV3&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;0.5&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.5&quot;</span><span class="p">]},</span> <span class="n">ordered</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+Linear mixed model fit by maximum likelihood  [&#39;lmerMod&#39;]
+Formula: DV_l~IV3+(IV3|Group)
+
+Family: binomial         Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47.0}
+
+Log-likelihood: -389.003         AIC: 796.006
+
+Random effects:
+
+              Name    Var    Std
+Group  (Intercept)  0.010  0.098
+Group       IV31.0  0.060  0.246
+Group       IV31.5  0.003  0.050
+
+               IV1     IV2  Corr
+Group  (Intercept)  IV31.0  -1.0
+Group  (Intercept)  IV31.5  -1.0
+Group       IV31.0  IV31.5   1.0
+
+Fixed effects:
+
+             Estimate  2.5_ci  97.5_ci     SE  ...  Prob_97.5_ci  Z-stat  P-val  Sig
+(Intercept)    -0.128  -0.294    0.037  0.085  ...         0.509  -1.518  0.129
+IV31           -0.182  -0.469    0.106  0.147  ...         0.526  -1.238  0.216
+IV32            0.000  -0.292    0.292  0.149  ...         0.572   0.001  1.000
+
+[3 rows x 13 columns]
+</pre></div>
+</div>
+</section>
+<section id="custom-contrasts">
+<h3>Custom contrasts<a class="headerlink" href="#custom-contrasts" title="Permalink to this heading">¶</a></h3>
+<p><code class="code docutils literal notranslate"><span class="pre">Lmer</span></code> models can also take custom factor contrasts based on how they are expected by R (see the note at the end of this tutorial for how contrasts work in R). Remember that there can be at most k-1 model terms representing any k level factor without over-parameterizing a model. If you specify a custom contrast, R will generate set of orthogonal contrasts for the rest of your model terms.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compare level &#39;1.0&#39; to the mean of levels &#39;0.5&#39; and &#39;1.5&#39;</span>
+<span class="c1"># and let R determine the second contrast orthogonal to it</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">factors</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;IV3&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;1.0&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;0.5&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;1.5&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">}}))</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+Linear mixed model fit by maximum likelihood  [&#39;lmerMod&#39;]
+Formula: DV_l~IV3+(IV3|Group)
+
+Family: binomial         Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47.0}
+
+Log-likelihood: -389.003         AIC: 796.006
+
+Random effects:
+
+              Name    Var    Std
+Group  (Intercept)  0.022  0.148
+Group       IV30.5  0.060  0.246
+Group       IV31.5  0.038  0.196
+
+               IV1     IV2  Corr
+Group  (Intercept)  IV30.5  -1.0
+Group  (Intercept)  IV31.5  -1.0
+Group       IV30.5  IV31.5   1.0
+
+Fixed effects:
+
+             Estimate  2.5_ci  97.5_ci     SE  ...  Prob_97.5_ci  Z-stat  P-val  Sig
+(Intercept)    -0.128  -0.294    0.037  0.085  ...         0.509  -1.518  0.129
+IV31           -0.000  -0.358    0.357  0.182  ...         0.588  -0.001  1.000
+IV32           -0.182  -0.469    0.106  0.147  ...         0.526  -1.238  0.216
+
+[3 rows x 13 columns]
+</pre></div>
+</div>
+</section>
+<section id="user-created-contrasts-without-r">
+<h3>User-created contrasts (without R)<a class="headerlink" href="#user-created-contrasts-without-r" title="Permalink to this heading">¶</a></h3>
+<p>Another option available to you is fitting a model with <em>only</em> your desired contrast(s) rather than a full set of k-1 contrasts. Contrary to how statistics is usually taught, you don’t ever <em>have to</em> include a full set of k-1 contrasts for a k level factor! The upside to doing this is that you won’t need to rely on R to compute anything for you (aside from the model fit), and you will have a model with exactly the number of terms as contrasts you desire, giving you complete control. The downside is that post-hoc tests will no longer be available (see tutorial 3 for more information on post-hoc tests), but it’s unlikely you’re doing post-hoc tests if you are computing a subset of specific contrasts anyway. This is also a useful approach if you don’t want to use patsy’s formula syntax with <code class="code docutils literal notranslate"><span class="pre">Lm</span></code> and <code class="code docutils literal notranslate"><span class="pre">Lm2</span></code> as noted above.</p>
+<p>This can be accomplished by creating new columns in your dataframe to test specific hypotheses and is trivial to do with pandas <a class="reference external" href="https://pandas.pydata.org/pandas-docs/version/0.25/reference/api/pandas.Series.map.html/">map</a> and <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.assign.html/">assign</a> methods. For example, here we manually compute a linear contrast by creating a new column in our dataframe and treating it as a continuous variable.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a new column in the dataframe with a custom (linear) contrast</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">IV3_custom_lin</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;IV3&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="mf">0.5</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">:</span> <span class="mi">1</span><span class="p">}))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>   Group   IV1  DV_l         DV       IV2  IV3  IV3_custom_lin
+0      1  20.0     0   7.936508  4.563492  0.5              -1
+1      1  20.0     0  15.277778  0.000000  1.0               0
+2      1  20.0     1   0.000000  0.000000  1.5               1
+3      1  20.0     1   9.523810  0.000000  0.5              -1
+4      1  12.5     0   0.000000  0.000000  1.0               0
+</pre></div>
+</div>
+<p>Now we can use this variable as a continuous predictor without the need for the <code class="code docutils literal notranslate"><span class="pre">factors</span></code> argument. Notice how the z-stat and p-value of the estimate are the same as the linear polynomial contrast estimated above. The coefficients differ in scale only because R uses [~-0.707, ~0, ~0.707] for its polynomial contrasts rather than [-1, 0, 1] like we did.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Estimate model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Lmer</span><span class="p">(</span>
+    <span class="s2">&quot;DV_l ~ IV3_custom_lin + (IV3_custom_lin|Group)&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="s2">&quot;binomial&quot;</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>boundary (singular) fit: see help(&#39;isSingular&#39;)
+
+Linear mixed model fit by maximum likelihood  [&#39;lmerMod&#39;]
+Formula: DV_l~IV3_custom_lin+(IV3_custom_lin|Group)
+
+Family: binomial         Inference: parametric
+
+Number of observations: 564      Groups: {&#39;Group&#39;: 47.0}
+
+Log-likelihood: -389.016         AIC: 788.031
+
+Random effects:
+
+                 Name  Var  Std
+Group     (Intercept)  0.0  0.0
+Group  IV3_custom_lin  0.0  0.0
+
+               IV1             IV2 Corr
+Group  (Intercept)  IV3_custom_lin
+
+Fixed effects:
+
+                Estimate  2.5_ci  97.5_ci  ...  Z-stat  P-val  Sig
+(Intercept)       -0.128  -0.294    0.037  ...  -1.517  0.129
+IV3_custom_lin    -0.128  -0.331    0.075  ...  -1.239  0.215
+
+[2 rows x 13 columns]
+</pre></div>
+</div>
+</section>
+</section>
+<section id="a-note-on-how-contrasts-in-r-work">
+<h2>A note on how contrasts in R work<a class="headerlink" href="#a-note-on-how-contrasts-in-r-work" title="Permalink to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is just for folks curious about how contrasts in R work</p>
+</div>
+<p>Specifying multiple custom contrasts in R has always been a point of confusion amongst users. This because the <code class="code docutils literal notranslate"><span class="pre">contrasts()</span></code> command in R doesn’t actually expect contrast weights (i.e. a design matrix) as one would intuit. Rather, it is made for generating contrast coding schemes which are the inverse of the contrast weight matrix. For a longer explanation with examples see <a class="reference external" href="https://rstudio-pubs-static.s3.amazonaws.com/65059_586f394d8eb84f84b1baaf56ffb6b47f.html">this reference</a> and <a class="reference external" href="https://github.com/ejolly/R/blob/master/Guides/Contrasts_in_R.md">this reference</a>. For these situations pymer4 offers a few utility functions to convert between these matrix types if desired in <code class="code docutils literal notranslate"><span class="pre">pymer4.utils</span></code>: <code class="code docutils literal notranslate"><span class="pre">R2con()</span></code> and <code class="code docutils literal notranslate"><span class="pre">con2R()</span></code>.</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-example-02-categorical-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/97b050c97268dd6fe761b7ee74f57e1d/example_02_categorical.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">example_02_categorical.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/db00e21c01b8b58ae466b1e9ff23265b/example_02_categorical.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">example_02_categorical.py</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

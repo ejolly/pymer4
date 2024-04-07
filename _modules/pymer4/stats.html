@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pymer4.stats &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../../auto_examples/index.html">Tutorial</a></li>
+                <li><a href="../../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pymer4.stats</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;User-facing statistics functions and tests.&quot;&quot;&quot;</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;discrete_inverse_logit&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cohens_d&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;perm_test&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;boot_func&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tost_equivalence&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;welch_dof&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;vif&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;correct_pvals&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">expit</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">pearsonr</span><span class="p">,</span> <span class="n">spearmanr</span><span class="p">,</span> <span class="n">ttest_ind</span><span class="p">,</span> <span class="n">ttest_rel</span><span class="p">,</span> <span class="n">ttest_1samp</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">pymer4.models</span> <span class="kn">import</span> <span class="n">Lmer</span>
+
+<span class="kn">from</span> <span class="nn">pymer4.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_check_random_state</span><span class="p">,</span>
+    <span class="n">_welch_ingredients</span><span class="p">,</span>
+    <span class="n">_mean_diff</span><span class="p">,</span>
+    <span class="n">_get_params</span><span class="p">,</span>
+    <span class="n">_lrt</span><span class="p">,</span>
+    <span class="n">_sig_stars</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+
+<span class="n">MAX_INT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
+
+
+<div class="viewcode-block" id="vif"><a class="viewcode-back" href="../../api.html#pymer4.stats.vif">[docs]</a><span class="k">def</span> <span class="nf">vif</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">has_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude_intercept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">check_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute variance inflation factor amongst columns of a dataframe to be used as a design matrix. Uses the same method as Matlab and R (diagonal elements) of the inverted correlation matrix. Prints a warning if any vifs are &gt;= to tol. If check_only is true it will only return a 1 if any vifs are higher than tol.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pandas.DataFrame): dataframe of design matrix output from patsy</span>
+<span class="sd">        has_intercept (bool): whether the first column of the dataframe is the intercept</span>
+<span class="sd">        exclude_intercept (bool): exclude intercept from computation and assumed intercept is the first column; default True</span>
+<span class="sd">        tol (float): tolerance check to print warning if any vifs exceed this value</span>
+<span class="sd">        check_only (bool): restrict return to a dictionary of vifs that exceed tol only rather than all; default False</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: dictionary with keys as column names and values as vifs</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;input needs to be a pandas dataframe&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">has_intercept</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">!=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;has_intercept is true, but first column does not appear to be a constant&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">exclude_intercept</span><span class="p">:</span>
+            <span class="n">corr_mat</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">corr_mat</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">vifs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">corr_mat</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">vifs</span> <span class="o">&gt;=</span> <span class="n">tol</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mask</span><span class="p">:</span>
+            <span class="n">high_vifs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">vifs</span><span class="p">[</span><span class="n">mask</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">high_vifs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">check_only</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">high_vifs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">high_vifs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">vifs</span><span class="p">))</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Cannot compute vifs! Design Matrix is strictly singular.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="discrete_inverse_logit"><a class="viewcode-back" href="../../api.html#pymer4.stats.discrete_inverse_logit">[docs]</a><span class="k">def</span> <span class="nf">discrete_inverse_logit</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply a discretized inverse logit transform to an array of values. Useful for converting normally distributed values to binomial classes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        arr (np.array): 1d numpy array</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.array: transformed values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">probabilities</span> <span class="o">=</span> <span class="n">expit</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">probabilities</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="cohens_d"><a class="viewcode-back" href="../../api.html#pymer4.stats.cohens_d">[docs]</a><span class="k">def</span> <span class="nf">cohens_d</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">paired</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute Cohen&#39;s d for one or two samples (paired or independent). For paired samples Cohen&#39;s Dz is computed (ref: https://bit.ly/2J54P61). If x and y are not the same size this will use the same pooled SD calculation in Welch&#39;s ttest to account for unequal variances. Unequal variance calculation will almost always produce a *smaller* estimate than the standard formula, except as the variance of the group with fewer observations increases. In that case, this estimate can be *larger* than the standard formula. This can be turned off with the equal_var=True argument. Percentile boot-strapped confidence intervals can also be returned</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (list-like): array or list of observations from first group</span>
+<span class="sd">        y (list-like): array or list of observations from second group or second set of observations from the same group; optional</span>
+<span class="sd">        paired (bool): whether to treat x any y (if provided) as paired or independent</span>
+<span class="sd">        n_boot (int): number of bootstrap samples to run; set to 0 to skip computing</span>
+<span class="sd">        equal_var (bool): should we pool standard deviation as in Welch&#39;s t-test</span>
+<span class="sd">        value (float): a value to see if the effect size is bigger than; `eff size - value` will be computed; default 0</span>
+<span class="sd">        n_jobs (int): number of parallel cores to use for bootstraping; default 1</span>
+<span class="sd">        seed (int or None): numerical seed for reproducibility of bootstrapping</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Multiple:</span>
+
+<span class="sd">            - **effect_size** (*float*): cohen&#39;s d</span>
+
+<span class="sd">            - **ci** (*np.array*): lower and upper bounds of 95% bootstrapped confidence intervals; optional</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">eff</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+            <span class="c1"># Cohen&#39;s Dz</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;with paired=True, both and x and y must be provided and must have the same number of observations&quot;</span>
+                <span class="p">)</span>
+            <span class="n">numerator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">-</span> <span class="n">value</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">y</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">eff</span> <span class="o">=</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Cohen&#39;s D</span>
+            <span class="n">m1</span><span class="p">,</span> <span class="n">s1</span><span class="p">,</span> <span class="n">ss1</span><span class="p">,</span> <span class="n">m2</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="n">ss2</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+                <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                <span class="n">y</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">equal_var</span><span class="p">:</span>
+                <span class="n">pooled_sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pooled_sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+                    <span class="p">(((</span><span class="n">ss1</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">s1</span> <span class="o">+</span> <span class="p">((</span><span class="n">ss2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">s2</span><span class="p">)))</span> <span class="o">/</span> <span class="p">(</span><span class="n">ss1</span> <span class="o">+</span> <span class="n">ss2</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="n">numerator</span> <span class="o">=</span> <span class="n">m1</span> <span class="o">-</span> <span class="n">m2</span> <span class="o">-</span> <span class="n">value</span>
+            <span class="n">eff</span> <span class="o">=</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">pooled_sd</span>
+
+    <span class="k">if</span> <span class="n">n_boot</span><span class="p">:</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">seeds</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">MAX_INT</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_boot</span><span class="p">)</span>
+        <span class="n">par_for</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;multiprocessing&quot;</span><span class="p">)</span>
+        <span class="n">boots</span> <span class="o">=</span> <span class="n">par_for</span><span class="p">(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">_cohens_d</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">paired</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_boot</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">ci_u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">ci_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">eff</span><span class="p">,</span> <span class="p">(</span><span class="n">ci_l</span><span class="p">,</span> <span class="n">ci_u</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">eff</span></div>
+
+
+<span class="k">def</span> <span class="nf">_cohens_d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">paired</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">random_state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;For use in parallel cohens_d&quot;&quot;&quot;</span>
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cohens_d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="perm_test"><a class="viewcode-back" href="../../api.html#pymer4.stats.perm_test">[docs]</a><span class="k">def</span> <span class="nf">perm_test</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;tstat&quot;</span><span class="p">,</span>
+    <span class="n">n_perm</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">equal_var</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">tails</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">return_dist</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    General purpose permutation test between two samples. Can handle a wide varierty of permutation tests including ttest, paired ttest, mean diff test, cohens d, pearson r, spearman r.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (list-like): array or list of observations from first group</span>
+<span class="sd">        y (list-like): array or list of observations from second group</span>
+<span class="sd">        stat (string): one of [&#39;tstat&#39;, &#39;tstat-paired&#39;, &#39;mean&#39;, &#39;cohensd&#39;, &#39;pearsonr&#39;, &#39;spearmanr&#39;]; &#39;mean&#39; will just compute permutations on the difference between the mean of x and mean of y. Useful if statistics are precomputed (e.g. x and y contain correlation values, or t-stats).</span>
+<span class="sd">        n_perm (int): number of permutations; set to 0 to return parametric results</span>
+<span class="sd">        equal_var (bool): should assume equal variances for tstat and cohensd</span>
+<span class="sd">        tails (int): perform one or two-tailed p-value computations; default 2</span>
+<span class="sd">        return_dists (bool): return permutation distribution</span>
+<span class="sd">        n_jobs (int): number of parallel cores to use for bootstraping; default 1</span>
+<span class="sd">        seed (int): for reproducing results</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Multiple:</span>
+
+<span class="sd">            - **original_stat** (*float*): the original statistic</span>
+
+<span class="sd">            - **perm_p_val** (*float*): the permuted p-value</span>
+
+<span class="sd">            - **perm_dist** (*np.array*): array of permuted statistic; optional</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)))</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">stat</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pearsonr&quot;</span><span class="p">,</span> <span class="s2">&quot;spearmanr&quot;</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;y must be provided for &#39;pearsonr&#39; or &#39;spearmanr&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;tstat&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">ttest_ind</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="n">equal_var</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">ttest_1samp</span><span class="p">)</span>
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;tstat-paired&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">ttest_rel</span>
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;x and y must be the same length&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+
+        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+                    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">-</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                        <span class="s2">&quot;One-sample mean test with a scalar y is not currently supported&quot;</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;cohensd&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">cohens_d</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="n">equal_var</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;pearsonr&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">pearsonr</span>
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;x and y must be the same length&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;spearmanr&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">spearmanr</span>
+        <span class="n">multi_return</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;x and y must be the same length&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;stat must be in [&#39;tstat&#39;, &#39;tstat-paired&#39;, &#39;mean&#39;, &#39;cohensd&#39;, &#39;pearsonr&#39;, &#39;spearmanr&#39;]&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Get original statistic</span>
+    <span class="n">original_stat</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">multi_return</span><span class="p">:</span>
+        <span class="n">original_stat</span> <span class="o">=</span> <span class="n">original_stat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Permute</span>
+    <span class="k">if</span> <span class="n">n_perm</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">seeds</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">MAX_INT</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_perm</span><span class="p">)</span>
+        <span class="n">par_for</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;multiprocessing&quot;</span><span class="p">)</span>
+        <span class="n">perms</span> <span class="o">=</span> <span class="n">par_for</span><span class="p">(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">_perm_test</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_perm</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">multi_return</span><span class="p">:</span>
+            <span class="n">perms</span> <span class="o">=</span> <span class="p">[</span><span class="n">elem</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">perms</span><span class="p">]</span>
+
+        <span class="n">denom</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">perms</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">tails</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">numer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">perms</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">original_stat</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">tails</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">original_stat</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">numer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">perms</span> <span class="o">&gt;=</span> <span class="n">original_stat</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">numer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">perms</span> <span class="o">&lt;=</span> <span class="n">original_stat</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;tails must be 1 or 2&quot;</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">numer</span> <span class="o">/</span> <span class="n">denom</span>
+        <span class="k">if</span> <span class="n">return_dist</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">original_stat</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">perms</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">original_stat</span><span class="p">,</span> <span class="n">p</span></div>
+
+
+<span class="k">def</span> <span class="nf">_perm_test</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">,</span> <span class="n">random_state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;For use in parallel perm_test&quot;&quot;&quot;</span>
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stat</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pearsonr&quot;</span><span class="p">,</span> <span class="s2">&quot;spearmanr&quot;</span><span class="p">]:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">stat</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;tstat&quot;</span><span class="p">,</span> <span class="s2">&quot;cohensd&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="n">x</span> <span class="o">-=</span> <span class="n">y</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shuffled_combined</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]))</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffled_combined</span><span class="p">[:</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">],</span> <span class="n">shuffled_combined</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="p">:]</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">stat</span> <span class="o">==</span> <span class="s2">&quot;tstat-paired&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">perm_test</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="n">equal_var</span><span class="p">,</span> <span class="n">n_perm</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="boot_func"><a class="viewcode-back" href="../../api.html#pymer4.stats.boot_func">[docs]</a><span class="k">def</span> <span class="nf">boot_func</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">func_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">paired</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Bootstrap an arbitrary function by resampling from x and y independently or jointly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (list-like): list of values for first group</span>
+<span class="sd">        y (list-like): list of values for second group; optional</span>
+<span class="sd">        function (callable): function that accepts x or y</span>
+<span class="sd">        paired (bool): whether to resample x and y jointly or independently</span>
+<span class="sd">        n_boot (int): number of bootstrap iterations</span>
+<span class="sd">        n_jobs (int): number of parallel cores; default 1</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Multiple:</span>
+
+<span class="sd">            - **original_stat** (*float*): function result with given data</span>
+
+<span class="sd">            - **ci** (*np.array*): lower and upper bounds of 95% confidence intervals</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;func must be a valid callable function&quot;</span><span class="p">)</span>
+
+    <span class="n">orig_result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">func_args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_boot</span><span class="p">:</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">seeds</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">MAX_INT</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_boot</span><span class="p">)</span>
+        <span class="n">par_for</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;multiprocessing&quot;</span><span class="p">)</span>
+        <span class="n">boots</span> <span class="o">=</span> <span class="n">par_for</span><span class="p">(</span>
+            <span class="n">delayed</span><span class="p">(</span><span class="n">_boot_func</span><span class="p">)(</span>
+                <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">func_args</span><span class="p">,</span> <span class="n">paired</span><span class="p">,</span> <span class="o">**</span><span class="n">func_args</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">seeds</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_boot</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">ci_u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">ci_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">boots</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">orig_result</span><span class="p">,</span> <span class="p">(</span><span class="n">ci_l</span><span class="p">,</span> <span class="n">ci_u</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">orig_result</span></div>
+
+
+<span class="k">def</span> <span class="nf">_boot_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">func_args</span><span class="p">,</span> <span class="n">paired</span><span class="p">,</span> <span class="n">random_state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;For use in parallel boot_func&quot;&quot;&quot;</span>
+    <span class="n">random_state</span> <span class="o">=</span> <span class="n">_check_random_state</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">paired</span><span class="p">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">random_state</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">boot_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">func_args</span><span class="p">,</span> <span class="n">paired</span><span class="o">=</span><span class="n">paired</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="tost_equivalence"><a class="viewcode-back" href="../../api.html#pymer4.stats.tost_equivalence">[docs]</a><span class="k">def</span> <span class="nf">tost_equivalence</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">,</span>
+    <span class="n">lower</span><span class="p">,</span>
+    <span class="n">upper</span><span class="p">,</span>
+    <span class="n">paired</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">equal_var</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">n_perm</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">n_boot</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+    <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to perform equivalence testing using TOST: two-one-sided-tests (Lakens et al, 2018). This works by defining a lower and upper bound of an &quot;equivalence&quot; range for the mean difference between x and y. This is a user-defined range that one might not feel is a particularly meangingful mean difference; conceptually similar to the Bayesian &quot;region of practical equivalence (rope).&quot; Specifically this uses, two one-sided t-tests against and lower and upper seperately to find out whether lower &lt; mean diff &lt; higher. n_perm only controls the permutation for the original two-sided test.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (list-like): array or list of observations from first group</span>
+<span class="sd">        y (list-like): array or list of observations from second group</span>
+<span class="sd">        lower (float): lower bound of equivalence region</span>
+<span class="sd">        upper (float): upper bound of equivalence region</span>
+<span class="sd">        equal_var (bool): should assume equal variances for t-stat and effect size calcs</span>
+<span class="sd">        n_perm (int): number of times to permute groups; set to 0 to turn off</span>
+<span class="sd">        n_boot (int): number of bootstrap samples for confidence intervals</span>
+<span class="sd">        plot (bool): return an equivalence plot depicting where the mean difference and 95% CIs fall relative to the equivalence range</span>
+<span class="sd">        return_dists (bool): optionally return the permuted distributions</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: a dictionary of TOST results</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">t</span> <span class="k">as</span> <span class="n">t_dist</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+    <span class="k">def</span> <span class="nf">_calc_stats</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">):</span>
+        <span class="n">n1</span><span class="p">,</span> <span class="n">m1</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">m2</span><span class="p">,</span> <span class="n">v2</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">numerator</span> <span class="o">=</span> <span class="n">m1</span> <span class="o">-</span> <span class="n">m2</span> <span class="o">-</span> <span class="n">val</span>
+        <span class="k">if</span> <span class="n">equal_var</span><span class="p">:</span>
+            <span class="c1"># From scipy</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">+</span> <span class="n">n2</span> <span class="o">-</span> <span class="mf">2.0</span>
+            <span class="n">svar</span> <span class="o">=</span> <span class="p">((</span><span class="n">n1</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v1</span> <span class="o">+</span> <span class="p">(</span><span class="n">n2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v2</span><span class="p">)</span> <span class="o">/</span> <span class="n">df</span>
+            <span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">svar</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n1</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">n2</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">vn1</span> <span class="o">=</span> <span class="n">v1</span> <span class="o">/</span> <span class="n">n1</span>
+            <span class="n">vn2</span> <span class="o">=</span> <span class="n">v2</span> <span class="o">/</span> <span class="n">n2</span>
+            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">):</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="p">(</span><span class="n">vn1</span> <span class="o">+</span> <span class="n">vn2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">vn1</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">n1</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">vn2</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">n2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vn1</span> <span class="o">+</span> <span class="n">vn2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denom</span><span class="p">,</span> <span class="n">df</span>
+
+    <span class="c1"># Just get df calculation from sub-function</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">_calc_stats</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">)</span>
+    <span class="n">tstat_orig</span><span class="p">,</span> <span class="n">pval_orig</span> <span class="o">=</span> <span class="n">perm_test</span><span class="p">(</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;tstat&quot;</span><span class="p">,</span> <span class="n">n_perm</span><span class="o">=</span><span class="n">n_perm</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="n">equal_var</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span>
+    <span class="p">)</span>
+    <span class="n">tstat_lower</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">_calc_stats</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">)</span>
+    <span class="n">tstat_upper</span><span class="p">,</span> <span class="n">df</span> <span class="o">=</span> <span class="n">_calc_stats</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">equal_var</span><span class="p">)</span>
+    <span class="n">mdiff</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">-</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="c1"># Parametric assumptions for each one-sided test</span>
+    <span class="n">pval_lower</span> <span class="o">=</span> <span class="n">t_dist</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">tstat_lower</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+    <span class="n">pval_upper</span> <span class="o">=</span> <span class="n">t_dist</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">tstat_upper</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+
+    <span class="c1"># Attempted one-side permutation tests, but computing p-values is non-trivial due to how signs can flip based on the equivalence range and test statistic. Revisit at some point in the future.</span>
+    <span class="c1"># else:</span>
+    <span class="c1">#     perm_t_origs, perm_t_lowers, perm_t_uppers = [], [], []</span>
+    <span class="c1">#     for i in range(n_perm):</span>
+    <span class="c1">#         shuffled_combined = np.random.permutation(np.hstack([x, y]))</span>
+    <span class="c1">#         new_x, new_y = shuffled_combined[:</span>
+    <span class="c1">#                                          x.size], shuffled_combined[x.size:]</span>
+    <span class="c1">#         perm_t_orig, _ = _calc_stats(new_x, new_y, 0, equal_var)</span>
+    <span class="c1">#         perm_t_lower, _ = _calc_stats(new_x, new_y, upper, equal_var)</span>
+    <span class="c1">#         perm_t_upper, _ = _calc_stats(new_x, new_y, lower, equal_var)</span>
+    <span class="c1">#         perm_t_origs.append(perm_t_orig)</span>
+    <span class="c1">#         perm_t_lowers.append(perm_t_lower)</span>
+    <span class="c1">#         perm_t_uppers.append(perm_t_upper)</span>
+
+    <span class="c1">#     if lower &lt; mdiff &lt; upper:</span>
+    <span class="c1">#         # upper = orange line is right of orange dist</span>
+    <span class="c1">#         pval_upper = np.mean(tstat_upper &gt;= perm_t_upper)</span>
+    <span class="c1">#         # lower = blue line is left of blue dist</span>
+    <span class="c1">#         pval_lower = np.mean(tstat_lower &lt;= perm_t_lower)</span>
+    <span class="c1">#     else:</span>
+    <span class="c1">#         # upper = prob orange line, right of blue dist</span>
+    <span class="c1">#         pval_upper = np.mean(tstat_upper &gt;= perm_t_lower)</span>
+    <span class="c1">#         # lower = prob blue line, left of orange dist</span>
+    <span class="c1">#         pval_lower = np.mean(tstat_lower &lt;= perm_t_upper)</span>
+
+    <span class="c1">#     p_orig = np.mean(np.abs(perm_t_origs) &gt;= np.abs(tstat_orig))</span>
+    <span class="c1">#     res = []  # just to be consistent with above</span>
+    <span class="c1">#     res.append(tstat_orig)</span>
+    <span class="c1">#     res.append(p_orig)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;original&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="n">mdiff</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="n">tstat_orig</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pval_orig</span><span class="p">}</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;lower&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="n">lower</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="n">tstat_lower</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pval_lower</span><span class="p">}</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;upper&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="n">upper</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="n">tstat_upper</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pval_upper</span><span class="p">}</span>
+
+    <span class="c1"># Effect size bootstrapped</span>
+    <span class="n">d</span><span class="p">,</span> <span class="p">(</span><span class="n">dlb</span><span class="p">,</span> <span class="n">dub</span><span class="p">)</span> <span class="o">=</span> <span class="n">cohens_d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="n">n_boot</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="n">equal_var</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;cohens_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">,</span> <span class="s2">&quot;CI_lb&quot;</span><span class="p">:</span> <span class="n">dlb</span><span class="p">,</span> <span class="s2">&quot;CI_ub&quot;</span><span class="p">:</span> <span class="n">dub</span><span class="p">}</span>
+
+    <span class="c1"># Some results text for interpretation</span>
+    <span class="k">if</span> <span class="n">pval_lower</span> <span class="o">&lt;</span> <span class="mf">0.05</span> <span class="ow">and</span> <span class="n">pval_upper</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;In_Equivalence_Range&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;In_Equivalence_Range&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">pval_orig</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;Means_Are_Different&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;Means_Are_Different&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+        <span class="c1"># Get mean diff</span>
+        <span class="n">m</span><span class="p">,</span> <span class="p">(</span><span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span> <span class="o">=</span> <span class="n">boot_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">_mean_diff</span><span class="p">,</span> <span class="n">n_boot</span><span class="o">=</span><span class="n">n_boot</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;o&quot;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">hlines</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">ub</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">hlines</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="n">lb</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">lower</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">upper</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">vlines</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">min_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">lb</span><span class="p">,</span> <span class="n">lower</span><span class="p">])</span>
+        <span class="n">min_plot</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">min_plot</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">max_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">ub</span><span class="p">,</span> <span class="n">upper</span><span class="p">])</span>
+        <span class="n">max_plot</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">max_plot</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="n">min_plot</span><span class="p">,</span> <span class="n">max_plot</span><span class="p">),</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Mean Difference&quot;</span><span class="p">,</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="mi">1</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;Equivalence bounds: [</span><span class="si">{</span><span class="n">lower</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">upper</span><span class="si">}</span><span class="s2">]</span><span class="se">\n</span><span class="s2">Mean diff: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2"> [</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">lb</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">ub</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">,</span>
+            <span class="n">horizontalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+            <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="welch_dof"><a class="viewcode-back" href="../../api.html#pymer4.stats.welch_dof">[docs]</a><span class="k">def</span> <span class="nf">welch_dof</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute adjusted dof via Welch-Satterthwaite equation</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (np.ndarray): 1d numpy array</span>
+<span class="sd">        y (np.ndarray): 1d numpy array</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: degrees of freedom</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+
+        <span class="n">x_numerator</span><span class="p">,</span> <span class="n">x_denominator</span> <span class="o">=</span> <span class="n">_welch_ingredients</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">y_numerator</span><span class="p">,</span> <span class="n">y_denominator</span> <span class="o">=</span> <span class="n">_welch_ingredients</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">x_numerator</span> <span class="o">+</span> <span class="n">y_numerator</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x_denominator</span> <span class="o">+</span> <span class="n">y_denominator</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Both x and y must be 1d numpy arrays&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="lrt"><a class="viewcode-back" href="../../api.html#pymer4.stats.lrt">[docs]</a><span class="k">def</span> <span class="nf">lrt</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">refit</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute a likelihood ratio test between two Lmer models. This produces identical results to R&#39;s anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.</span>
+<span class="sd">    #     Possible additions:</span>
+<span class="sd">    #     1) Generalize function to perform LRT, or vuong test</span>
+<span class="sd">    #     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction</span>
+<span class="sd">    #     3) Given a single model expand out to all separate term tests</span>
+<span class="sd">       Args:</span>
+<span class="sd">           models (list): a list of two Lmer models to be compared</span>
+<span class="sd">           refit (bool): should REML models be refitted as ML before comparison (defaults to True)</span>
+
+<span class="sd">       Returns:</span>
+<span class="sd">           df (pandas.DataFrame): dataframe of the anova results</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">models_list</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">models_list</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">models_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">models_list</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">models_list</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must have 2 models to perform comparison&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">Lmer</span><span class="p">),</span> <span class="n">models_list</span><span class="p">))):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;All models are not Lmer&quot;</span><span class="p">)</span>
+
+    <span class="c1"># refit models if needed</span>
+    <span class="n">refitted</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">refit</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">models_list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">_REML</span><span class="p">:</span>
+                <span class="n">refitted</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">m</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">REML</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">summarize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">models_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span>
+
+    <span class="c1"># Get number of coefs for each model</span>
+    <span class="n">all_params</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">models_list</span><span class="p">:</span>
+        <span class="n">all_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_get_params</span><span class="p">(</span><span class="n">m</span><span class="p">))</span>
+    <span class="n">all_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_params</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">all_params</span><span class="p">)</span>
+    <span class="n">all_params</span> <span class="o">=</span> <span class="n">all_params</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">models_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">models_list</span><span class="p">)[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">models_list</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">_get_params</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">_get_params</span><span class="p">(</span><span class="n">models_list</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]))</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">chisq</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">((</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">models_list</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">logLike</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">m</span><span class="o">.</span><span class="n">logLike</span><span class="p">))</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="p">)</span>
+        <span class="n">pval</span> <span class="o">=</span> <span class="n">_lrt</span><span class="p">([</span><span class="n">models_list</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]])</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">out</span><span class="p">,</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">formula</span><span class="p">,</span>
+                        <span class="s2">&quot;npar&quot;</span><span class="p">:</span> <span class="n">_get_params</span><span class="p">(</span><span class="n">m</span><span class="p">),</span>
+                        <span class="s2">&quot;AIC&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">AIC</span><span class="p">,</span>
+                        <span class="s2">&quot;BIC&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">BIC</span><span class="p">,</span>
+                        <span class="s2">&quot;deviance&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">m</span><span class="o">.</span><span class="n">logLike</span><span class="p">,</span>
+                        <span class="s2">&quot;log-likelihood&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">logLike</span><span class="p">,</span>
+                        <span class="s2">&quot;Chisq&quot;</span><span class="p">:</span> <span class="n">chisq</span><span class="p">,</span>
+                        <span class="s2">&quot;Df&quot;</span><span class="p">:</span> <span class="n">df</span><span class="p">,</span>
+                        <span class="s2">&quot;P-val&quot;</span><span class="p">:</span> <span class="n">pval</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;Sig&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;P-val&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_sig_stars</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;npar&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;AIC&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;BIC&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;log-likelihood&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;deviance&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Chisq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Df&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;P-val&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sig&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">refitted</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;refitting model(s) with ML (instead of REML)&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="rsquared"><a class="viewcode-back" href="../../api.html#pymer4.stats.rsquared">[docs]</a><span class="k">def</span> <span class="nf">rsquared</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">has_constant</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the R^2, coefficient of determination. This statistic is a ratio of &quot;explained variance&quot; to &quot;total variance&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        y (np.ndarray): 1d array of dependent variable</span>
+<span class="sd">        res (np.ndarray): 1d array of residuals</span>
+<span class="sd">        has_constant (bool): whether the fitted model included a constant (intercept)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: coefficient of determination</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">y_mean</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">rss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">res</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">has_constant</span><span class="p">:</span>
+        <span class="n">tss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">y</span> <span class="o">-</span> <span class="n">y_mean</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">rss</span> <span class="o">/</span> <span class="n">tss</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="rsquared_adj"><a class="viewcode-back" href="../../api.html#pymer4.stats.rsquared_adj">[docs]</a><span class="k">def</span> <span class="nf">rsquared_adj</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">nobs</span><span class="p">,</span> <span class="n">df_res</span><span class="p">,</span> <span class="n">has_constant</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the adjusted R^2, coefficient of determination.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        r (float): rsquared value</span>
+<span class="sd">        nobs (int): number of observations the model was fit on</span>
+<span class="sd">        df_res (int): degrees of freedom of the residuals (nobs - number of model params)</span>
+<span class="sd">        has_constant (bool): whether the fitted model included a constant (intercept)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: adjusted coefficient of determination</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Skip calculation if Dof is not a positive number to avoid 0 division error or calculating negative R^2 values</span>
+    <span class="k">if</span> <span class="n">df_res</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">if</span> <span class="n">has_constant</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="p">(</span><span class="n">nobs</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">df_res</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">nobs</span> <span class="o">/</span> <span class="n">df_res</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="correct_pvals"><a class="viewcode-back" href="../../api.html#pymer4.stats.correct_pvals">[docs]</a><span class="k">def</span> <span class="nf">correct_pvals</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;holm&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provided a list of p-values return a corrected list according to specified method.</span>
+<span class="sd">    You can use this list to then compare against a chosen alpha (e.g. .05). Closely</span>
+<span class="sd">    follows the implementats in statsmodels.stats.multitest.multipletests</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ps (list/np.ndarray): list of p-values</span>
+<span class="sd">        method (str, optional): correction method. Default to &#39;holm&#39; for holm-bonferroni</span>
+<span class="sd">        step-down procedure</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: adjusted p-values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;holm-bonf&quot;</span><span class="p">:</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;holm&quot;</span>
+    <span class="n">supported_methods</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;holm&quot;</span><span class="p">,</span> <span class="s2">&quot;bonf&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_methods</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;method must be one of </span><span class="si">{</span><span class="n">supported_methods</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">pvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ps</span><span class="p">)</span>
+
+    <span class="c1"># pval * number of tests</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;bonf&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pvals</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pvals</span><span class="p">))</span>
+
+    <span class="c1"># sorted pval * cumulative number of tests</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;holm&quot;</span><span class="p">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">pvals</span><span class="p">)</span>
+        <span class="n">idx_r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="n">sorted_pvals</span> <span class="o">=</span> <span class="n">pvals</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">corrected</span> <span class="o">=</span> <span class="n">sorted_pvals</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sorted_pvals</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Set maximum p-val as the same for all tests above it</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span><span class="n">corrected</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span><span class="p">[</span><span class="n">idx_r</span><span class="p">]</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pymer4.simulate &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../../auto_examples/index.html">Tutorial</a></li>
+                <li><a href="../../api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pymer4.simulate</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span> <span class="n">squareform</span>
+<span class="kn">from</span> <span class="nn">pymer4.utils</span> <span class="kn">import</span> <span class="n">isPSD</span><span class="p">,</span> <span class="n">nearestPSD</span>
+<span class="kn">from</span> <span class="nn">pymer4.stats</span> <span class="kn">import</span> <span class="n">discrete_inverse_logit</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;easy_multivariate_normal&quot;</span><span class="p">,</span> <span class="s2">&quot;simulate_lm&quot;</span><span class="p">,</span> <span class="s2">&quot;simulate_lmm&quot;</span><span class="p">]</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Eshin Jolly&quot;</span><span class="p">]</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;MIT&quot;</span>
+
+
+<div class="viewcode-block" id="simulate_lm"><a class="viewcode-back" href="../../api.html#pymer4.simulate.simulate_lm">[docs]</a><span class="k">def</span> <span class="nf">simulate_lm</span><span class="p">(</span>
+    <span class="n">num_obs</span><span class="p">,</span>
+    <span class="n">num_coef</span><span class="p">,</span>
+    <span class="n">coef_vals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">corrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mus</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">sigmas</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">noise_params</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">family</span><span class="o">=</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to quickly simulate a regression model dataset, with continuous predictors.</span>
+<span class="sd">    Provided a number of observations, number of coefficients, and optionally correlations between predictors, means, and standard deviations of predictors, returns a pandas dataframe with simulated data that can be used to estimate a linear regression using Lm(). Using the family=&#39;binomial&#39; argument can generate discrete dependent variable values for use with logistic regression.</span>
+
+<span class="sd">    Defaults to returning standard normal (mu = 0; sigma = 1) predictors with no explicit correlations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_obs (int): number of total observations, i.e. rows of data</span>
+<span class="sd">        num_coef (int): number of coefficients/regressors, i.e. columns of data</span>
+<span class="sd">        coef_vals (list,optional): &quot;true&quot; values of coefficients to generate data. If not provided will be randomly generated. Must include a coefficient for the intercept as well (i.e. mean of data)</span>
+<span class="sd">        corrs (ndarray,list,float): correlations between coefficients provided as 2d num_coef x num_coef, 1d flattend numpy array/list of length (num_features * (num_features-1)) / 2, or a float to be treated as the same correlation between all coefficients</span>
+<span class="sd">        mus (float/list/ndarray): means of columns of predictors</span>
+<span class="sd">        sigmas (float/list/ndarray): stds of columns of predictors</span>
+<span class="sd">        noise_params (tup, optional): mean and std of noise added to simulated data</span>
+<span class="sd">        family (str): distribution family for the dependent variable. Currently only &#39;gaussian&#39; (continuous DV) or &#39;binomial&#39; (discrete DV) are available.</span>
+<span class="sd">        seed (int): seed for reproducible random number generation</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Multiple:</span>
+
+<span class="sd">            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef</span>
+
+<span class="sd">            - **coefs** (*np.array*): ground-truth coefficient values</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">coef_vals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef_vals</span><span class="p">)</span> <span class="o">-</span> <span class="n">num_coef</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Missing one coefficient value. Did you provide a value for the intercept term?&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">coef_vals</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_coef</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="p">),</span> <span class="s2">&quot;Number of coefficient values should be num_coef + 1 (for intercept)&quot;</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="n">coef_vals</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">num_coef</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mus</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;mus must match number of num_coef&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigmas</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigmas</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sigmas must match number of num_coef&quot;</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">noise_params</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">noise_params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="p">),</span> <span class="s2">&quot;noise_params should be a tuple of (mean,std)&quot;</span>
+
+    <span class="c1"># Generate random design matrix</span>
+    <span class="k">if</span> <span class="n">corrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">easy_multivariate_normal</span><span class="p">(</span><span class="n">num_obs</span><span class="p">,</span> <span class="n">num_coef</span><span class="p">,</span> <span class="n">corrs</span><span class="p">,</span> <span class="n">mus</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_obs</span><span class="p">,</span> <span class="n">num_coef</span><span class="p">))</span>
+    <span class="c1"># Add intercept</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">num_obs</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">X</span><span class="p">])</span>
+    <span class="c1"># Generate data</span>
+    <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="o">*</span><span class="n">noise_params</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">num_obs</span><span class="p">)</span>
+    <span class="c1"># Apply transform if not linear model</span>
+    <span class="k">if</span> <span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;binomial&quot;</span><span class="p">:</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">discrete_inverse_logit</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span>
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]]),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DV&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;IV&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">elem</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)],</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dat</span><span class="p">,</span> <span class="n">b</span></div>
+
+
+<div class="viewcode-block" id="simulate_lmm"><a class="viewcode-back" href="../../api.html#pymer4.simulate.simulate_lmm">[docs]</a><span class="k">def</span> <span class="nf">simulate_lmm</span><span class="p">(</span>
+    <span class="n">num_obs</span><span class="p">,</span>
+    <span class="n">num_coef</span><span class="p">,</span>
+    <span class="n">num_grps</span><span class="p">,</span>
+    <span class="n">coef_vals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">corrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">grp_sigmas</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">mus</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">sigmas</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">noise_params</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">family</span><span class="o">=</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to quickly simulate a multi-level regression model dataset, with continuous predictors.</span>
+<span class="sd">    Provided a number of observations, number of coefficients, number of groups/clusters,</span>
+<span class="sd">    and optionally correlations between predictors, means, and standard deviations of predictors,</span>
+<span class="sd">    returns a pandas dataframe with simulated data that can be used to estimate a multi-level model using Lmer(). Using the family=&#39;binomial&#39; argument can generate discrete dependent variable values for use with logistic multi-level models.</span>
+
+<span class="sd">    Defaults to returning standard normal (mu = 0; sigma = 1) predictors with no explicit correlations and low variance between</span>
+<span class="sd">    groups (sigma = .25).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_obs (int): number of observations per cluster/stratum/group</span>
+<span class="sd">        num_coef (int): number of coefficients/regressors, i.e. columns of data</span>
+<span class="sd">        num_grps (int): number of cluster/stratums/groups</span>
+<span class="sd">        coef_vals (list,optional): &quot;true&quot; values of coefficients to generate data. If not provided will be randomly generated. Must include a coefficient for the intercept as well (i.e. mean of data)</span>
+<span class="sd">        corrs (ndarray,list,float): correlations between coefficients provided as 2d num_coef x num_coef, 1d flattend numpy array/list of length (num_features * (num_features-1)) / 2, or a float to be treated</span>
+<span class="sd">        as the same correlation between all coefficients</span>
+<span class="sd">        grp_sigmas (int or list): grp level std around population coefficient values; can be a single value in which case same std is applied around all coefficients or a list for different std; default .25</span>
+<span class="sd">        mus (float/list/ndarray): means of columns of predictors</span>
+<span class="sd">        sigmas (float/list/ndarray): stds of columns of predictors</span>
+<span class="sd">        noise_params (tup, optional): mean and std of noise added to each group&#39;s simulated data</span>
+<span class="sd">        family (str): distribution family for the dependent variable. Currently only &#39;gaussian&#39; (continuous DV) or &#39;binomial&#39; (discrete DV) are available.</span>
+<span class="sd">        seed (int): seed for reproducible random number generation</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Multiple:</span>
+
+<span class="sd">            - **data** (*pd.DataFrame*): dataframe organized as num_obs x num_coef</span>
+
+<span class="sd">            - **blups** (*pd.DataFrame*): ground-truth group/cluster level coefficients, organized as num_grps x num_coef (i.e. BLUPs)</span>
+
+<span class="sd">            - **coefs** (*np.array*): ground-truth population-level coefficients</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">coef_vals</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef_vals</span><span class="p">)</span> <span class="o">-</span> <span class="n">num_coef</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Missing one coefficient value. Did you provide a value for the intercept term?&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coef_vals</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_coef</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="n">coef_vals</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">num_coef</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">noise_params</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">noise_params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="p">),</span> <span class="s2">&quot;noise_params should be a tuple of (mean,std)&quot;</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">grp_sigmas</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grp_sigmas</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grp_sigmas</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+    <span class="p">),</span> <span class="s2">&quot;grp_sigmas should be scalar value or list&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grp_sigmas</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">grp_sigmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">grp_sigmas</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">num_coef</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">grp_sigmas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
+            <span class="n">b</span>
+        <span class="p">),</span> <span class="s2">&quot;The length of a list of grp_sigmas must match the num_coef plus intercept!&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mus</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;mus must match number of num_coef&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigmas</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigmas</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigmas</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;sigmas must match number of num_coef&quot;</span>
+
+    <span class="c1"># Generate group paramaters (BLUPs)</span>
+    <span class="n">blups</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">est</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">num_grps</span><span class="p">)</span> <span class="k">for</span> <span class="n">est</span><span class="p">,</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">grp_sigmas</span><span class="p">)]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="c1"># Generate data</span>
+    <span class="k">for</span> <span class="n">grp</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">blups</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="c1"># Create a random design matrix per group</span>
+        <span class="k">if</span> <span class="n">corrs</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">easy_multivariate_normal</span><span class="p">(</span><span class="n">num_obs</span><span class="p">,</span> <span class="n">num_coef</span><span class="p">,</span> <span class="n">corrs</span><span class="p">,</span> <span class="n">mus</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">num_obs</span><span class="p">,</span> <span class="n">num_coef</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">num_obs</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">x</span><span class="p">])</span>
+        <span class="c1"># Use blups to generate group data</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">blups</span><span class="p">[</span><span class="n">grp</span><span class="p">,</span> <span class="p">:])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="o">*</span><span class="n">noise_params</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">num_obs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">family</span> <span class="o">==</span> <span class="s2">&quot;binomial&quot;</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">discrete_inverse_logit</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grp</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">x_all</span><span class="p">,</span> <span class="n">y_all</span> <span class="o">=</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_all</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">x_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_all</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">grp_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">elem</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_obs</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_grps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">y_all</span><span class="p">,</span> <span class="n">x_all</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:],</span> <span class="n">grp_ids</span><span class="p">]),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DV&quot;</span><span class="p">]</span>
+        <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;IV&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">elem</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Group&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">blups</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">blups</span><span class="p">,</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Intercept&quot;</span><span class="p">]</span>
+        <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;IV&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">elem</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)],</span>
+        <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Grp&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">elem</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_grps</span><span class="p">)],</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">blups</span><span class="p">,</span> <span class="n">b</span></div>
+
+
+<div class="viewcode-block" id="easy_multivariate_normal"><a class="viewcode-back" href="../../api.html#pymer4.simulate.easy_multivariate_normal">[docs]</a><span class="k">def</span> <span class="nf">easy_multivariate_normal</span><span class="p">(</span>
+    <span class="n">num_obs</span><span class="p">,</span>
+    <span class="n">num_features</span><span class="p">,</span>
+    <span class="n">corrs</span><span class="p">,</span>
+    <span class="n">mu</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">sigma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">forcePSD</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">return_new_corrs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">nit</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to more easily generate multivariate normal samples provided a correlation matrix or list of correlations (upper triangle of correlation matrix) instead of a covariance matrix. Defaults to returning approximately standard normal (mu = 0; sigma = 1) variates. Unlike numpy, if the desired correlation matrix is not positive-semi-definite, will by default issue a warning and find the nearest PSD correlation matrix and generate data with this matrix. This new matrix can optionally be returned used the return_new_corrs argument.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_obs (int): number of observations/samples to generate (rows)</span>
+<span class="sd">        corrs (ndarray/list/float): num_features x num_features 2d array, flattend numpy array of length (num_features * (num_features-1)) / 2, or scalar for same correlation on all off-diagonals</span>
+<span class="sd">        num_features (int): number of features/variables/dimensions to generate (columns)</span>
+<span class="sd">        mu (float/list): mean of each feature across observations; default 0.0</span>
+<span class="sd">        sigma (float/list): sd of each feature across observations; default 1.0</span>
+<span class="sd">        forcePD (bool): whether to find and use a new correlation matrix if the requested one is not positive semi-definite; default False</span>
+<span class="sd">        return_new_corrs (bool): return the nearest correlation matrix that is positive semi-definite used to generate data; default False</span>
+<span class="sd">        nit (int): number of iterations to search for the nearest positive-semi-definite correlation matrix is the requested correlation matrix is not PSD; default 100</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: 2d numpy array of correlated data organized as num_obs x num_features</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_features</span><span class="p">,</span> <span class="s2">&quot;Number of means must match number of features&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="p">[</span><span class="n">mu</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_features</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_features</span><span class="p">,</span> <span class="s2">&quot;Number of sds must match number of features&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="p">[</span><span class="n">sigma</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_features</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">corrs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="p">(</span>
+            <span class="n">corrs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">corrs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="n">corrs</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">corrs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">corrs</span><span class="p">)))</span>
+        <span class="p">),</span> <span class="s2">&quot;Correlation matrix must be square symmetric&quot;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">corrs</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">corrs</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">num_features</span> <span class="o">*</span> <span class="p">(</span><span class="n">num_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="p">),</span> <span class="s2">&quot;(num_features * (num_features - 1) / 2) correlation values are required for a flattened array or list&quot;</span>
+        <span class="n">corrs</span> <span class="o">=</span> <span class="n">squareform</span><span class="p">(</span><span class="n">corrs</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">corrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">corrs</span><span class="p">]</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(((</span><span class="n">num_features</span> <span class="o">*</span> <span class="p">(</span><span class="n">num_features</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)))</span>
+        <span class="n">corrs</span> <span class="o">=</span> <span class="n">squareform</span><span class="p">(</span><span class="n">corrs</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Correlations must be num_features x num_feature, flattend numpy array/list or scalar&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">isPSD</span><span class="p">(</span><span class="n">corrs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">forcePSD</span><span class="p">:</span>
+            <span class="c1"># Tell user their correlations are being recomputed if they didnt ask to save them as they might not realize</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">return_new_corrs</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Correlation matrix is not positive semi-definite. Solved for new correlation matrix.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">_corrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nearestPSD</span><span class="p">(</span><span class="n">corrs</span><span class="p">,</span> <span class="n">nit</span><span class="p">))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Correlation matrix is not positive semi-definite. Pymer4 will not generate inaccurate multivariate data. Use the forcePD argument to automatically solve for the closest desired correlation matrix.&quot;</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_corrs</span> <span class="o">=</span> <span class="n">corrs</span>
+
+    <span class="c1"># Rescale correlation matrix by variances, given standard deviations of features</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span>
+    <span class="c1"># R * Vars = R * SD * SD</span>
+    <span class="n">cov</span> <span class="o">=</span> <span class="n">_corrs</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sd</span><span class="p">))</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">num_obs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_new_corrs</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">_corrs</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">X</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

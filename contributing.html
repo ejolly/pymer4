@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Contributing &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Citation" href="citation.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="auto_examples/index.html">Tutorial</a></li>
+                <li><a href="api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Contributing</a><ul>
+<li><a class="reference internal" href="#development-cycle-and-workflow">Development Cycle and workflow</a><ul>
+<li><a class="reference internal" href="#testing">Testing</a></li>
+<li><a class="reference internal" href="#packaging-stable-releases">Packaging Stable Releases</a></li>
+<li><a class="reference internal" href="#packaging-development-releases">Packaging Development Releases</a></li>
+<li><a class="reference internal" href="#updating-deployed-documentation">Updating deployed documentation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#code-guidelines">Code Guidelines</a></li>
+<li><a class="reference internal" href="#versioning-guidelines">Versioning Guidelines</a></li>
+<li><a class="reference internal" href="#documentation-guidelines">Documentation Guidelines</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <section id="contributing">
+<h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">¶</a></h1>
+<p>Maintaining this package is tricky because of its inter-language operability. In particular this requires keeping up with API changes to Python packages (e.g. pandas), R packages (e.g. lmerTest) as well as changes in rpy2 (which tend to break between versions), the interface package between them. For these reasons contributions are <strong>always</strong> welcome! Checkout the <a class="reference external" href="https://github.com/users/ejolly/projects/1">development roadmap on Github</a>. Also note the diagram and explanation below which illustrate how code development cycles work and how automated deployment is handled through Travis CI.</p>
+<section id="development-cycle-and-workflow">
+<h2>Development Cycle and workflow<a class="headerlink" href="#development-cycle-and-workflow" title="Permalink to this heading">¶</a></h2>
+<p>All automation for testing, documentation, and packaging is handled through Github Actions. We use separate workflows to handle testing and packaging.</p>
+<section id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this heading">¶</a></h3>
+<p>Any pushes or PRs against the <code class="code docutils literal notranslate"><span class="pre">master</span></code> branch will trigger the <strong>Tests</strong> GA workflow. This is a simple workflow that:</p>
+<ul class="simple">
+<li><p>sets up a <code class="code docutils literal notranslate"><span class="pre">conda</span></code> environment with required <code class="code docutils literal notranslate"><span class="pre">R</span></code> dependencies</p></li>
+<li><p>installs the latest code from the <code class="code docutils literal notranslate"><span class="pre">master</span></code> branch</p></li>
+<li><p>runs tests and builds documentation (as an additional testing layer)</p></li>
+</ul>
+</section>
+<section id="packaging-stable-releases">
+<h3>Packaging Stable Releases<a class="headerlink" href="#packaging-stable-releases" title="Permalink to this heading">¶</a></h3>
+<p>A stable release can be installed from <code class="code docutils literal notranslate"><span class="pre">pip</span></code> or from <code class="code docutils literal notranslate"><span class="pre">conda</span></code> using the <code class="code docutils literal notranslate"><span class="pre">-c</span> <span class="pre">ejolly</span></code> channel flag. Packaging a stable release requires building 3 artifacts:</p>
+<ol class="arabic simple">
+<li><p>Conda packages for multiple platforms uploaded to the main <code class="code docutils literal notranslate"><span class="pre">ejolly</span></code> channel on anaconda cloud</p></li>
+<li><p>A pip installable package uploaded to Pypi</p></li>
+<li><p>Documentation site deployed to github pages</p></li>
+</ol>
+<p>To create a new release:</p>
+<ol class="arabic simple">
+<li><p>Publish a new release via github</p></li>
+<li><p>Manually trigger the <strong>Build</strong> and <strong>Build_noarch</strong> workflows and enable uploading to the main channel on anaconda, uploading to pypi, and deploying documentation</p></li>
+</ol>
+<p><em>Note: Previously this process was automated to trigger when a github release is made, but this seems to be unreliable as the commit hash is missing and causes runners to not find the built tarballs</em></p>
+</section>
+<section id="packaging-development-releases">
+<h3>Packaging Development Releases<a class="headerlink" href="#packaging-development-releases" title="Permalink to this heading">¶</a></h3>
+<p>Development releases can be install directly from the <code class="code docutils literal notranslate"><span class="pre">master</span></code> branch on github using <code class="code docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">git+https://github.com/ejolly/pymer4.git</span></code> or conda using the <code class="code docutils literal notranslate"><span class="pre">-c</span> <span class="pre">ejolly/label/pre-release</span></code> channel flag.</p>
+<p>A development release only includes 1 artifact:</p>
+<ol class="arabic simple">
+<li><p>Conda packages for multiple platforms uploaded to the <code class="code docutils literal notranslate"><span class="pre">ejolly/label/pre-release</span></code> channel on anaconda cloud</p></li>
+</ol>
+<p>Development releases are created the same way as stable releases using the same <strong>Build</strong> and <strong>Build_noarch</strong> workflows, but choosing the “pre-release” option for uploading to anaconda cloud and disabling pypi and documentation deploys. The default options for these works flow will simply build packages but perform no uploading at all which can useful for testing package builds.</p>
+</section>
+<section id="updating-deployed-documentation">
+<h3>Updating deployed documentation<a class="headerlink" href="#updating-deployed-documentation" title="Permalink to this heading">¶</a></h3>
+<p>To deploy only documentation changes you can use <em>either</em> the <strong>Build</strong> workflow and enable the documentation deploy or the <strong>Docs</strong> workflow which is a bit faster as it skips packaging building.</p>
+</section>
+</section>
+<section id="code-guidelines">
+<h2>Code Guidelines<a class="headerlink" href="#code-guidelines" title="Permalink to this heading">¶</a></h2>
+<p>Please use the <a class="reference external" href="https://black.readthedocs.io/en/stable/">black</a> code formatter for styling code. Any easy way to check if code is formatted properly is to use a <a class="reference external" href="https://githooks.com/">git pre-commit hook</a>. After installing black, just create a file called <code class="code docutils literal notranslate"><span class="pre">.git/hooks/pre-commit</span></code> and put the following inside:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
+black<span class="w"> </span>--check<span class="w"> </span>.
+</pre></div>
+</div>
+</div></blockquote>
+<p>This will prevent the use of the <code class="code docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span></code> command if black notes any files that have not been formatted. Just format those files and you should be able to proceed with the commit!</p>
+<p>Please use <a class="reference external" href="https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html/">google style docstrings</a> for documenting all functions, methods, and classes.</p>
+<p>Please be sure to include tests with any code submissions and verify they pass using <a class="reference external" href="https://docs.pytest.org/en/latest/">pytest</a>. To run all package tests you can use <code class="code docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">-s</span> <span class="pre">--capture=no</span></code> in the project root. To run specific tests you can point to a file or even a test function within a file, e.g. <code class="code docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">pymer4/test/test_models.py</span> <span class="pre">-k</span> <span class="pre">&quot;test_gaussian_lm&quot;</span></code></p>
+</section>
+<section id="versioning-guidelines">
+<h2>Versioning Guidelines<a class="headerlink" href="#versioning-guidelines" title="Permalink to this heading">¶</a></h2>
+<p>The current <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> scheme is <a class="reference external" href="https://www.python.org/dev/peps/pep-0440/">PEP 440</a> compliant with two and only two forms of version strings: <code class="code docutils literal notranslate"><span class="pre">M.N.P</span></code> and <code class="code docutils literal notranslate"><span class="pre">M.N.P.devX</span></code>. Versions with the <code class="code docutils literal notranslate"><span class="pre">.devX</span></code> designation denote development versions typically on the <code class="code docutils literal notranslate"><span class="pre">master</span></code> branch or <code class="code docutils literal notranslate"><span class="pre">conda</span></code> pre-release channel.</p>
+<p>This simplifed scheme is not illustrated in the PEP 440 examples, but if was it would be described as “major.minor.micro” with development releases. To illustrate, the version sequence would look like this:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="m">0</span>.7.0
+<span class="m">0</span>.7.1.dev0
+<span class="m">0</span>.7.1.dev1
+<span class="m">0</span>.7.1
+</pre></div>
+</div>
+</div></blockquote>
+<p>The third digit(s) in the <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> scheme, i.e. PEP 440 “micro,” are not strictly necessary but are useful for semantically versioned “patch” designations. The <code class="code docutils literal notranslate"><span class="pre">.devX</span></code> extension on the other hand denotes a sequence of incremental work in progress like the alpha, beta, developmental, release candidate system without the alphabet soup.</p>
+</section>
+<section id="documentation-guidelines">
+<h2>Documentation Guidelines<a class="headerlink" href="#documentation-guidelines" title="Permalink to this heading">¶</a></h2>
+<p>Documentation is written with <a class="reference external" href="https://www.sphinx-doc.org/en/master/">sphinx</a> using the <a class="reference external" href="https://ryan-roemer.github.io/sphinx-bootstrap-theme/">bootstrap theme</a>. Tutorial usage of package features is written using <a class="reference external" href="https://sphinx-gallery.github.io/">sphinx gallery</a>.</p>
+<p>To edit and build docs locally you’ll need to install these packages using: <code class="code docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">sphinx</span> <span class="pre">sphinx_bootstrap_theme</span> <span class="pre">sphinx-gallery</span></code>. Then from within the <code class="code docutils literal notranslate"><span class="pre">docs</span></code> folder you can run <code class="code docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code>.</p>
+<p>To add new examples to the tutorials simply create a new <code class="code docutils literal notranslate"><span class="pre">.py</span></code> file in the <code class="code docutils literal notranslate"><span class="pre">examples/</span></code> directory that begins with <code class="code docutils literal notranslate"><span class="pre">example_</span></code>. Any python code will be executed with outputs when the <code class="code docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> command is run and automatically rendered in the tutorial gallery. You can add non-code comments with <a class="reference external" href="https://sphinx-gallery.github.io/syntax.html/">rST syntax</a> using other files in the <code class="code docutils literal notranslate"><span class="pre">examples/</span></code> directory as a guide.</p>
+<p>In addition to making it easy to create standalone examples of package features, the tutorial gallery serves as another layer of testing for the package. This can be really useful to ensure previous functionality is preserved when adding new features or fixing issues.</p>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

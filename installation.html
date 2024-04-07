@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Installation &#8212; pymer4 0.8.2 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/bootstrap-sphinx.css?v=0bf093e7" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=61a4c737" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=f9948e0f"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="What’s New" href="new.html" />
+    <link rel="prev" title="Features" href="features.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-inverse navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          Pymer4</a>
+        <span class="navbar-text navbar-version pull-left"><b>0.8.2</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="auto_examples/index.html">Tutorial</a></li>
+                <li><a href="api.html">API</a></li>
+                <li><a href="https://github.com/ejolly/pymer4">Github</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Nav <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="features.html">Features</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="new.html">What's New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rfx_cheatsheet.html">Lme4 RFX Cheatsheet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">TOC <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#using-anaconda-recommended">Using Anaconda (recommended)</a><ul>
+<li><a class="reference internal" href="#for-the-latest-stable-release-recommended">For the latest stable release (recommended)</a><ul>
+<li><a class="reference internal" href="#creating-and-installing-into-a-new-environment">Creating and installing into a new environment</a></li>
+<li><a class="reference internal" href="#installing-into-an-existing-environment">Installing into an existing environment</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#for-the-latest-development-release">For the latest development release</a></li>
+<li><a class="reference internal" href="#speed-ups-on-intel-cpus">Speed Ups on Intel CPUs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-pip">Using pip</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li><a class="reference internal" href="#if-you-already-have-r-rstudio-installed">1. If you already have R/RStudio installed</a></li>
+<li><a class="reference internal" href="#if-you-don-t-have-r-rstudio-installed">2. If you don’t have R/RStudio installed</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#for-the-latest-stable-release">For the latest stable release</a></li>
+<li><a class="reference internal" href="#id1">For the latest development release</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#making-sure-the-install-worked">Making sure the install worked</a></li>
+<li><a class="reference internal" href="#installation-issues">Installation Issues</a><ul>
+<li><a class="reference internal" href="#missing-r-packages">Missing R packages</a></li>
+<li><a class="reference internal" href="#compiler-issues-on-macos">Compiler Issues on macOS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kernel-crashes-in-jupyter-notebooks-lab">Kernel Crashes in Jupyter Notebooks/Lab</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> since version 0.6.0 is only compatible with Python 3. Versions 0.5.0 and lower will work with Python 2, but will not contain any new features.</p>
+</div>
+<section id="using-anaconda-recommended">
+<h2>Using Anaconda (recommended)<a class="headerlink" href="#using-anaconda-recommended" title="Permalink to this heading">¶</a></h2>
+<section id="for-the-latest-stable-release-recommended">
+<h3>For the latest stable release (recommended)<a class="headerlink" href="#for-the-latest-stable-release-recommended" title="Permalink to this heading">¶</a></h3>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> has some dependecies that can only be resolved using <a class="reference external" href="https://conda-forge.org/">conda-forge</a> (e.g. recent versions of <code class="code docutils literal notranslate"><span class="pre">R,</span> <span class="pre">lme4,</span> <span class="pre">rpy2</span></code> etc). For
+this reason I recommend preferring <code class="code docutils literal notranslate"><span class="pre">conda-forge</span></code> for all packages in the
+environment you use for <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code>. If you prefer to use the defaults Anaconda
+channel you can switch the order of the channel priorities in any of the commands below,
+i.e. <code class="code docutils literal notranslate"><span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">-c</span> <span class="pre">defaults</span></code> to <code class="code docutils literal notranslate"><span class="pre">-c</span> <span class="pre">defaults</span> <span class="pre">-c</span> <span class="pre">conda-forge</span></code>.</p>
+<section id="creating-and-installing-into-a-new-environment">
+<h4>Creating and installing into a new environment<a class="headerlink" href="#creating-and-installing-into-a-new-environment" title="Permalink to this heading">¶</a></h4>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>pymer4<span class="w"> </span>-c<span class="w"> </span>ejolly<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-c<span class="w"> </span>defaults<span class="w"> </span>pymer4
+conda<span class="w"> </span>activate<span class="w"> </span>pymer4
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="installing-into-an-existing-environment">
+<h4>Installing into an existing environment<a class="headerlink" href="#installing-into-an-existing-environment" title="Permalink to this heading">¶</a></h4>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>ejolly<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-c<span class="w"> </span>defaults<span class="w"> </span>pymer4
+</pre></div>
+</div>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Both commands above pull dependencies from conda-forge <em>first</em> rather than the
+default Anaconda channel. It’s good practice to maintain this channel priority if
+you add additional packages to your environment. So be mindful of adding a <code class="code docutils literal notranslate"><span class="pre">-c</span>
+<span class="pre">conda-forge</span></code> flag if you install any additional packages into your environment. You
+can avoid this if you deliberately reversed the order of channels when installing
+<code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> as noted above.</p>
+</div>
+</section>
+</section>
+<section id="for-the-latest-development-release">
+<h3>For the latest development release<a class="headerlink" href="#for-the-latest-development-release" title="Permalink to this heading">¶</a></h3>
+<p>Simply use either command above and substitute <code class="code docutils literal notranslate"><span class="pre">ejolly</span></code> for <code class="code docutils literal notranslate"><span class="pre">ejolly/label/pre-release</span></code>, i.e.</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>ejolly/label/pre-release<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-c<span class="w"> </span>defaults<span class="w"> </span>pymer4
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="speed-ups-on-intel-cpus">
+<h3>Speed Ups on Intel CPUs<a class="headerlink" href="#speed-ups-on-intel-cpus" title="Permalink to this heading">¶</a></h3>
+<p>If you are installing on an Intel CPU, you can additionally request the highly optimized
+Intel Math Kernel Library (MKL) which uses optimized math libraries for Basic Linear Algebra Subprograms (BLAS) computations and can provide substantial speed ups for <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> as well as:code:<cite>numpy</cite>.</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>ejolly<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-c<span class="w"> </span>defaults<span class="w"> </span>pymer4<span class="w"> </span><span class="s2">&quot;blas=*=mkl*&quot;</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>This isn’t recommended for other CPUs (e.g. AMD) as MKL will actually <em>slow down</em> computations. Instead you can request OpenBLAS, which is the default when installing <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> from conda-forge. If you want to install this explicitly the following command will work:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>ejolly<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-c<span class="w"> </span>defaults<span class="w"> </span>pymer4<span class="w"> </span><span class="s2">&quot;blas=*=openblas*&quot;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+</section>
+<section id="using-pip">
+<h2>Using pip<a class="headerlink" href="#using-pip" title="Permalink to this heading">¶</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It’s strongly advised to use the conda install method above because of how notoriously finicky it can be to install <code class="code docutils literal notranslate"><span class="pre">rpy2</span></code> on various platforms. I recommend only following the directions below if you’re comfortable with <code class="code docutils literal notranslate"><span class="pre">pip</span></code> and the command line or prefer not to use Anaconda.</p>
+</div>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h3>
+<p><code class="code docutils literal notranslate"><span class="pre">pymer4</span></code> requires a working R installation along with three R packages: <code class="code docutils literal notranslate"><span class="pre">lme4</span></code>, <code class="code docutils literal notranslate"><span class="pre">lmerTest</span></code>, and <code class="code docutils literal notranslate"><span class="pre">emmeans</span></code>. Follow either option below to make sure these are installed.</p>
+<section id="if-you-already-have-r-rstudio-installed">
+<h4>1. If you already have R/RStudio installed<a class="headerlink" href="#if-you-already-have-r-rstudio-installed" title="Permalink to this heading">¶</a></h4>
+<p>Make sure you also have the 3 required R packages which can be installed from within R/RStudio using:</p>
+<blockquote>
+<div><div class="highlight-R notranslate"><div class="highlight"><pre><span></span><span class="nf">install.packages</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="s">&#39;lme4&#39;</span><span class="p">,</span><span class="s">&#39;lmerTest&#39;</span><span class="p">,</span><span class="s">&#39;emmeans&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="if-you-don-t-have-r-rstudio-installed">
+<h4>2. If you don’t have R/RStudio installed<a class="headerlink" href="#if-you-don-t-have-r-rstudio-installed" title="Permalink to this heading">¶</a></h4>
+<p>The <a class="reference external" href="https://www.anaconda.com/distribution/">Anaconda Python distribution</a> can also install and maintain R and R-packages for you. To install R and the the required packages through Anaconda:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>r<span class="w"> </span>r-base<span class="w"> </span>r-lmertest<span class="w"> </span>r-emmeans<span class="w"> </span>rpy2
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+</section>
+<section id="for-the-latest-stable-release">
+<h3>For the latest stable release<a class="headerlink" href="#for-the-latest-stable-release" title="Permalink to this heading">¶</a></h3>
+<p>After either option you can pip install <code class="code docutils literal notranslate"><span class="pre">pymer4</span></code></p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pymer4
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="id1">
+<h3>For the latest development release<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<p>Install via github:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/ejolly/pymer4.git
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+</section>
+<section id="making-sure-the-install-worked">
+<h2>Making sure the install worked<a class="headerlink" href="#making-sure-the-install-worked" title="Permalink to this heading">¶</a></h2>
+<p>You can test the installation by running the following command in a terminal</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from pymer4.test_install import test_install; test_install()&quot;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="installation-issues">
+<h2>Installation Issues<a class="headerlink" href="#installation-issues" title="Permalink to this heading">¶</a></h2>
+<p>If you have installed via <code class="code docutils literal notranslate"><span class="pre">pip</span></code> it’s recommended you try the <code class="code docutils literal notranslate"><span class="pre">conda</span></code> method described above prior to raising an issue on github. Otherwise the following solutions may help.</p>
+<section id="missing-r-packages">
+<h3>Missing R packages<a class="headerlink" href="#missing-r-packages" title="Permalink to this heading">¶</a></h3>
+<p>If you follow step 2 in the prerequisites above (i.e. let Anaconda install R for you), some users have reported that the <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span></code> command above sometimes doesn’t install everything you need; for example the <a class="reference external" href="https://cran.r-project.org/web/packages/Matrix/index.html">matrix</a> package. You can fix this by either installing any missing packages from within R directly by first launching R at a terminal using <code class="docutils literal notranslate"><span class="pre">R</span></code>, then adding the package with <code class="docutils literal notranslate"><span class="pre">install.packages(&quot;Matrix&quot;)</span></code> or by using Anaconda and prepending <code class="docutils literal notranslate"><span class="pre">r-</span></code> infront of the <em>lowercase</em> name of the package: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">r-matrix</span></code>.</p>
+</section>
+<section id="compiler-issues-on-macos">
+<h3>Compiler Issues on macOS<a class="headerlink" href="#compiler-issues-on-macos" title="Permalink to this heading">¶</a></h3>
+<p>Some of the more cryptic error messages you might encounter on macOS are due to compiler issues that give <code class="docutils literal notranslate"><span class="pre">rpy2</span></code> (a package dependency of <code class="docutils literal notranslate"><span class="pre">pymer4</span></code>) some issues during install. Here’s a fix that should work for that:</p>
+<ol class="arabic">
+<li><p>Install <a class="reference external" href="https://brew.sh/">homebrew</a> if you don’t have it already by running the command at the link (it’s a great pacakage manager for macOS). To check if you already have it, do <code class="docutils literal notranslate"><span class="pre">which</span> <span class="pre">brew</span></code> in your Terminal. If nothing pops up you don’t have it.</p></li>
+<li><p>Fix brew permissions: <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">chown</span> <span class="pre">-R</span> <span class="pre">$(whoami)</span> <span class="pre">$(brew</span> <span class="pre">--prefix)/*</span></code> (this is <strong>necessary</strong> on macOS Sierra or higher (&gt;= macOS 10.12))</p></li>
+<li><p>Update homebrew <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">update</span></code></p></li>
+<li><p>Install the xz uitility <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">xz</span></code></p></li>
+<li><p>At this point you can try to re-install <code class="docutils literal notranslate"><span class="pre">pymer4</span></code> and re-test the installation. If it still doesn’t work follow the next few steps below</p></li>
+<li><p>Install an updated compiler: <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">gcc</span></code>, or if you have homebrew already, <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">upgrade</span> <span class="pre">gcc</span></code></p></li>
+<li><p>Enable the new compiler for use:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">CC</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>find<span class="w"> </span><span class="sb">`</span>brew<span class="w"> </span>info<span class="w"> </span>gcc<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>usr<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span><span class="s1">&#39;s/(.*//&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{printf $1&quot;/bin&quot;}&#39;</span><span class="sb">`</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;x86*gcc-?&#39;</span><span class="k">)</span><span class="s2">&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-W&quot;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>If the above results in any error output (it should return nothing) you might need to manually find out where the new compiler is installed. To do so use <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">info</span> <span class="pre">gcc</span></code> and <code class="docutils literal notranslate"><span class="pre">cd</span></code> into the directory that begins with <code class="docutils literal notranslate"><span class="pre">/usr</span></code> in the output of that command. From there <code class="docutils literal notranslate"><span class="pre">cd</span></code> into <code class="docutils literal notranslate"><span class="pre">bin</span></code> and look for a file that begins with <code class="docutils literal notranslate"><span class="pre">x86</span></code> and ends with <code class="docutils literal notranslate"><span class="pre">gcc-7</span></code>. It’s possible that the directory ends with <code class="docutils literal notranslate"><span class="pre">gcc-8</span></code> or a higher number based on how recently you installed from homebrew. In that case, just use the latest version. Copy the <em>full path</em> to that file and run the following:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">CC</span><span class="o">=</span><span class="w"> </span>pathYouCopiedInQuotes
+<span class="nb">export</span><span class="w"> </span><span class="nv">CFLAGS</span><span class="o">=</span><span class="s2">&quot;-W&quot;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p>Finally install <code class="docutils literal notranslate"><span class="pre">rpy2</span></code> using the new compiler you just installed: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">rpy2</span></code> if you have R/RStudio or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">rpy2</span></code> if you don’t.</p></li>
+<li><p>Now you should be able to <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pymer4</span></code> :)</p></li>
+</ol>
+</section>
+</section>
+<section id="kernel-crashes-in-jupyter-notebooks-lab">
+<h2>Kernel Crashes in Jupyter Notebooks/Lab<a class="headerlink" href="#kernel-crashes-in-jupyter-notebooks-lab" title="Permalink to this heading">¶</a></h2>
+<p>Sometimes using <code class="docutils literal notranslate"><span class="pre">pymer4</span></code> interactively can cause the Python kernel to crash. This is more likely to happen if you have multiple interactive sessions running simulatenously. One way around this is to put this at the top of your notebook/code:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;KMP_DUPLICATE_LIB_OK&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;True&#39;</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Or set the following environment variable prior to launching your interactive sessions:</p>
+<blockquote>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">KMP_DUPLICATE_LIB_OK</span><span class="o">=</span>TRUE
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017-2024, Eshin Jolly.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.1.2.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>
