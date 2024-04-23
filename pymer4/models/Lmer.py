@@ -923,20 +923,10 @@ class Lmer(object):
 
         Args:
             data (pandas.core.frame.DataFrame): input data to make predictions on
-            use_rfx (bool): whether to condition on random effects when making
-            predictions; Default True
-            pred_type (str): whether the prediction should be on the 'response' scale
-            (default); or on the 'link' scale of the predictors passed through the link
-            function (e.g. log-odds scale in a logit model instead of probability
-            values)
-            skip_data_checks (bool): whether to skip checks that input data have the
-            same columns as the original data the model were trained on. If predicting
-            using a model trained with categorical variables it can be helpful to set
-            this to False. Default True
-            verify_predictions (bool): whether to ensure that the predicted data are not
-            identical to original model fits. Only useful to set this to False when
-            making predictions on the same data the model was fit on, but its faster to
-            access these directly from model.fits or model.data['fits']. Default True
+            use_rfx (bool): whether to condition on random effects when making predictions; Default True
+            pred_type (str): whether the prediction should be on the 'response' scale (default); or on the 'link' scale of the predictors passed through the link function (e.g. log-odds scale in a logit model instead of probability values)
+            skip_data_checks (bool): whether to skip checks that input data have the same columns as the original data the model were trained on. If predicting using a model trained with categorical variables it can be helpful to set this to True. Default False
+            verify_predictions (bool): whether to ensure that the predicted data are not identical to original model fits. Only useful to set this to False when making predictions on the same data the model was fit on, but its faster to access these directly from model.fits or model.data['fits']. Default True
             verbose (bool): whether to print R messages to console
 
         Returns:
