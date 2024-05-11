@@ -104,6 +104,13 @@ class Lmer(object):
         # Get bambi's internal design matrix object
         fm_design_matrix = self.model_obj.response_component.design
 
+        # Store DV, IVs, and random effects
+        self.terms = dict(
+            common_terms=list(fm_design_matrix.common.terms.keys()),
+            group_terms=list(fm_design_matrix.group.terms.keys()),
+            response_term=fm_design_matrix.response.name,
+        )
+
         # Fixed-effect design matrix
         self.design_matrix = fm_design_matrix.common.as_dataframe()
 
@@ -111,54 +118,25 @@ class Lmer(object):
         self.grps = dict()
         self.design_matrix_rfx = dict()
 
-        # Design matrix per rfx parameter; can't cast to df directly
-        # Instead we need to slice the numpy array and then cast to df
-        rfx_design_matrix = np.array(fm_design_matrix.group)
+        # Get rfx group sizes and optionally design matrix
+        # We need to slice the combined rfx numpy array bambi gives us
+        # using stored column slices for each rfx term
+        # rfx_design_matrix = np.array(fm_design_matrix.group)
 
-        for rfx in fm_design_matrix.group.terms:
+        for rfx in self.terms["group_terms"]:
 
             # Get the number of groups for this rfx term
             grp_size = len(fm_design_matrix.group.terms[rfx].groups)
 
-            # We can use the stored slice range to get the correct columns
-            design_mat = rfx_design_matrix[:, fm_design_matrix.group.slices[rfx]]
-
             # Store dicts
             self.grps[rfx] = grp_size
+            # We can use the stored slice range to get the correct columns
 
-            # NOTE: May not need to save these?
-            self.design_matrix_rfx[rfx] = pd.DataFrame(
-                design_mat, columns=fm_design_matrix.group.terms[rfx].groups
-            )
-
-        # if self.model_obj.intercept_term:
-        #     common_terms = ["Intercept"]
-        # else:
-        #     common_terms = []
-        # common_terms += list(self.model_obj.common_terms.keys())
-        # group_terms = list(self.model_obj.group_specific_terms.keys())
-        # response_term = [self.model_obj.response.name]
-        # self.terms = dict(
-        #     common_terms=common_terms,
-        #     group_terms=group_terms,
-        #     response_term=response_term,
-        # )
-
-        # Fixed effects population params dm
-        # self.design_matrix = self.model_obj._design.common.as_dataframe()
-        # self._get_ngrps()
-
-        # Rfx matrix: num obs x num rfx terms (e.g. intercepts, slopes) per group
-        # E.g. with random intercepts and 10 subs this would have 10 columns
-        # E.g. with random intercepts+slopes and 10 subs this would have 20 columns
-        # E.g. with random intercepts+slopes for 10 subs and random intercepts for 5 items this would have 25 columns
-        # rfx_name_slices = self.model_obj._design.group.slices
-        # rfx_mat = pd.DataFrame(np.array(self.model_obj._design.group))
-        # col_names = np.array(rfx_mat.columns).astype(str)
-        # for rfx_name, slice_range in rfx_name_slices.items():
-        #     col_names[slice_range] = rfx_name
-        # rfx_mat.columns = col_names
-        # self.design_matrix_rfx = rfx_mat
+            # NOTE: If we want to store the rfx design matrices per term
+            # design_mat = rfx_design_matrix[:, fm_design_matrix.group.slices[rfx]]
+            # self.design_matrix_rfx[rfx] = pd.DataFrame(
+            #     design_mat, columns=fm_design_matrix.group.terms[rfx].groups
+            # )
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -181,46 +159,43 @@ class Lmer(object):
 
     def fit(
         self,
+        summary=True,
+        draws=1000,
+        tune=1000,
+        inference_method="nuts_numpyro",
+        progressbar=False,
+        verbose=False,
         rank=False,
         ordered=False,
         rank_group="",
         rank_exclude_cols=[],
-        verbose=0,
         **kwargs,
     ):
 
-        # inference_method = kwargs.pop("inference_method", "nuts_numpyro")
-        draws = kwargs.pop("draws", self.draws)
-        tune = kwargs.pop("tune", self.tune)
-        summary = kwargs.pop("summary", True)
-        summarize = kwargs.pop("summary", True)
-        if isinstance(verbose, bool):
-            verbose = 2 if verbose else 0
-
-        # Only print progress bars if maximum verbosity (2)
-        # Different backends have different kwarg names so we need to build this dict programmatically
-        additional_kwargs = dict()
-        # if inference_method == "nuts_numpyro":
-        #     # additional_kwargs["progress_bar"] = True if verbose > 1 else False
-        #     self.backend = "Numpyro/Jax NUTS Sampler"
-        # else:
-        #     # additional_kwargs["progressbar"] = True if verbose > 1 else False
-        #     self.backend = "PyMC MCMC"
-
         # Hide basic compilation messages if lowest verbosity (0)
         with open(os.devnull, "w") as f:
-            with redirect_stdout(f) if verbose == 0 else nullcontext():
+            with redirect_stdout(f) if verbose else nullcontext():
                 self.inference_obj = self.model_obj.fit(
                     draws=draws,
-                    # inference_method=inference_method,
                     tune=tune,
-                    **additional_kwargs,
+                    inference_method=inference_method,
+                    progressbar=progressbar,
+                    **kwargs,
                 )
 
         # Set flag now for other internal ops like .predict call
         self.fitted = True
 
-        # Population level effects
+        # Create summary tables for fixed and random effects
+        self._build_results()
+
+        # Return summary table if requested
+        if summary:
+            return self.summary()
+
+    def _build_results(self):
+
+        # Population level parameters
         self.coefs = az.summary(
             self.inference_obj,
             kind="all",
@@ -240,7 +215,8 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
 
-        # Cluster level deviances from population effect
+        # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
+        # Cluster level effects
         self.ranef = az.summary(
             self.inference_obj,
             kind="all",
@@ -259,7 +235,7 @@ class Lmer(object):
         )[
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
-        # Filter out variances manually as the az.summary still includes them
+        # Filter out row with variance across rfx, as the az.summary includes it
         to_remove = self.ranef.filter(like="_sigma", axis=0).index
         self.ranef = self.ranef[~self.ranef.index.isin(to_remove)]
 
@@ -283,65 +259,67 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
         ]
 
+        # TODO:
+        # Create summary table for cluster level parameters
+
+        # TODO: Fix me
         # Fits/predictions marginalizing over posterior
         # This adds a column to self.inference_obj.posterior named 'DV_mean'
-        self.model_obj.predict(
-            self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
-        )
+        # self.model_obj.predict(
+        #     self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
+        # )
+
         # This adds a new attribute on self.inference_obj called
         # .posterior_predictions that contains a column called 'DV'
-        self.model_obj.predict(
-            self.inference_obj, inplace=True, include_group_specific=True, kind="pps"
-        )
+        # self.model_obj.predict(
+        #     self.inference_obj, inplace=True, include_group_specific=True, kind="pps"
+        # )
+
         # Aggregate them by calling predict using the same data the model was estimated
         # with. By default this uses the posterior estimates of the mean response var,
         # jnstead of the posterior predictive dist. But aggregating them gives the same
         # estimates when calculated on the same data the model was fit on
-        if verbose:
-            print("Sampling predictions marginalizing over posteriors...")
-        self.fits = self.predict(data=None, summarize=True, kind="ppc").drop(
-            columns=["Kind"]
-        )
-        self.posterior_predictions = self.fits
+        # if verbose:
+        #     print("Sampling predictions marginalizing over posteriors...")
+        # self.fits = self.predict(data=None, summarize=True, kind="ppc").drop(
+        #     columns=["Kind"]
+        # )
+        # self.posterior_predictions = self.fits
 
-        self.data["fits"] = self.fits["Estimate"].copy()
+        # self.data["fits"] = self.fits["Estimate"].copy()
 
         # Fits/predictions marginalizing over prior
         # NOTE: Move to init?
-        if verbose:
-            print("Sampling predictions marginalizing over priors...")
-        priors = self.model_obj.prior_predictive(draws=self.draws)
+        # if verbose:
+        #     print("Sampling predictions marginalizing over priors...")
+        # priors = self.model_obj.prior_predictive(draws=self.draws)
+
         # TODO: Fixme
         # Storing everything in a single inference object is conveninent but plots are
         # getting screwed up. E.g. plot with kind='trace' is incuding posterior
         # predictive traces which take a realllly long time to plot
         # Solution 1: Try using separate inference objects
         # Solution 2: tweak plotting code
-        self.inference_obj.add_groups(
-            {"prior": priors.prior, "prior_predictive": priors.prior_predictive}
-        )
-        self.prior_predictions = (
-            az.summary(
-                self.inference_obj.prior_predictive,
-                kind="stats",
-                var_names=[self.model_obj.response.name],
-                filter_vars="like",
-                hdi_prob=0.95,
-                stat_focus="mean",
-            ).rename(
-                columns={
-                    "mean": "Estimate",
-                    "sd": "SD",
-                    "hdi_2.5%": "2.5_ci",
-                    "hdi_97.5%": "97.5_ci",
-                }
-            )
-        )[["Estimate", "SD", "2.5_ci", "97.5_ci"]]
-
-        if summary or summarize:
-            return self.summary()
-
-        # TODO: add warnings for RG stat > 1.05
+        # self.inference_obj.add_groups(
+        #     {"prior": priors.prior, "prior_predictive": priors.prior_predictive}
+        # )
+        # self.prior_predictions = (
+        #     az.summary(
+        #         self.inference_obj.prior_predictive,
+        #         kind="stats",
+        #         var_names=[self.model_obj.response.name],
+        #         filter_vars="like",
+        #         hdi_prob=0.95,
+        #         stat_focus="mean",
+        #     ).rename(
+        #         columns={
+        #             "mean": "Estimate",
+        #             "sd": "SD",
+        #             "hdi_2.5%": "2.5_ci",
+        #             "hdi_97.5%": "97.5_ci",
+        #         }
+        #     )
+        # )[["Estimate", "SD", "2.5_ci", "97.5_ci"]]
 
     def _plot_priors(self, **kwargs):
         """Helper function for .plot_summary when requesting prior plots because this
@@ -592,7 +570,7 @@ class Lmer(object):
         names = []
         for name in df.index:
             n = name.split("_sigma")[0]
-            if n in self.model_obj.group_specific_terms.keys():
+            if n in self.terms["group_terms"]:
                 term_name, group_name = n.split("|")
                 term_name = "(Intercept)" if term_name == "1" else term_name
                 new_index.append(group_name)
