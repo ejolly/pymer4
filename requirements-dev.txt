@@ -1,0 +1,7 @@
+-r requirements.txt
+ipykernel>=6.16
+black
+pytest
+sphinx
+sphinx-gallery
+pydata-sphinx-theme

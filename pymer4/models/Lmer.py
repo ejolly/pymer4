@@ -5,7 +5,6 @@ Pymer4 Lmer Class
 Main class to wrap Bambi's model interface
 """
 
-
 from copy import copy
 import numpy as np
 import pandas as pd
@@ -18,7 +17,6 @@ from pymer4.utils import _select_az_params
 
 
 class Lmer(object):
-
     """
     Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
 
@@ -100,139 +98,49 @@ class Lmer(object):
         self.model_obj = bmb.Model(
             self.formula, data=self.data, family=self.family, **kwargs
         )
-        self.model_obj.build()
+        # self.model_obj.build()
 
+        # IVs
+        # self.model_obj.backend.model.unobserved_RVs
+        # DV
+        # self.model_obj.backend.model.observed_RVs
+
+        # TODO: Fix this it uses the outdated bambi API
         # Store separate model terms for ease of reference
-        if self.model_obj.intercept_term:
-            common_terms = ["Intercept"]
-        else:
-            common_terms = []
-        common_terms += list(self.model_obj.common_terms.keys())
-        group_terms = list(self.model_obj.group_specific_terms.keys())
-        response_term = [self.model_obj.response.name]
-        self.terms = dict(
-            common_terms=common_terms,
-            group_terms=group_terms,
-            response_term=response_term,
-        )
+        # if self.model_obj.intercept_term:
+        #     common_terms = ["Intercept"]
+        # else:
+        #     common_terms = []
+        # common_terms += list(self.model_obj.common_terms.keys())
+        # group_terms = list(self.model_obj.group_specific_terms.keys())
+        # response_term = [self.model_obj.response.name]
+        # self.terms = dict(
+        #     common_terms=common_terms,
+        #     group_terms=group_terms,
+        #     response_term=response_term,
+        # )
 
         # Fixed effects population params dm
-        self.design_matrix = self.model_obj._design.common.as_dataframe()
-        self._get_ngrps()
+        # self.design_matrix = self.model_obj._design.common.as_dataframe()
+        # self._get_ngrps()
 
         # Rfx matrix: num obs x num rfx terms (e.g. intercepts, slopes) per group
         # E.g. with random intercepts and 10 subs this would have 10 columns
         # E.g. with random intercepts+slopes and 10 subs this would have 20 columns
         # E.g. with random intercepts+slopes for 10 subs and random intercepts for 5 items this would have 25 columns
-        rfx_name_slices = self.model_obj._design.group.slices
-        rfx_mat = pd.DataFrame(np.array(self.model_obj._design.group))
-        col_names = np.array(rfx_mat.columns).astype(str)
-        for rfx_name, slice_range in rfx_name_slices.items():
-            col_names[slice_range] = rfx_name
-        rfx_mat.columns = col_names
-        self.design_matrix_rfx = rfx_mat
+        # rfx_name_slices = self.model_obj._design.group.slices
+        # rfx_mat = pd.DataFrame(np.array(self.model_obj._design.group))
+        # col_names = np.array(rfx_mat.columns).astype(str)
+        # for rfx_name, slice_range in rfx_name_slices.items():
+        #     col_names[slice_range] = rfx_name
+        # rfx_mat.columns = col_names
+        # self.design_matrix_rfx = rfx_mat
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
             self.__class__.__module__, self.fitted, self.formula, self.family
         )
         return out
-
-    def _make_factors(self, factor_dict, ordered=False):
-        """
-        Covert specific columns to R-style factors. Default scheme is dummy coding where reference is 1st level provided. Alternative is orthogonal polynomial contrasts. User can also specific custom contrasts.
-
-        Args:
-            factor_dict: (dict) dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast; a dict with keys as factor leves and values as desired comparisons in human readable format
-            ordered: (bool) whether to interpret factor_dict values as dummy-coded (1st list item is reference level) or as polynomial contrasts (linear contrast specified by ordered of list items); ignored if factor_dict values are not a list
-
-        Returns:
-            pandas.core.frame.DataFrame: copy of original data with factorized columns
-
-        Examples:
-
-            Dummy/treatment contrasts with 'A' as the reference level and other contrasts as 'B'-'A' and 'C'-'A'
-
-            >>> _make_factors(factor_dict={'factor': ['A','B','C']})
-
-            Same as above but a linear contrast (and automatically computed quadratic contrast) of A < B < C
-
-            >>> _make_factors(factor_dict={'factor': ['A','B','C']}, ordered=True)
-
-            Custom contrast of 'A' - mean('B', 'C')
-
-            >>> _make_factors(factor_dict={'factor': {'A': 1, 'B': -0.5, 'C': -0.5}})
-        """
-
-        errormsg = "factors should be specified as a dictionary with values as one of:\n1) a list with factor levels in the desired order for dummy/treatment/polynomial contrasts\n2) a dict with keys as factor levels and values as desired comparisons in human readable format"
-        # We create a copy of data because we need to convert dtypes to categories and then pass them to R. However, resetting categories on the *same* dataframe and passing to R repeatedly (e.g. multiple calls to .fit with different contrasats) does not work as R only uses the 1st category spec. So instead we create a copy and return that copy to get used by .fit
-        out = {}
-        df = self.data.copy()
-        if not isinstance(factor_dict, dict):
-            raise TypeError(errormsg)
-        for factor, contrasts in factor_dict.items():
-            # First convert to a string type because R needs string based categories
-            df[factor] = df[factor].apply(str)
-
-            # Treatment/poly contrasts
-            if isinstance(contrasts, list):
-                # Ensure that all factor levels are accounted for
-                if not all([e in contrasts for e in df[factor].unique()]):
-                    raise ValueError(
-                        "Not all factor levels are specified in the desired contrast"
-                    )
-                # Define and apply a pandas categorical type in the same order as requested, which will get converted to the right factor levels in R
-                cat = CategoricalDtype(contrasts)
-                df[factor] = df[factor].astype(cat)
-
-                if ordered:
-                    # Polynomial contrasts
-                    con_codes = None
-                else:
-                    # Treatment/dummy contrasts
-                    con_codes = None
-
-                out[factor] = con_codes
-
-            # Custom contrasts (human readable)
-            elif isinstance(contrasts, dict):
-                factor_levels = list(contrasts.keys())
-                cons = list(contrasts.values())
-                # Ensure that all factor levels are accounted for
-                if not all([e in factor_levels for e in df[factor].unique()]):
-                    raise ValueError(
-                        "Not all factor levels are specified in the desired contrast"
-                    )
-                # Define and apply categorical type in the same order as requested
-                cat = CategoricalDtype(factor_levels)
-                df[factor] = df[factor].astype(cat)
-                # Compute desired contrasts in R format along with addition k - 1 contrasts not specified
-                out[factor] = cons
-
-            else:
-                raise TypeError(errormsg)
-        self.factors = factor_dict
-        self.contrast_codes = out
-        return out, df
-
-    def _refit_orthogonal(self):
-        """
-        Refit a model with factors organized as polynomial contrasts to ensure valid type-3 SS calculations with using `.anova()`. Previous factor specifications are stored in `model.factors_prev_`.
-        """
-
-        self.factors_prev_ = copy(self.factors)
-        self.contrast_codes_prev_ = copy(self.contrast_codes)
-        # Create orthogonal polynomial contrasts for all factors, by creating a list of unique
-        # factor levels as self._make_factors will handle the rest
-        new_factors = {}
-        for factor in self.factors.keys():
-            new_factors[factor] = sorted(list(map(str, self.data[factor].unique())))
-
-        self.fit(
-            factors=new_factors,
-            ordered=True,
-            summarize=False,
-        )
 
     def anova(self, force_orthogonal=False):
         """
@@ -245,19 +153,13 @@ class Lmer(object):
             pd.DataFrame: Type 3 ANOVA results
         """
 
-        if self.factors:
-            # Model can only have factors if it's been fit
-            if force_orthogonal:
-                self._refit_orthogonal()
-        elif not self.fitted:
-            raise ValueError("Model must be fit before ANOVA table can be generated!")
-
-        self.anova_results = None
-        return self.anova_results
+        raise NotImplementedError("This method is not yet implemented")
 
     def _get_ngrps(self):
         """Get the groups information from the model as a dictionary"""
 
+
+        m.components['DV'].design.group.terms['1|Group'].groups
         group_terms = self.model_obj.group_specific_terms.values()
         self.grps = {e.name.split("|")[-1]: len(e.groups) for e in group_terms}
 
@@ -428,6 +330,7 @@ class Lmer(object):
     def _plot_priors(self, **kwargs):
         """Helper function for .plot_summary when requesting prior plots because this
         calls a custom bambi method rather than an arviz function"""
+
         hdi_prob = kwargs.pop("hdi_prob", 0.95)
         hdi_prob = kwargs.pop("ci", 95) / 100
         params = kwargs.pop("params", "default")
@@ -560,14 +463,6 @@ class Lmer(object):
     def plot_posteriors(self, **kwargs):
         return self.plot_summary(kind="posteriors", dist="posteriors", **kwargs)
 
-    def plot_posterior(self, **kwargs):
-        """Alias for plot_posteriors"""
-        return self.plot_posteriors(**kwargs)
-
-    def plot_prior(self, **kwargs):
-        """Alias for plot_priors"""
-        return self.plot_prior(**kwargs)
-
     def simulate(self, num_datasets, use_rfx=True, verbose=False):
         """
         Simulate new responses based upon estimates from a fitted model. By default group/cluster means for simulated data will match those of the original data. Unlike predict, this is a non-deterministic operation because lmer will sample random-efects values for all groups/cluster and then sample data points from their respective conditional distributions.
@@ -580,7 +475,7 @@ class Lmer(object):
         Returns:
             np.ndarray: simulated data values
         """
-        pass
+        raise NotImplementedError("This method is not yet implemented")
 
     def predict(self, data=None, **kwargs):
         """
@@ -761,4 +656,5 @@ class Lmer(object):
 
         if not self.fitted:
             raise RuntimeError("Model must be fit before plotting!")
-        pass
+
+        raise NotImplementedError("This method is not yet implemented")

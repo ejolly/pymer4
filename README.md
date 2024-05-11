@@ -30,7 +30,7 @@ However, reaching feature parity with the release version of pymer4 (e.g. a vari
 
 ## Development
 
-One other major difference is that this branch uses [poetry](https://python-poetry.org/) for package and environment installation, build, and deployment. To work with this branch locally run `curl -sSL https://install.python-poetry.org | python` to install poetry. Then `poetry install` from within this repo to setup a virtual environment with all dependencies in `.venv`. You can then use `poetry run pytest` to run the test suite.
+Create a new virtual environment using your favorite tool then use `pip install -r requirements-dev.txt` to install the necessary dependencies.
 
 ## Contributing
 

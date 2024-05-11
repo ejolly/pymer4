@@ -17,4 +17,6 @@ dev/
 .vscode/settings.json
 *.key
 pytest.ini
-.venv
+env
+environment.yml
+docs/dev.ipynb
