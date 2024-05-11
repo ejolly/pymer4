@@ -50,19 +50,7 @@ class Lmer(object):
 
     def __init__(self, formula, data, family="gaussian", **kwargs):
 
-        self.family = family
-        implemented_fams = ["gaussian"]
-        # implemented_fams = [
-        #     "gaussian",
-        #     "binomial",
-        #     "gamma",
-        #     "inverse_gaussian",
-        #     "poisson",
-        # ]
-        if self.family not in implemented_fams:
-            raise ValueError(f"Family must be one of: {implemented_fams}!")
         self.fitted = False
-        self.formula = formula.replace(" ", "")
         self.data = copy(data)
         self.grps = None
         self.AIC = None
@@ -92,14 +80,12 @@ class Lmer(object):
         self.terms = {}
         self.fits = None
         self.inference_obj = None
-        self.prior_predictions = None
-        self.posterior_predictions = None
 
         # Initialize bambi model object and extract attributes
-        self.model_obj = bmb.Model(
-            self.formula, data=self.data, family=self.family, **kwargs
-        )
+        self.model_obj = bmb.Model(formula, data=self.data, family=family, **kwargs)
         self.model_obj.build()
+        self.family = self.model_obj.family.name
+        self.formula = self.model_obj.formula.main
 
         # Get bambi's internal design matrix object
         fm_design_matrix = self.model_obj.response_component.design
@@ -111,32 +97,21 @@ class Lmer(object):
             response_term=fm_design_matrix.response.name,
         )
 
-        # Fixed-effect design matrix
+        # Fixed-effects design matrix
         self.design_matrix = fm_design_matrix.common.as_dataframe()
 
-        # Random-effects names, design matrices, and group sizes
-        self.grps = dict()
-        self.design_matrix_rfx = dict()
+        # Random-effects names and group sizes
+        self.grps = {
+            rfx: len(fm_design_matrix.group.terms[rfx].groups)
+            for rfx in self.terms["group_terms"]
+        }
 
-        # Get rfx group sizes and optionally design matrix
-        # We need to slice the combined rfx numpy array bambi gives us
-        # using stored column slices for each rfx term
-        # rfx_design_matrix = np.array(fm_design_matrix.group)
+        # Sample from priors to get summarized predictive distributions
+        # for each model term
+        self._build_priors()
 
-        for rfx in self.terms["group_terms"]:
-
-            # Get the number of groups for this rfx term
-            grp_size = len(fm_design_matrix.group.terms[rfx].groups)
-
-            # Store dicts
-            self.grps[rfx] = grp_size
-            # We can use the stored slice range to get the correct columns
-
-            # NOTE: If we want to store the rfx design matrices per term
-            # design_mat = rfx_design_matrix[:, fm_design_matrix.group.slices[rfx]]
-            # self.design_matrix_rfx[rfx] = pd.DataFrame(
-            #     design_mat, columns=fm_design_matrix.group.terms[rfx].groups
-            # )
+        # NOTE: Only if we want to store design matrices for rfx terms
+        # self._build_rfx_design_matrices(fm_design_matrix)
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -183,17 +158,21 @@ class Lmer(object):
                     **kwargs,
                 )
 
-        # Set flag now for other internal ops like .predict call
+        # Set flags
         self.fitted = True
+        self.backend = inference_method
 
         # Create summary tables for fixed and random effects
-        self._build_results()
+        self._build_coefs()
+
+        # Create fits/predictions marginalizing over posterior
+        self._build_fits()
 
         # Return summary table if requested
         if summary:
             return self.summary()
 
-    def _build_results(self):
+    def _build_coefs(self):
 
         # Population level parameters
         self.coefs = az.summary(
@@ -208,15 +187,16 @@ class Lmer(object):
                 "sd": "SD",
                 "mcse_mean": "SE",
                 "r_hat": "Rubin_Gelman",
-                "hdi_2.5%": "2.5_ci",
-                "hdi_97.5%": "97.5_ci",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
             }
         )[
-            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
+            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
         ]
 
         # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
         # Cluster level effects
+        # TODO: Turn this into wide-format so rfx are stacked as columns instead of rows
         self.ranef = az.summary(
             self.inference_obj,
             kind="all",
@@ -228,12 +208,12 @@ class Lmer(object):
                 "mean": "Estimate",
                 "sd": "SD",
                 "mcse_mean": "SE",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
                 "r_hat": "Rubin_Gelman",
-                "hdi_2.5%": "2.5_ci",
-                "hdi_97.5%": "97.5_ci",
             }
         )[
-            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
+            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
         ]
         # Filter out row with variance across rfx, as the az.summary includes it
         to_remove = self.ranef.filter(like="_sigma", axis=0).index
@@ -252,74 +232,76 @@ class Lmer(object):
                 "sd": "SD",
                 "mcse_mean": "SE",
                 "r_hat": "Rubin_Gelman",
-                "hdi_2.5%": "2.5_ci",
-                "hdi_97.5%": "97.5_ci",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
             }
         )[
-            ["Estimate", "SD", "2.5_ci", "97.5_ci", "SE", "Rubin_Gelman"]
+            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
         ]
 
         # TODO:
         # Create summary table for cluster level parameters
 
-        # TODO: Fix me
-        # Fits/predictions marginalizing over posterior
-        # This adds a column to self.inference_obj.posterior named 'DV_mean'
-        # self.model_obj.predict(
-        #     self.inference_obj, inplace=True, include_group_specific=True, kind="mean"
-        # )
+    def _build_fits(self):
+        """Adds .fits (also accessible as .posterior_predictions) and .residuals
+        to model object as well as dataframe. Fits are the posterior predictive distribution of the model. Residuals are the difference between the observed data and the fits.
+        """
 
-        # This adds a new attribute on self.inference_obj called
-        # .posterior_predictions that contains a column called 'DV'
-        # self.model_obj.predict(
-        #     self.inference_obj, inplace=True, include_group_specific=True, kind="pps"
-        # )
+        # Fits/predictions sampled from posterior
+        # With no arguments, this will return the posterior predictive distribution
+        # using the same data the model was fit to
+        fits = self.predict()
+        fits = fits.rename(
+            columns={
+                "Estimate": "fits",
+                "SD": "fits_SD",
+                "2.5_hdi": "fits_2.5_hdi",
+                "97.5_hdi": "fits_97.5_hdi",
+            },
+        ).drop(columns=["Kind"])
 
-        # Aggregate them by calling predict using the same data the model was estimated
-        # with. By default this uses the posterior estimates of the mean response var,
-        # jnstead of the posterior predictive dist. But aggregating them gives the same
-        # estimates when calculated on the same data the model was fit on
-        # if verbose:
-        #     print("Sampling predictions marginalizing over posteriors...")
-        # self.fits = self.predict(data=None, summarize=True, kind="ppc").drop(
-        #     columns=["Kind"]
-        # )
-        # self.posterior_predictions = self.fits
+        # Store them
+        self.data = pd.concat([self.data, fits.reset_index(drop=True)], axis=1)
+        self.fits = self.data["fits"].to_numpy()
+        self.posterior_predictions = fits
 
-        # self.data["fits"] = self.fits["Estimate"].copy()
+        # Calculate residuals
+        self.residuals = self.data[self.terms["response_term"]] - self.fits
+        self.data["residuals"] = self.residuals.copy()
 
-        # Fits/predictions marginalizing over prior
-        # NOTE: Move to init?
-        # if verbose:
-        #     print("Sampling predictions marginalizing over priors...")
-        # priors = self.model_obj.prior_predictive(draws=self.draws)
+    def _build_priors(self):
+        """Adds a .prior_coefs attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
 
-        # TODO: Fixme
-        # Storing everything in a single inference object is conveninent but plots are
-        # getting screwed up. E.g. plot with kind='trace' is incuding posterior
-        # predictive traces which take a realllly long time to plot
-        # Solution 1: Try using separate inference objects
-        # Solution 2: tweak plotting code
-        # self.inference_obj.add_groups(
-        #     {"prior": priors.prior, "prior_predictive": priors.prior_predictive}
-        # )
-        # self.prior_predictions = (
-        #     az.summary(
-        #         self.inference_obj.prior_predictive,
-        #         kind="stats",
-        #         var_names=[self.model_obj.response.name],
-        #         filter_vars="like",
-        #         hdi_prob=0.95,
-        #         stat_focus="mean",
-        #     ).rename(
-        #         columns={
-        #             "mean": "Estimate",
-        #             "sd": "SD",
-        #             "hdi_2.5%": "2.5_ci",
-        #             "hdi_97.5%": "97.5_ci",
-        #         }
-        #     )
-        # )[["Estimate", "SD", "2.5_ci", "97.5_ci"]]
+        priors = self.model_obj.prior_predictive()
+        self.prior_coefs = az.summary(
+            priors,
+            kind="stats",
+            var_names=self.terms["common_terms"],
+            hdi_prob=0.95,
+            stat_focus="mean",
+        ).rename(
+            columns={
+                "mean": "Estimate",
+                "sd": "SD",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
+            }
+        )
+
+    def _build_rfx_design_matrices(self, fm_design_matrix):
+
+        # We need to slice the combined rfx numpy array bambi gives us
+        # using stored column slices for each rfx term
+        self.design_matrix_rfx = dict()
+        rfx_design_matrix = np.array(fm_design_matrix.group)
+
+        for rfx in self.terms["group_terms"]:
+            # We can use the stored slice range to get the correct columns
+            design_mat = rfx_design_matrix[:, fm_design_matrix.group.slices[rfx]]
+
+            self.design_matrix_rfx[rfx] = pd.DataFrame(
+                design_mat, columns=fm_design_matrix.group.terms[rfx].groups
+            )
 
     def _plot_priors(self, **kwargs):
         """Helper function for .plot_summary when requesting prior plots because this
@@ -471,7 +453,16 @@ class Lmer(object):
         """
         raise NotImplementedError("This method is not yet implemented")
 
-    def predict(self, data=None, **kwargs):
+    def predict(
+        self,
+        data=None,
+        summary=True,
+        use_rfx=True,
+        hdi_prob=0.95,
+        kind="mean",
+        stat_focus="mean",
+        **kwargs,
+    ):
         """
         Make predictions given new data or return predictions on data model was fit to.
         Predictions include uncertainty and are summarized using highest density
@@ -505,59 +496,46 @@ class Lmer(object):
 
         """
 
-        use_rfx = kwargs.pop("use_rfx", True)
-        summarize = kwargs.pop("summarize", True)
-        hdi_prob = kwargs.pop("ci", 95) / 100
-        stat_focus = kwargs.pop("stat_focus", "mean")
-
         # Only guard against external use
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate predictions!")
 
-        # If no data is passed, just return the predictions from the estimated
-        # posteriors and observed data. Otherwise call bambi's predict method with the
-        # new data as a kwarg
-        if kwargs.get("data", None) is None:
-            predictions = self.inference_obj
-        else:
-            predictions = self.model_obj.predict(
-                self.inference_obj,
-                inplace=False,
-                include_group_specific=use_rfx,
-                **kwargs,
+        predictions = self.model_obj.predict(
+            idata=self.inference_obj,
+            data=data,
+            inplace=False,
+            include_group_specific=use_rfx,
+            **kwargs,
+        )
+
+        # Predictions are an arviz distribution so aggregate them and filter
+        # out the single row containing the sigma of the distribution,
+        # since we already have uncertainty per prediction
+        output = (
+            az.summary(
+                predictions,
+                kind="stats",
+                var_names=[self.terms["response_term"]],
+                filter_vars="like",
+                hdi_prob=hdi_prob,
+                stat_focus=stat_focus,
             )
-        # So we aggregate them using arviz and filter out the single row containing the
-        # sigma of the distribution of predictions, since we already have uncertainty
-        # per prediction
-        if summarize:
-            summary = (
-                az.summary(
-                    predictions,
-                    kind="stats",
-                    var_names=[self.model_obj.response.name],
-                    filter_vars="like",
-                    hdi_prob=hdi_prob,
-                    stat_focus=stat_focus,
-                )
-                .filter(regex=".*?\[.*?\].*?", axis=0)
-                .assign(Kind=kwargs.get("kind", "mean"))
-                .rename(
-                    columns={
-                        "mean": "Estimate",
-                        "sd": "SD",
-                        "hdi_2.5%": "2.5_ci",
-                        "hdi_97.5%": "97.5_ci",
-                    }
-                )
-            )[["Estimate", "SD", "2.5_ci", "97.5_ci", "Kind"]]
+            .filter(regex=".*?\[.*?\].*?", axis=0)
+            .assign(Kind=kind)
+        )
 
-        else:
-            summary = None
+        # Rename columns if using the mean to summarize
+        if kind == "mean":
+            output = output.rename(
+                columns={
+                    stat_focus: "Estimate",
+                    "sd": "SD",
+                    "hdi_2.5%": "2.5_hdi",
+                    "hdi_97.5%": "97.5_hdi",
+                }
+            )[["Estimate", "SD", "2.5_hdi", "97.5_hdi", "Kind"]]
 
-        if summarize:
-            return summary
-        else:
-            return predictions
+        return output
 
     def _pprint_ranef_var(self):
         """
@@ -585,7 +563,7 @@ class Lmer(object):
             df.assign(Name=names)
             .drop(columns=["SD", "SE"])
             .rename(columns={"Estimate": "Std"})
-        )[["Name", "Std", "2.5_ci", "97.5_ci", "Rubin_Gelman"]]
+        )[["Name", "Std", "2.5_hdi", "97.5_hdi", "Rubin_Gelman"]]
 
         return df.round(3)
 
