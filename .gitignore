@@ -20,3 +20,4 @@ pytest.ini
 env
 environment.yml
 docs/dev.ipynb
+.vscode/bookmarks.json

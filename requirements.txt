@@ -2,3 +2,6 @@ bambi>=0.13.0
 seaborn>=0.12
 patsy>=0.5.1
 joblib>=1.4
+jax
+jaxlib
+numpyro

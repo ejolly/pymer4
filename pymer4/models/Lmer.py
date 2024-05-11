@@ -74,6 +74,7 @@ class Lmer(object):
         self.ranef = None
         self.fixef = None
         self.design_matrix = None
+        self.design_matrix_rfx = None
         self.residuals = None
         self.coefs = None
         self.model_obj = None
@@ -98,15 +99,38 @@ class Lmer(object):
         self.model_obj = bmb.Model(
             self.formula, data=self.data, family=self.family, **kwargs
         )
-        # self.model_obj.build()
+        self.model_obj.build()
 
-        # IVs
-        # self.model_obj.backend.model.unobserved_RVs
-        # DV
-        # self.model_obj.backend.model.observed_RVs
+        # Get bambi's internal design matrix object
+        fm_design_matrix = self.model_obj.response_component.design
 
-        # TODO: Fix this it uses the outdated bambi API
-        # Store separate model terms for ease of reference
+        # Fixed-effect design matrix
+        self.design_matrix = fm_design_matrix.common.as_dataframe()
+
+        # Random-effects names, design matrices, and group sizes
+        self.grps = dict()
+        self.design_matrix_rfx = dict()
+
+        # Design matrix per rfx parameter; can't cast to df directly
+        # Instead we need to slice the numpy array and then cast to df
+        rfx_design_matrix = np.array(fm_design_matrix.group)
+
+        for rfx in fm_design_matrix.group.terms:
+
+            # Get the number of groups for this rfx term
+            grp_size = len(fm_design_matrix.group.terms[rfx].groups)
+
+            # We can use the stored slice range to get the correct columns
+            design_mat = rfx_design_matrix[:, fm_design_matrix.group.slices[rfx]]
+
+            # Store dicts
+            self.grps[rfx] = grp_size
+
+            # NOTE: May not need to save these?
+            self.design_matrix_rfx[rfx] = pd.DataFrame(
+                design_mat, columns=fm_design_matrix.group.terms[rfx].groups
+            )
+
         # if self.model_obj.intercept_term:
         #     common_terms = ["Intercept"]
         # else:
@@ -155,14 +179,6 @@ class Lmer(object):
 
         raise NotImplementedError("This method is not yet implemented")
 
-    def _get_ngrps(self):
-        """Get the groups information from the model as a dictionary"""
-
-
-        m.components['DV'].design.group.terms['1|Group'].groups
-        group_terms = self.model_obj.group_specific_terms.values()
-        self.grps = {e.name.split("|")[-1]: len(e.groups) for e in group_terms}
-
     def fit(
         self,
         rank=False,
@@ -173,7 +189,7 @@ class Lmer(object):
         **kwargs,
     ):
 
-        inference_method = kwargs.pop("inference_method", "nuts_numpyro")
+        # inference_method = kwargs.pop("inference_method", "nuts_numpyro")
         draws = kwargs.pop("draws", self.draws)
         tune = kwargs.pop("tune", self.tune)
         summary = kwargs.pop("summary", True)
@@ -184,19 +200,19 @@ class Lmer(object):
         # Only print progress bars if maximum verbosity (2)
         # Different backends have different kwarg names so we need to build this dict programmatically
         additional_kwargs = dict()
-        if inference_method == "nuts_numpyro":
-            additional_kwargs["progress_bar"] = True if verbose > 1 else False
-            self.backend = "Numpyro/Jax NUTS Sampler"
-        else:
-            additional_kwargs["progressbar"] = True if verbose > 1 else False
-            self.backend = "PyMC MCMC"
+        # if inference_method == "nuts_numpyro":
+        #     # additional_kwargs["progress_bar"] = True if verbose > 1 else False
+        #     self.backend = "Numpyro/Jax NUTS Sampler"
+        # else:
+        #     # additional_kwargs["progressbar"] = True if verbose > 1 else False
+        #     self.backend = "PyMC MCMC"
 
         # Hide basic compilation messages if lowest verbosity (0)
         with open(os.devnull, "w") as f:
             with redirect_stdout(f) if verbose == 0 else nullcontext():
                 self.inference_obj = self.model_obj.fit(
                     draws=draws,
-                    inference_method=inference_method,
+                    # inference_method=inference_method,
                     tune=tune,
                     **additional_kwargs,
                 )
