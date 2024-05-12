@@ -512,7 +512,7 @@ class Lmer(object):
         summary=True,
         use_rfx=True,
         hdi_prob=0.95,
-        kind="mean",
+        kind="pps",
         stat_focus="mean",
         **kwargs,
     ):
@@ -558,6 +558,7 @@ class Lmer(object):
             data=data,
             inplace=False,
             include_group_specific=use_rfx,
+            kind=kind,
             **kwargs,
         )
 
@@ -578,7 +579,7 @@ class Lmer(object):
         )
 
         # Rename columns if using the mean to summarize
-        if kind == "mean":
+        if stat_focus == "mean":
             output = output.rename(
                 columns={
                     stat_focus: "Estimate",
