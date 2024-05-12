@@ -14,6 +14,7 @@ from pandas.api.types import CategoricalDtype
 from contextlib import redirect_stdout, nullcontext
 import os
 from pymer4.utils import _select_az_params
+from warnings import warn
 
 
 class Lmer(object):
@@ -50,36 +51,14 @@ class Lmer(object):
 
     def __init__(self, formula, data, family="gaussian", **kwargs):
 
+        # TODO: Add docstring info about families and link functions
         self.fitted = False
         self.data = copy(data)
-        self.grps = None
-        self.AIC = None
-        self.BIC = None
-        self.logLike = None
-        self.warnings = []
-        self.ranef_var = None
-        self.ranef_corr = None
-        self.ranef = None
-        self.fixef = None
-        self.design_matrix = None
-        self.design_matrix_rfx = None
-        self.residuals = None
-        self.coefs = None
-        self.model_obj = None
-        self.factors = None
-        self.contrast_codes = None
-        self.ranked_data = False
-        self.marginal_estimates = None
-        self.marginal_contrasts = None
-        self.sig_type = None
-        self.factors_prev_ = None
-        self.contrasts = None
-        self.backend = None
-        self.draws = 2000
-        self.tune = 1000
-        self.terms = {}
-        self.fits = None
-        self.inference_obj = None
+        self.model_obj = None  # bambi model object
+        self.inference_obj = None  # arviz inference object after fitting
+
+        # NOTE: We need to convert binomial to bernoulli for bambi
+        family = "bernoulli" if family == "binomial" else family
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(formula, data=self.data, family=family, **kwargs)
@@ -140,10 +119,6 @@ class Lmer(object):
         inference_method="nuts_numpyro",
         progressbar=False,
         verbose=False,
-        rank=False,
-        ordered=False,
-        rank_group="",
-        rank_exclude_cols=[],
         **kwargs,
     ):
 
@@ -162,7 +137,7 @@ class Lmer(object):
         self.fitted = True
         self.backend = inference_method
 
-        # Create summary tables for fixed and random effects
+        # Create summary tables for population, fixed, and random parameters
         self._build_coefs()
 
         # Create fits/predictions marginalizing over posterior
@@ -175,7 +150,7 @@ class Lmer(object):
     def _build_coefs(self):
 
         # Population level parameters
-        self.coefs = az.summary(
+        self.coef = az.summary(
             self.inference_obj,
             kind="all",
             var_names=["~|", "~_sigma"],
@@ -194,32 +169,39 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
         ]
 
+        # Cluster RFX
         # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
-        # Cluster level effects
-        # TODO: Turn this into wide-format so rfx are stacked as columns instead of rows
-        self.ranef = az.summary(
-            self.inference_obj,
-            kind="all",
-            var_names=["|"],
-            filter_vars="like",
-            hdi_prob=0.95,
-        ).rename(
-            columns={
-                "mean": "Estimate",
-                "sd": "SD",
-                "mcse_mean": "SE",
-                "hdi_2.5%": "2.5_hdi",
-                "hdi_97.5%": "97.5_hdi",
-                "r_hat": "Rubin_Gelman",
-            }
-        )[
-            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
-        ]
-        # Filter out row with variance across rfx, as the az.summary includes it
-        to_remove = self.ranef.filter(like="_sigma", axis=0).index
-        self.ranef = self.ranef[~self.ranef.index.isin(to_remove)]
+        rfx = dict()
+        # Instead of a single data-frame we store a dictionary of data-frames
+        # because we have summary statistics over distributions for each rfx term
+        for term in self.terms["group_terms"]:
+            summary = az.summary(
+                self.inference_obj,
+                kind="all",
+                var_names=term,
+                filter_vars="like",
+                hdi_prob=0.95,
+            ).rename(
+                columns={
+                    "mean": "Estimate",
+                    "sd": "SD",
+                    "mcse_mean": "SE",
+                    "hdi_2.5%": "2.5_hdi",
+                    "hdi_97.5%": "97.5_hdi",
+                    "r_hat": "Rubin_Gelman",
+                }
+            )[
+                ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
+            ]
+            # Filter out row with variance across rfx, as the az.summary includes it
+            to_remove = summary.filter(like="_sigma", axis=0).index
+            summary = summary[~summary.index.isin(to_remove)]
+            rfx[term] = summary
 
-        # Variance of ranfx
+        # Store them
+        self.ranef = rfx
+
+        # Cluster RFX Variance
         self.ranef_var = az.summary(
             self.inference_obj,
             kind="all",
@@ -239,8 +221,79 @@ class Lmer(object):
             ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
         ]
 
-        # TODO:
-        # Create summary table for cluster level parameters
+        # Cluster FFX
+        # Wrap in try because this is not always possible to determine automatically
+        # with more complicated rfx terms
+        try:
+            # Get unique cluster names
+            cluster_names = list(
+                set([term.split("|")[-1] for term in self.terms["group_terms"]])
+            )
+            fixef = dict()
+            for name in cluster_names:
+                fixef[name] = self.calc_fixef(name)
+            self.fixef = fixef
+        except Exception:
+            warn(
+                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually use the `model.calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item')",
+            )
+
+        # Alias attributes for backwards compatibility
+        self.coefs = self.coef
+        self.fixefs = self.fixef
+        self.ranefs = self.ranef
+
+    def calc_fixef(self, group_var):
+        """
+        Calculate parameter estimates per `group_var` cluster by combining population and rfx estimates. This is equivalent to fixef() in R. This is a method rather than a model attribute because Bambi doesn't store the combined estimates by default and with more complicated rfx terms it's not always clear how to combine them.
+
+        Args:
+            group_var (str): name of the group variable to calculate fixef for; Corresponds to the last part of the rfx in the model formula, e.g. for "(condition|subject)" use "subject" to return per-subject estimates.
+
+        Returns:
+            pd.DataFrame: data frame with one row per group and columns for the estimate, 2.5 and 97.5 HDIs
+
+        """
+
+        group_terms = [t for t in self.terms["group_terms"] if group_var in t]
+        if len(group_terms) == 0:
+            raise ValueError(f"Group variable {group_var} not found in model")
+
+        fixef = dict()
+        new_index = None
+        for term in self.terms["common_terms"]:
+            if term == "Intercept":
+                rfx_term = [t for t in group_terms if t.startswith("1|")]
+                if len(rfx_term) == 0:
+                    continue
+                rfx_term = rfx_term[0]
+                col_prefix = "Intercept"
+            else:
+                rfx_term = [t for t in group_terms if t.startswith(term + "|")]
+                if len(rfx_term) == 0:
+                    continue
+                rfx_term = rfx_term[0]
+                col_prefix = term
+
+            if new_index is None:
+                new_index = [e.split("|")[-1] for e in self.ranef[rfx_term].index]
+
+            point_estimates = (
+                self.ranef[rfx_term].loc[:, "Estimate"]
+                + self.coef.loc[term, "Estimate"]
+            ).to_numpy()
+            lb = (
+                self.ranef[rfx_term].loc[:, "2.5_hdi"] + self.coef.loc[term, "Estimate"]
+            ).to_numpy()
+            ub = (
+                self.ranef[rfx_term].loc[:, "97.5_hdi"]
+                + self.coef.loc[term, "Estimate"]
+            ).to_numpy()
+            fixef[f"{col_prefix}_Estimate"] = point_estimates
+            fixef[f"{col_prefix}_2.5_hdi"] = lb
+            fixef[f"{col_prefix}_97.5_hdi"] = ub
+
+        return pd.DataFrame(fixef, index=new_index)
 
     def _build_fits(self):
         """Adds .fits (also accessible as .posterior_predictions) and .residuals
@@ -270,10 +323,10 @@ class Lmer(object):
         self.data["residuals"] = self.residuals.copy()
 
     def _build_priors(self):
-        """Adds a .prior_coefs attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
+        """Adds a .prior_coef attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
 
         priors = self.model_obj.prior_predictive()
-        self.prior_coefs = az.summary(
+        self.prior_coef = az.summary(
             priors,
             kind="stats",
             var_names=self.terms["common_terms"],
@@ -590,12 +643,12 @@ class Lmer(object):
         # print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
         print("Random effects:\n")
         print("%s\n" % (self._pprint_ranef_var()))
-        if self.coefs is None:
+        if self.coef is None:
             print("No fixed effects estimated\n")
             return
         else:
             print("Fixed effects:\n")
-            return self.coefs.round(3)
+            return self.coef.round(3)
 
     def plot(
         self,

@@ -104,15 +104,15 @@ def test_gaussian_lmm():
     # Test against lme4 model in tutorial 1 notebook
     model = Lmer("DV ~ IV2 + (IV2|Group)", data=df)
     assert model.inference_obj is None
-    assert model.prior_coefs is not None
+    assert model.prior_coef is not None
 
     # Test printing summary
     model.fit()
 
-    assert model.coefs.loc["Intercept", "2.5_hdi"] > 4
-    assert model.coefs.loc["Intercept", "97.5_hdi"] < 16
-    assert model.coefs.loc["IV2", "2.5_hdi"] > 0.5
-    assert model.coefs.loc["IV2", "97.5_hdi"] < 0.9
+    assert model.coef.loc["Intercept", "2.5_hdi"] > 4
+    assert model.coef.loc["Intercept", "97.5_hdi"] < 16
+    assert model.coef.loc["IV2", "2.5_hdi"] > 0.5
+    assert model.coef.loc["IV2", "97.5_hdi"] < 0.9
 
     # Test shape works with random items
     model = Lmer("DV ~ IV3 + IV2 + (IV2|Group) + (1|IV3)", data=df)
@@ -123,9 +123,11 @@ def test_gaussian_lmm():
 
     model.fit(summary=False)
 
-    assert model.coefs.shape == (3, 6)
-    assert model.ranef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
+    assert model.coef.shape == (3, 6)
     assert model.ranef_var.shape == (4, 6)
+    # TODO: add tests for random-effects
+    # assert model.ranef.shape == (df.Group.nunique() * 2 + df.IV3.nunique(), 6)
+    # TODO: add tests for fixed-effects
 
     # Fit check against example on bambi website
     data = load_data("sleepstudy")
@@ -133,10 +135,10 @@ def test_gaussian_lmm():
     model.fit(summary=False)
 
     # Check values against bambi docs which use pymc's sampler
-    assert model.coefs.loc["Intercept", "2.5_hdi"] > 233
-    assert model.coefs.loc["Intercept", "97.5_hdi"] < 268
-    assert model.coefs.loc["Days", "2.5_hdi"] > 6.5
-    assert model.coefs.loc["Days", "97.5_hdi"] < 15
+    assert model.coef.loc["Intercept", "2.5_hdi"] > 233
+    assert model.coef.loc["Intercept", "97.5_hdi"] < 268
+    assert model.coef.loc["Days", "2.5_hdi"] > 6.5
+    assert model.coef.loc["Days", "97.5_hdi"] < 15
 
     # Test predict
     # Sample from mean of DV distribution using posterior
