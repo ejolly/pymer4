@@ -52,13 +52,22 @@ class Lmer(object):
     def __init__(self, formula, data, family="gaussian", **kwargs):
 
         # TODO: Add docstring info about families and link functions
-        self.fitted = False
-        self.data = copy(data)
+        # Initialize attributes
+        self.fitted = False  # whether model has been fit
         self.model_obj = None  # bambi model object
         self.inference_obj = None  # arviz inference object after fitting
+        self.backend = None  # inference backend used
+        self.coef = None  # population level parameters
+        self.fixef = None  # cluster level parameters
+        self.ranef = None  # cluster level differences from population parameters
+        self.ranef_var = None  # cluster level variance
+        self.posterior_summary_statistic = "mean"  # how we summarize posteriors
 
         # NOTE: We need to convert binomial to bernoulli for bambi
         family = "bernoulli" if family == "binomial" else family
+
+        # Copy data to avoid modifying original
+        self.data = copy(data)
 
         # Initialize bambi model object and extract attributes
         self.model_obj = bmb.Model(formula, data=self.data, family=family, **kwargs)
@@ -117,37 +126,133 @@ class Lmer(object):
         draws=1000,
         tune=1000,
         inference_method="nuts_numpyro",
+        summarize_posterior_with="mean",
+        refit=False,
         progressbar=False,
         verbose=False,
         **kwargs,
     ):
+        """
+        Perform bayesian estimation via the requestined inference method. Defaults to using NUTS sampler with numpyro backend which is a bit faster than PyMC's `'mcmc'` sampler with early identitcal estimates. The underlying `arviz` inference object can be accessed at `.inference_object`. This method will also summarize posterior distributions following BARG guidelines from [Kruschke (2021, NHB)](https://www.nature.com/articles/s41562-021-01177-7).
 
-        # Hide basic compilation messages if lowest verbosity (0)
-        with open(os.devnull, "w") as f:
-            with redirect_stdout(f) if verbose else nullcontext():
-                self.inference_obj = self.model_obj.fit(
-                    draws=draws,
-                    tune=tune,
-                    inference_method=inference_method,
-                    progressbar=progressbar,
-                    **kwargs,
-                )
+        Args:
+            summary (bool, optional): print an R style summary and return population coefficients table. Defaults to True.
+            draws (int, optional): _description_. Defaults to 1000.
+            tune (int, optional): _description_. Defaults to 1000.
+            inference_method (str, optional): _description_. Defaults to "nuts_numpyro".
+            summarize_posterior_with (str, optional): How to summarize posterior distribution. "mean" uses density-based values while "median" uses quantile-based values. Defaults to "mean".
+            progressbar (bool, optional): _description_. Defaults to False.
+            verbose (bool, optional): _description_. Defaults to False.
 
-        # Set flags
-        self.fitted = True
-        self.backend = inference_method
 
-        # Create summary tables for population, fixed, and random parameters
-        self._build_coefs()
+        Returns:
+            pd.DataFrame: table of posterior parameter summaries if `summary=True`
+        """
 
-        # Create fits/predictions marginalizing over posterior
-        self._build_fits()
+        # Only perform sampling if model hasn't been fit or if refit is True
+        if (not self.fitted) or refit:
+            # Hide basic compilation messages if lowest verbosity (0)
+            with open(os.devnull, "w") as f:
+                with redirect_stdout(f) if verbose else nullcontext():
+                    self.inference_obj = self.model_obj.fit(
+                        draws=draws,
+                        tune=tune,
+                        inference_method=inference_method,
+                        progressbar=progressbar,
+                        **kwargs,
+                    )
 
-        # Return summary table if requested
-        if summary:
-            return self.summary()
+                # Set flags
+                self.fitted = True
+                self.backend = inference_method
+
+                # NOTE: self.summary() can rewrite this attribute by design
+                self.posterior_summary_statistic = summarize_posterior_with
+
+        # Calculate posterior and fit summary statistics
+        # This can be called multiple times without re-fitting
+        return self.summary(summarize_posterior_with, return_summary=summary)
+
+    def _coefs_rename_map(self):
+        if self.posterior_summary_statistic == "mean":
+            rename_map = {
+                "mean": "Estimate",
+                "sd": "SD",
+                "mcse_mean": "MCSE",
+                "r_hat": "Rubin_Gelman",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
+                "ess_bulk": "ESS_Bulk",
+                "ess_tail": "ESS_Tail",
+            }
+            sort_order = [
+                "Estimate",
+                "2.5_hdi",
+                "97.5_hdi",
+                "SD",
+                "MCSE",
+                "Rubin_Gelman",
+                "ESS_Bulk",
+                "ESS_Tail",
+            ]
+        elif self.posterior_summary_statistic == "median":
+            rename_map = {
+                "median": "Estimate",
+                "mad": "MAD",
+                "mcse_median": "MCSE",
+                "r_hat": "Rubin_Gelman",
+                "eti_2.5%": "2.5_eti",
+                "eti_97.5%": "97.5_eti",
+                "ess_median": "ESS_Median",
+                "ess_tail": "ESS_Tail",
+            }
+            sort_order = [
+                "Estimate",
+                "2.5_eti",
+                "97.5_eti",
+                "MAD",
+                "MCSE",
+                "Rubin_Gelman",
+                "ESS_Median",
+                "ESS_Tail",
+            ]
+        return rename_map, sort_order
+
+    def _fits_rename_map(self):
+
+        if self.posterior_summary_statistic == "mean":
+            rename_map = {
+                "mean": "fits",
+                "sd": "fits_SD",
+                "hdi_2.5%": "fits_2.5_hdi",
+                "hdi_97.5%": "fits_97.5_hdi",
+            }
+            sort_order = [
+                "fits",
+                "fits_2.5_hdi",
+                "fits_97.5_hdi",
+                "fits_SD",
+                "Kind",
+            ]
+        elif self.posterior_summary_statistic == "median":
+            rename_map = {
+                "median": "fits",
+                "mad": "fits_MAD",
+                "eti_2.5%": "fits_2.5_eti",
+                "eti_97.5%": "fits_97.5_eti",
+            }
+            sort_order = [
+                "fits",
+                "fits_2.5_eti",
+                "fits_97.5_eti",
+                "fits_MAD",
+                "Kind",
+            ]
+        return rename_map, sort_order
 
     def _build_coefs(self):
+
+        rename_map, sort_order = self._coefs_rename_map()
 
         # Population level parameters
         self.coef = az.summary(
@@ -156,18 +261,8 @@ class Lmer(object):
             var_names=["~|", "~_sigma"],
             filter_vars="like",
             hdi_prob=0.95,
-        ).rename(
-            columns={
-                "mean": "Estimate",
-                "sd": "SD",
-                "mcse_mean": "SE",
-                "r_hat": "Rubin_Gelman",
-                "hdi_2.5%": "2.5_hdi",
-                "hdi_97.5%": "97.5_hdi",
-            }
-        )[
-            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
-        ]
+            stat_focus=self.posterior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
 
         # Cluster RFX
         # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
@@ -181,18 +276,8 @@ class Lmer(object):
                 var_names=term,
                 filter_vars="like",
                 hdi_prob=0.95,
-            ).rename(
-                columns={
-                    "mean": "Estimate",
-                    "sd": "SD",
-                    "mcse_mean": "SE",
-                    "hdi_2.5%": "2.5_hdi",
-                    "hdi_97.5%": "97.5_hdi",
-                    "r_hat": "Rubin_Gelman",
-                }
-            )[
-                ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
-            ]
+                stat_focus=self.posterior_summary_statistic,
+            ).rename(columns=rename_map)[sort_order]
             # Filter out row with variance across rfx, as the az.summary includes it
             to_remove = summary.filter(like="_sigma", axis=0).index
             summary = summary[~summary.index.isin(to_remove)]
@@ -208,18 +293,8 @@ class Lmer(object):
             var_names=["_sigma"],
             filter_vars="like",
             hdi_prob=0.95,
-        ).rename(
-            columns={
-                "mean": "Estimate",
-                "sd": "SD",
-                "mcse_mean": "SE",
-                "r_hat": "Rubin_Gelman",
-                "hdi_2.5%": "2.5_hdi",
-                "hdi_97.5%": "97.5_hdi",
-            }
-        )[
-            ["Estimate", "SD", "2.5_hdi", "97.5_hdi", "SE", "Rubin_Gelman"]
-        ]
+            stat_focus=self.posterior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
 
         # Cluster FFX
         # Wrap in try because this is not always possible to determine automatically
@@ -243,6 +318,57 @@ class Lmer(object):
         self.fixefs = self.fixef
         self.ranefs = self.ranef
 
+    def _empty_prev_fit_summary(self):
+
+        self.coef = None
+        self.fixef = None
+        self.ranef = None
+        self.ranef_var = None
+        self.fits = None
+        self.residuals = None
+        self.posterior_predictions = None
+        _, sort_order = self._fits_rename_map()
+        sort_order += ["residuals"]
+        self.data = self.data.drop(columns=sort_order, errors="ignore")
+        self.posterior_summary_statistic = None
+
+    def _calc_p_values(self):
+
+        out = dict()
+        for term in self.coef.index:
+
+            # Factor term
+            if "[" in term:
+                factor_term = term.split("[")[0]
+                posterior = self.inference_obj.posterior[factor_term]
+                for i in range(posterior.shape[2]):
+                    p = 1 - (posterior[:, :, i] > 0).mean().item()
+                    out[f"{term}"] = p
+
+            # Get posterior distribution
+            posterior = self.inference_obj.posterior[term]
+
+            if len(posterior.shape) == 3:
+                for i in range(posterior.shape[2]):
+                    p = 1 - (posterior[:, :, i] > 0).mean().item()
+                    out[f"{term}_{i}"] = p
+                pass
+            else:
+                p = 1 - (posterior > 0).mean().item()
+                out[term] = p
+        # for term in self.terms["common_terms"]:
+
+        #     # Get posterior distribution
+        #     posterior = self.inference_obj.posterior[term]
+        #     if len(posterior.shape) == 3:
+        #         for i in range(posterior.shape[2]):
+        #             p = 1 - (posterior[:, :, i] > 0).mean().item()
+        #             out[f"{term}_{i}"] = p
+        #         pass
+        #     else:
+        #         p = 1 - (posterior > 0).mean().item()
+        #         out[term] = p
+
     def calc_fixef(self, group_var):
         """
         Calculate parameter estimates per `group_var` cluster by combining population and rfx estimates. This is equivalent to fixef() in R. This is a method rather than a model attribute because Bambi doesn't store the combined estimates by default and with more complicated rfx terms it's not always clear how to combine them.
@@ -251,13 +377,18 @@ class Lmer(object):
             group_var (str): name of the group variable to calculate fixef for; Corresponds to the last part of the rfx in the model formula, e.g. for "(condition|subject)" use "subject" to return per-subject estimates.
 
         Returns:
-            pd.DataFrame: data frame with one row per group and columns for the estimate, 2.5 and 97.5 HDIs
+            pd.DataFrame: data frame with one row per group and columns for the estimate, 2.5 and 97.5 uncertainty estimates
 
         """
 
         group_terms = [t for t in self.terms["group_terms"] if group_var in t]
         if len(group_terms) == 0:
             raise ValueError(f"Group variable {group_var} not found in model")
+
+        lb_col = "2.5_hdi" if self.posterior_summary_statistic == "mean" else "2.5_eti"
+        ub_col = (
+            "97.5_hdi" if self.posterior_summary_statistic == "mean" else "97.5_eti"
+        )
 
         fixef = dict()
         new_index = None
@@ -283,15 +414,14 @@ class Lmer(object):
                 + self.coef.loc[term, "Estimate"]
             ).to_numpy()
             lb = (
-                self.ranef[rfx_term].loc[:, "2.5_hdi"] + self.coef.loc[term, "Estimate"]
+                self.ranef[rfx_term].loc[:, lb_col] + self.coef.loc[term, "Estimate"]
             ).to_numpy()
             ub = (
-                self.ranef[rfx_term].loc[:, "97.5_hdi"]
-                + self.coef.loc[term, "Estimate"]
+                self.ranef[rfx_term].loc[:, ub_col] + self.coef.loc[term, "Estimate"]
             ).to_numpy()
             fixef[f"{col_prefix}_Estimate"] = point_estimates
-            fixef[f"{col_prefix}_2.5_hdi"] = lb
-            fixef[f"{col_prefix}_97.5_hdi"] = ub
+            fixef[f"{col_prefix}_{lb_col}"] = lb
+            fixef[f"{col_prefix}_{ub_col}"] = ub
 
         return pd.DataFrame(fixef, index=new_index)
 
@@ -303,7 +433,7 @@ class Lmer(object):
         # Fits/predictions sampled from posterior
         # With no arguments, this will return the posterior predictive distribution
         # using the same data the model was fit to
-        fits = self.predict()
+        fits = self.predict(summarize_predictions_with=self.posterior_summary_statistic)
         fits = fits.rename(
             columns={
                 "Estimate": "fits",
@@ -509,11 +639,10 @@ class Lmer(object):
     def predict(
         self,
         data=None,
-        summary=True,
         use_rfx=True,
         hdi_prob=0.95,
         kind="pps",
-        stat_focus="mean",
+        summarize_predictions_with="mean",
         **kwargs,
     ):
         """
@@ -536,7 +665,6 @@ class Lmer(object):
             observation).Defaults to ``"mean"``.
             data (pandas.core.frame.DataFrame; optional): input data to make predictions
             on. Defaults to using same data model was fit with
-            summarize (bool; optional): whether to aggregate predictions by stat_focus
             and ci; Default True
             ci (int; optional): highest density interval (bayesian confidence) interval;
             Default to 95%
@@ -572,22 +700,14 @@ class Lmer(object):
                 var_names=[self.terms["response_term"]],
                 filter_vars="like",
                 hdi_prob=hdi_prob,
-                stat_focus=stat_focus,
+                stat_focus=summarize_predictions_with,
             )
             .filter(regex=".*?\[.*?\].*?", axis=0)
             .assign(Kind=kind)
         )
 
-        # Rename columns if using the mean to summarize
-        if stat_focus == "mean":
-            output = output.rename(
-                columns={
-                    stat_focus: "Estimate",
-                    "sd": "SD",
-                    "hdi_2.5%": "2.5_hdi",
-                    "hdi_97.5%": "97.5_hdi",
-                }
-            )[["Estimate", "SD", "2.5_hdi", "97.5_hdi", "Kind"]]
+        rename_map, sort_order = self._fits_rename_map()
+        output = output.rename(columns=rename_map)[sort_order]
 
         return output
 
@@ -613,43 +733,75 @@ class Lmer(object):
         df.index = new_index
 
         # Format columns
-        df = (
-            df.assign(Name=names)
-            .drop(columns=["SD", "SE"])
-            .rename(columns={"Estimate": "Std"})
-        )[["Name", "Std", "2.5_hdi", "97.5_hdi", "Rubin_Gelman"]]
+        df = (df.assign(Name=names))[
+            [
+                "Name",
+                "Estimate",
+                f"{'2.5_hdi' if self.posterior_summary_statistic == 'mean' else '2.5_eti'}",
+                f"{'97.5_hdi' if self.posterior_summary_statistic == 'mean' else '97.5_eti'}",
+                "Rubin_Gelman",
+            ]
+        ]
 
         return df.round(3)
 
-    def summary(self):
+    def summary(self, summarize_posterior_with="mean", return_summary=True):
         """
-        Summarize the output of a fitted model.
+        Summarize the posterior and estimates of a fitted model. This adds summary tables for population effects (`self.coef`), random effects (`self.ranef`), and fixed effects (`self.fixef`) to the model object. It also adds posterior predictive fits (`self.fits`) and residuals (`self.residuals`) to the model data. Optionally print a summary of the model fit in the style of R's `summary()` function.
+
+        Args:
+            summarize_posterior_with (str, optional): Generate summarize using 'mean' or 'median'. Defaults to "mean".
+            return_summary (bool, optional): Print summary and return population paraemeter table (`self.coef`). Defaults to True.
 
         Returns:
-            pd.DataFrame: R/statsmodels style summary
-
+            pd.DataFrame: DataFrame of population parameter estimates rounded to 3 decimal places
         """
 
         if not self.fitted:
             raise RuntimeError("Model must be fitted to generate summary!")
 
-        print(f"Linear mixed model fit by: {self.backend}\n")
+        if summarize_posterior_with not in ["mean", "median"]:
+            raise ValueError(
+                f"summarize_posterior_with must be 'mean' or 'median', not {summarize_posterior_with}"
+            )
 
-        print("Formula: {}\n".format(self.formula))
-        print("Family: {}\n".format(self.family))
-        print(
-            "Number of observations: %s\t Groups: %s\n"
-            % (self.data.shape[0], self.grps)
-        )
-        # print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
-        print("Random effects:\n")
-        print("%s\n" % (self._pprint_ranef_var()))
-        if self.coef is None:
-            print("No fixed effects estimated\n")
-            return
-        else:
-            print("Fixed effects:\n")
-            return self.coef.round(3)
+        # Remove previous summary stats if they exist
+        self._empty_prev_fit_summary()
+
+        # Update user choice, shared across private methods below
+        self.posterior_summary_statistic = summarize_posterior_with
+
+        # Create summary tables for population, fixed, and random parameters
+        self._build_coefs()
+
+        # Add posterior p-values
+        self._calc_p_values()
+
+        # Add fits (predictions on same data) and residuals to
+        # self.data marginalizing over posterior
+        self._build_fits()
+
+        # Print R style summary and return population fixed effects
+        if return_summary:
+            print(f"Linear mixed model fit by: {self.backend}\n")
+
+            print("Formula: {}\n".format(self.formula))
+            print("Family: {}\n".format(self.family))
+            print(
+                "Number of observations: %s\t Groups: %s\n"
+                % (self.data.shape[0], self.grps)
+            )
+            print(f"Posterior sampling: {self.backend}\n")
+            print(f"Posterior summary statistic: {self.posterior_summary_statistic}\n")
+            # print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
+            print("Random effects:\n")
+            print("%s\n" % (self._pprint_ranef_var()))
+            if self.coef is None:
+                print("No fixed effects estimated\n")
+                return
+            else:
+                print("Fixed effects:\n")
+                return self.coef.round(3)
 
     def plot(
         self,
