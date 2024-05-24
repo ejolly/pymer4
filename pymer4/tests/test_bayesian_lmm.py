@@ -4,7 +4,7 @@ import pytest
 from pymer4 import Lmer
 
 
-@pytest.mark.usefixtures("sleepstudy")
+@pytest.mark.usefixtures("sleepstudy", "sampledata")
 class Test_Basic_Usage:
 
     EXPECTED_PRIOR_MEAN_SUMMARY_COLS = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
@@ -28,6 +28,14 @@ class Test_Basic_Usage:
         "Rubin_Gelman",
         "ESS_Median",
         "ESS_Tail",
+    ]
+    EXPECTED_ARVIZ_INFERENCE_DATA_GROUPS = [
+        "posterior",
+        "posterior_predictive",
+        "sample_stats",
+        "prior",
+        "prior_predictive",
+        "observed_data",
     ]
 
     def test_init(self, sleepstudy):
@@ -84,8 +92,12 @@ class Test_Basic_Usage:
         assert isinstance(out, pd.DataFrame)
         assert out.equals(sleep_model.coef_posterior)
 
-        # We hold on to posterior samples from chains and draws in the arviz object
+        # For convenience we store: priors, prior predictive samples, posteriors, posterior predictive samples, observed_data, and sample_stats from the inference routine in the same arviz InferenceData object
         assert isinstance(sleep_model.inference_obj, az.InferenceData)
+        assert (
+            sleep_model.inference_obj.groups()
+            == self.EXPECTED_ARVIZ_INFERENCE_DATA_GROUPS
+        )
 
         # Like lme4 we have easy-to-access attributes for fixed and random effects
         # Multiple aliases to get access to a dataframe of summary stats for population
@@ -169,6 +181,7 @@ class Test_Basic_Usage:
             "chain": 4,
             "draw": 1000,
             "Subject__factor_dim": 18,
+            "Reaction_obs": 180,
         }
 
         # We can change this by passing chains and draws to .fit()
@@ -179,6 +192,7 @@ class Test_Basic_Usage:
             "chain": 2,
             "draw": 500,
             "Subject__factor_dim": 18,
+            "Reaction_obs": 180,
         }
 
         # Change inference method to pymc's mcmc sampler, which is a bit slower
@@ -189,3 +203,34 @@ class Test_Basic_Usage:
         assert (
             sleep_model.inference_obj.sample_stats.attrs["inference_library"] == "pymc"
         )
+
+    def bayesian_pvals(self, sleepstudy):
+
+        sleep_model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
+        sleep_model.fit(summary=False)
+        # TODO:
+
+    def test_sleepstudy_precision(self, sleepstudy):
+        """Check numpyro fit against pymc"""
+
+        model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
+        model.fit(summary=False)
+
+        # Test against pymc values from bambi tutorial:
+        # https://bambinos.github.io/bambi/notebooks/sleepstudy.html#analyze-results
+        assert model.coef.loc["Intercept", "2.5_hdi"] > 233
+        assert model.coef.loc["Intercept", "97.5_hdi"] < 268
+        assert model.coef.loc["Days", "2.5_hdi"] > 6.5
+        assert model.coef.loc["Days", "97.5_hdi"] < 15
+
+    def test_sampledata_precision(self, sampledata):
+        """Check numpyro fit against lme4"""
+
+        # Test against lme4 model from pymer4 tutorial 1
+        model = Lmer("DV ~ IV2 + (IV2|Group)", data=sampledata)
+        model.fit(summary=False)
+
+        assert model.coef.loc["Intercept", "2.5_hdi"] > 4
+        assert model.coef.loc["Intercept", "97.5_hdi"] < 16
+        assert model.coef.loc["IV2", "2.5_hdi"] > 0.5
+        assert model.coef.loc["IV2", "97.5_hdi"] < 0.9

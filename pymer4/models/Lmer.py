@@ -176,6 +176,15 @@ class Lmer(object):
                 progressbar,
                 **kwargs,
             )
+            # NOTE: This is a little annoying cause we already called self.model_obj.prior_predictive during initialization. We could store the prior predictive in the model object and then add it to the inference object here, but that would be a bit of a hack. We could also just call it again here, but that would be inefficient. So we'll just leave it as is for now.
+            # Add priors to inference object
+            priors_inference_obj = self.model_obj.prior_predictive(draws=draws)
+            self.inference_obj.add_groups(
+                {
+                    "prior": priors_inference_obj.prior,
+                    "prior_predictive": priors_inference_obj.prior_predictive,
+                }
+            )
 
             # Set flags
             self.fitted = True
@@ -296,7 +305,9 @@ class Lmer(object):
             var_names=["~|", "~_sigma"],
             filter_vars="like",
             hdi_prob=0.95,
+            group="posterior",
             stat_focus=self.posterior_summary_statistic,
+            round_to=None,
         ).rename(columns=rename_map)[sort_order]
 
         # Cluster RFX
@@ -310,6 +321,7 @@ class Lmer(object):
                 kind="all",
                 var_names=term,
                 filter_vars="like",
+                group="posterior",
                 hdi_prob=0.95,
                 stat_focus=self.posterior_summary_statistic,
             ).rename(columns=rename_map)[sort_order]
@@ -327,6 +339,7 @@ class Lmer(object):
             kind="all",
             var_names=["_sigma"],
             filter_vars="like",
+            group="posterior",
             hdi_prob=0.95,
             stat_focus=self.posterior_summary_statistic,
         ).rename(columns=rename_map)[sort_order]
@@ -471,7 +484,9 @@ class Lmer(object):
         # Fits/predictions sampled from posterior
         # With no arguments, this will return the posterior predictive distribution
         # using the same data the model was fit to
-        fits = self.predict(summarize_predictions_with=self.posterior_summary_statistic)
+        fits = self.predict(
+            summarize_predictions_with=self.posterior_summary_statistic, inplace=True
+        )
         fits = fits.rename(
             columns={
                 "Estimate": "fits",
@@ -675,6 +690,7 @@ class Lmer(object):
         hdi_prob=0.95,
         kind="pps",
         summarize_predictions_with="mean",
+        inplace=False,
         **kwargs,
     ):
         """
@@ -716,10 +732,16 @@ class Lmer(object):
         predictions = self.model_obj.predict(
             idata=self.inference_obj,
             data=data,
-            inplace=False,
+            inplace=inplace,
             include_group_specific=use_rfx,
             kind=kind,
             **kwargs,
+        )
+
+        predictions = (
+            self.inference_obj.posterior_predictive
+            if predictions is None
+            else predictions
         )
 
         # Predictions are an arviz distribution so aggregate them and filter
@@ -811,7 +833,7 @@ class Lmer(object):
         self._build_fits()
 
         # Add posterior p-values
-        self._calc_p_values()
+        # self._calc_p_values()
 
         # Print R style summary and return population fixed effects
         if return_summary:
