@@ -49,7 +49,9 @@ class Lmer(object):
 
     """
 
-    def __init__(self, formula, data, family="gaussian", **kwargs):
+    def __init__(
+        self, formula, data, family="gaussian", summarize_prior_with="mean", **kwargs
+    ):
 
         # TODO: Add docstring info about families and link functions
         # Initialize attributes
@@ -57,10 +59,13 @@ class Lmer(object):
         self.model_obj = None  # bambi model object
         self.inference_obj = None  # arviz inference object after fitting
         self.backend = None  # inference backend used
-        self.coef = None  # population level parameters
+        self.coef_prior = None  # prior summary statistics
+        self.coef_posterior = None  # posterior summary statistics
+        self.coef = None  # alias for self.coef_posterior
         self.fixef = None  # cluster level parameters
         self.ranef = None  # cluster level differences from population parameters
         self.ranef_var = None  # cluster level variance
+        self.prior_summary_statistic = summarize_prior_with  # how we summarize priors
         self.posterior_summary_statistic = "mean"  # how we summarize posteriors
 
         # NOTE: We need to convert binomial to bernoulli for bambi
@@ -70,8 +75,7 @@ class Lmer(object):
         self.data = copy(data)
 
         # Initialize bambi model object and extract attributes
-        self.model_obj = bmb.Model(formula, data=self.data, family=family, **kwargs)
-        self.model_obj.build()
+        self.model_obj = self._build_bambi_model(self.data, formula, family, **kwargs)
         self.family = self.model_obj.family.name
         self.formula = self.model_obj.formula.main
 
@@ -95,7 +99,7 @@ class Lmer(object):
         }
 
         # Sample from priors to get summarized predictive distributions
-        # for each model term
+        # for each model term and summarize
         self._build_priors()
 
         # NOTE: Only if we want to store design matrices for rfx terms
@@ -107,18 +111,29 @@ class Lmer(object):
         )
         return out
 
-    def anova(self, force_orthogonal=False):
-        """
-        Return a type-3 ANOVA table from a fitted model. Like R, this method does not ensure that contrasts are orthogonal to ensure correct type-3 SS computation. However, the force_orthogonal flag can refit the regression model with orthogonal polynomial contrasts automatically guaranteeing valid SS type 3 inferences. Note that this will overwrite factors specified in the last call to `.fit()`
+    @staticmethod
+    def _build_bambi_model(data, formula, family, **kwargs):
 
-        Args:
-            force_orthogonal (bool): whether factors in the model should be recoded using polynomial contrasts to ensure valid type-3 SS calculations. If set to True, previous factor specifications will be saved in `model.factors_prev_`; default False
+        model_obj = bmb.Model(formula, data=data, family=family, **kwargs)
+        model_obj.build()
+        return model_obj
 
-        Returns:
-            pd.DataFrame: Type 3 ANOVA results
-        """
+    @staticmethod
+    def _fit_bambi_model(
+        model_obj, verbose, draws, tune, inference_method, progressbar, **kwargs
+    ):
 
-        raise NotImplementedError("This method is not yet implemented")
+        # Hide basic compilation messages if lowest verbosity (0)
+        with open(os.devnull, "w") as f:
+            with redirect_stdout(f) if verbose else nullcontext():
+                inference_obj = model_obj.fit(
+                    draws=draws,
+                    tune=tune,
+                    inference_method=inference_method,
+                    progressbar=progressbar,
+                    **kwargs,
+                )
+        return inference_obj
 
     def fit(
         self,
@@ -151,23 +166,23 @@ class Lmer(object):
 
         # Only perform sampling if model hasn't been fit or if refit is True
         if (not self.fitted) or refit:
-            # Hide basic compilation messages if lowest verbosity (0)
-            with open(os.devnull, "w") as f:
-                with redirect_stdout(f) if verbose else nullcontext():
-                    self.inference_obj = self.model_obj.fit(
-                        draws=draws,
-                        tune=tune,
-                        inference_method=inference_method,
-                        progressbar=progressbar,
-                        **kwargs,
-                    )
 
-                # Set flags
-                self.fitted = True
-                self.backend = inference_method
+            self.inference_obj = self._fit_bambi_model(
+                self.model_obj,
+                verbose,
+                draws,
+                tune,
+                inference_method,
+                progressbar,
+                **kwargs,
+            )
 
-                # NOTE: self.summary() can rewrite this attribute by design
-                self.posterior_summary_statistic = summarize_posterior_with
+            # Set flags
+            self.fitted = True
+            self.backend = inference_method
+
+            # NOTE: self.summary() can rewrite this attribute by design
+            self.posterior_summary_statistic = summarize_posterior_with
 
         # Calculate posterior and fit summary statistics
         # This can be called multiple times without re-fitting
@@ -250,12 +265,32 @@ class Lmer(object):
             ]
         return rename_map, sort_order
 
-    def _build_coefs(self):
+    def _priors_rename_map(self):
+
+        if self.prior_summary_statistic == "mean":
+            rename_map = {
+                "mean": "Estimate",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
+                "sd": "SD",
+            }
+            sort_order = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
+        elif self.prior_summary_statistic == "median":
+            rename_map = {
+                "median": "Estimate",
+                "eti_2.5%": "2.5_eti",
+                "eti_97.5%": "97.5_eti",
+                "mad": "MAD",
+            }
+            sort_order = ["Estimate", "2.5_eti", "97.5_eti", "MAD"]
+        return rename_map, sort_order
+
+    def _build_posteriors(self):
 
         rename_map, sort_order = self._coefs_rename_map()
 
         # Population level parameters
-        self.coef = az.summary(
+        self.coef_posterior = az.summary(
             self.inference_obj,
             kind="all",
             var_names=["~|", "~_sigma"],
@@ -306,14 +341,15 @@ class Lmer(object):
             )
             fixef = dict()
             for name in cluster_names:
-                fixef[name] = self.calc_fixef(name)
+                fixef[name] = self._calc_fixef(name)
             self.fixef = fixef
         except Exception:
             warn(
-                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually use the `model.calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item')",
+                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually combine `model.coef` and `model.ranef` if you want `model.fixef`. You can try to use the internal function `model._calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item'). However, this may fail again and you need to resort to manual labour :(",
             )
 
         # Alias attributes for backwards compatibility
+        self.coef = self.coef_posterior
         self.coefs = self.coef
         self.fixefs = self.fixef
         self.ranefs = self.ranef
@@ -369,7 +405,7 @@ class Lmer(object):
         #         p = 1 - (posterior > 0).mean().item()
         #         out[term] = p
 
-    def calc_fixef(self, group_var):
+    def _calc_fixef(self, group_var):
         """
         Calculate parameter estimates per `group_var` cluster by combining population and rfx estimates. This is equivalent to fixef() in R. This is a method rather than a model attribute because Bambi doesn't store the combined estimates by default and with more complicated rfx terms it's not always clear how to combine them.
 
@@ -411,13 +447,15 @@ class Lmer(object):
 
             point_estimates = (
                 self.ranef[rfx_term].loc[:, "Estimate"]
-                + self.coef.loc[term, "Estimate"]
+                + self.coef_posterior.loc[term, "Estimate"]
             ).to_numpy()
             lb = (
-                self.ranef[rfx_term].loc[:, lb_col] + self.coef.loc[term, "Estimate"]
+                self.ranef[rfx_term].loc[:, lb_col]
+                + self.coef_posterior.loc[term, "Estimate"]
             ).to_numpy()
             ub = (
-                self.ranef[rfx_term].loc[:, ub_col] + self.coef.loc[term, "Estimate"]
+                self.ranef[rfx_term].loc[:, ub_col]
+                + self.coef_posterior.loc[term, "Estimate"]
             ).to_numpy()
             fixef[f"{col_prefix}_Estimate"] = point_estimates
             fixef[f"{col_prefix}_{lb_col}"] = lb
@@ -456,20 +494,14 @@ class Lmer(object):
         """Adds a .prior_coef attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
 
         priors = self.model_obj.prior_predictive()
-        self.prior_coef = az.summary(
+        rename_map, sort_order = self._priors_rename_map()
+        self.coef_prior = az.summary(
             priors,
             kind="stats",
             var_names=self.terms["common_terms"],
             hdi_prob=0.95,
-            stat_focus="mean",
-        ).rename(
-            columns={
-                "mean": "Estimate",
-                "sd": "SD",
-                "hdi_2.5%": "2.5_hdi",
-                "hdi_97.5%": "97.5_hdi",
-            }
-        )
+            stat_focus=self.prior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
 
     def _build_rfx_design_matrices(self, fm_design_matrix):
 
@@ -772,14 +804,14 @@ class Lmer(object):
         self.posterior_summary_statistic = summarize_posterior_with
 
         # Create summary tables for population, fixed, and random parameters
-        self._build_coefs()
-
-        # Add posterior p-values
-        self._calc_p_values()
+        self._build_posteriors()
 
         # Add fits (predictions on same data) and residuals to
         # self.data marginalizing over posterior
         self._build_fits()
+
+        # Add posterior p-values
+        self._calc_p_values()
 
         # Print R style summary and return population fixed effects
         if return_summary:
