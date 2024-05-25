@@ -13,7 +13,7 @@ import arviz as az
 from pandas.api.types import CategoricalDtype
 from contextlib import redirect_stdout, nullcontext
 import os
-from pymer4.utils import _select_az_params
+from pymer4.utils import _select_az_params, _sig_stars
 from warnings import warn
 
 
@@ -302,8 +302,7 @@ class Lmer(object):
         self.coef_posterior = az.summary(
             self.inference_obj,
             kind="all",
-            var_names=["~|", "~_sigma"],
-            filter_vars="like",
+            var_names=self.terms["common_terms"],
             hdi_prob=0.95,
             group="posterior",
             stat_focus=self.posterior_summary_statistic,
@@ -375,9 +374,9 @@ class Lmer(object):
 
     def _empty_prev_fit_summary(self):
 
-        self.coef = None
-        self.fixef = None
-        self.ranef = None
+        self.coef_posterior = self.coef = self.coefs = None
+        self.fixef = self.fixefs = None
+        self.ranef = self.ranefs = None
         self.ranef_var = None
         self.fits = None
         self.residuals = None
@@ -388,41 +387,29 @@ class Lmer(object):
         self.posterior_summary_statistic = None
 
     def _calc_p_values(self):
-
-        out = dict()
-        for term in self.coef.index:
-
-            # Factor term
-            if "[" in term:
-                factor_term = term.split("[")[0]
-                posterior = self.inference_obj.posterior[factor_term]
-                for i in range(posterior.shape[2]):
-                    p = 1 - (posterior[:, :, i] > 0).mean().item()
-                    out[f"{term}"] = p
-
-            # Get posterior distribution
-            posterior = self.inference_obj.posterior[term]
-
-            if len(posterior.shape) == 3:
-                for i in range(posterior.shape[2]):
-                    p = 1 - (posterior[:, :, i] > 0).mean().item()
-                    out[f"{term}_{i}"] = p
-                pass
+        """
+        Calculate p-values via 95% posterior density intervals coverage of the point-value 0. Conceptually analogous to comparing a 95% confidence interval to 0 in frequentist statistics. See [Michael Frank's Book](https://michael-franke.github.io/intro-data-analysis/ch-03-05-Bayes-testing-estimation.html) for more details.
+        """
+        pvals = []
+        for term in self.terms["common_terms"]:
+            full_posterior = self.inference_obj.posterior[term].values.flatten()
+            hdi_bounds = az.hdi(full_posterior, hdi_prob=0.95)
+            posterior_mean = full_posterior.mean()
+            # Calculate the proportion of samples less than zero if mean is positive, or greater than zero if mean is negative
+            if posterior_mean > 0:
+                p_value = (full_posterior < 0).mean()
             else:
-                p = 1 - (posterior > 0).mean().item()
-                out[term] = p
-        # for term in self.terms["common_terms"]:
+                p_value = (full_posterior > 0).mean()
 
-        #     # Get posterior distribution
-        #     posterior = self.inference_obj.posterior[term]
-        #     if len(posterior.shape) == 3:
-        #         for i in range(posterior.shape[2]):
-        #             p = 1 - (posterior[:, :, i] > 0).mean().item()
-        #             out[f"{term}_{i}"] = p
-        #         pass
-        #     else:
-        #         p = 1 - (posterior > 0).mean().item()
-        #         out[term] = p
+            # Adjust p-value based on HDI covering zero
+            if hdi_bounds[0] < 0 < hdi_bounds[1]:
+                # If the HDI includes zero, we double the p-value to reflect two-tailed test
+                p_value = 2 * min(p_value, 1 - p_value)
+
+            pvals.append(p_value)
+        stars = list(map(_sig_stars, pvals))
+        self.coef["P-val"] = pvals
+        self.coef["Sig"] = stars
 
     def _calc_fixef(self, group_var):
         """
@@ -839,7 +826,12 @@ class Lmer(object):
         self._build_fits()
 
         # Add posterior p-values
-        # self._calc_p_values()
+        if self.posterior_summary_statistic == "mean":
+            self._calc_p_values()
+        else:
+            warn(
+                "P-values are not available for median-based summaries. Use `summarize_posterior_with ='mean'` for p-values."
+            )
 
         # Print R style summary and return population fixed effects
         if return_summary:
