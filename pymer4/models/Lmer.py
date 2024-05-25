@@ -310,6 +310,12 @@ class Lmer(object):
             round_to=None,
         ).rename(columns=rename_map)[sort_order]
 
+        # Make sure intercept is always first row
+        index_row = self.coef_posterior.loc["Intercept"]
+        self.coef_posterior = pd.concat(
+            [index_row.to_frame().T, self.coef_posterior.drop("Intercept")]
+        )
+
         # Cluster RFX
         # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
         rfx = dict()
