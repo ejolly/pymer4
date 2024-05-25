@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import bambi as bmb
 import arviz as az
-from pandas.api.types import CategoricalDtype
 from contextlib import redirect_stdout, nullcontext
 import os
 from pymer4.utils import _select_az_params, _sig_stars
@@ -58,7 +57,6 @@ class Lmer(object):
         self.fitted = False  # whether model has been fit
         self.model_obj = None  # bambi model object
         self.inference_obj = None  # arviz inference object after fitting
-        self.backend = None  # inference backend used
         self.coef_prior = None  # prior summary statistics
         self.coef_posterior = None  # posterior summary statistics
         self.coef = None  # alias for self.coef_posterior
@@ -67,6 +65,11 @@ class Lmer(object):
         self.ranef_var = None  # cluster level variance
         self.prior_summary_statistic = summarize_prior_with  # how we summarize priors
         self.posterior_summary_statistic = "mean"  # how we summarize posteriors
+        self.calc_nested_model_comparison = False  # whether to calculate Bayes Factors
+        self.nested_model_inference_obj = dict()  # store nested model inference objects
+        self._draws = 1000  # default number of draws
+        self._tune = 1000  # default number of tuning steps
+        self.backend = "nuts_numpyrio"  # inference backend used
 
         # NOTE: We need to convert binomial to bernoulli for bambi
         family = "bernoulli" if family == "binomial" else family
@@ -135,6 +138,26 @@ class Lmer(object):
                 )
         return inference_obj
 
+    @staticmethod
+    def _make_nested_models(terms: dict):
+        """Given a dictionary of terms from a model, generate a dictionary of nested models for each fixed effect term. This is useful for calculating Bayes Factors for each fixed effect term in the model."""
+        # NOTE: May need to verify this against formula that are specified in mode esoteric ways, but still supported by bambi
+
+        ranef_formula = "+".join([f"({term})" for term in terms["group_terms"]])
+        fixed_eff_terms = terms["common_terms"][:]
+        fixed_eff_terms.remove("Intercept")
+
+        nested_model_formulae = {}
+        for term in fixed_eff_terms:
+            other_terms = fixed_eff_terms[:]
+            other_terms.remove(term)
+            nested_formula = (
+                f"{terms['response_term']} ~ {'+'.join(other_terms)}+ {ranef_formula}"
+            )
+            nested_model_formulae[term] = nested_formula
+
+        return nested_model_formulae
+
     def fit(
         self,
         summary=True,
@@ -142,6 +165,8 @@ class Lmer(object):
         tune=1000,
         inference_method="nuts_numpyro",
         summarize_posterior_with="mean",
+        nested_model_comparison=False,
+        save_nested_models=False,
         refit=False,
         progressbar=False,
         verbose=False,
@@ -167,17 +192,30 @@ class Lmer(object):
         # Only perform sampling if model hasn't been fit or if refit is True
         if (not self.fitted) or refit:
 
+            # Set hyper-parameters
+            self._draws = draws
+            self._tune = tune
+            self.backend = inference_method
+            self.fitted = True
+            self.calc_nested_model_comparison = nested_model_comparison
+
             self.inference_obj = self._fit_bambi_model(
                 self.model_obj,
                 verbose,
-                draws,
-                tune,
-                inference_method,
-                progressbar,
+                draws=self._draws,
+                tune=self._tune,
+                inference_method=self.backend,
+                progressbar=progressbar,
+                idata_kwargs=(
+                    dict(log_likelihood=True)
+                    if self.calc_nested_model_comparison
+                    else None
+                ),
                 **kwargs,
             )
-            # NOTE: This is a little annoying cause we already called self.model_obj.prior_predictive during initialization. We could store the prior predictive in the model object and then add it to the inference object here, but that would be a bit of a hack. We could also just call it again here, but that would be inefficient. So we'll just leave it as is for now.
+
             # Add priors to inference object
+            # NOTE: This is a little annoying cause we already called self.model_obj.prior_predictive during initialization. We could store the prior predictive in the model object and then add it to the inference object here, but that would be a bit of a hack. We could also just call it again here, but that would be inefficient. So we'll just leave it as is for now.
             priors_inference_obj = self.model_obj.prior_predictive(draws=draws)
             self.inference_obj.add_groups(
                 {
@@ -186,16 +224,16 @@ class Lmer(object):
                 }
             )
 
-            # Set flags
-            self.fitted = True
-            self.backend = inference_method
-
             # NOTE: self.summary() can rewrite this attribute by design
             self.posterior_summary_statistic = summarize_posterior_with
 
         # Calculate posterior and fit summary statistics
         # This can be called multiple times without re-fitting
-        return self.summary(summarize_posterior_with, return_summary=summary)
+        return self.summary(
+            summarize_posterior_with,
+            return_summary=summary,
+            save_nested_models=save_nested_models,
+        )
 
     def _coefs_rename_map(self):
         if self.posterior_summary_statistic == "mean":
@@ -385,10 +423,11 @@ class Lmer(object):
         sort_order += ["residuals"]
         self.data = self.data.drop(columns=sort_order, errors="ignore")
         self.posterior_summary_statistic = None
+        self.nested_model_inference_obj = dict()
 
     def _calc_p_values(self):
         """
-        Calculate p-values via 95% posterior density intervals coverage of the point-value 0. Conceptually analogous to comparing a 95% confidence interval to 0 in frequentist statistics. See [Michael Frank's Book](https://michael-franke.github.io/intro-data-analysis/ch-03-05-Bayes-testing-estimation.html) for more details.
+        Calculate p-values via 95% posterior density intervals coverage of the point-value 0. Conceptually analogous to comparing a 95% confidence interval to 0 in frequentist statistics. We use 95% highest-density-intervals which can appropriately handle skewed posteriors. See [Michael Frank's Book](https://michael-franke.github.io/intro-data-analysis/ch-03-05-Bayes-testing-estimation.html) for more details.
         """
         pvals = []
         for term in self.terms["common_terms"]:
@@ -408,8 +447,54 @@ class Lmer(object):
 
             pvals.append(p_value)
         stars = list(map(_sig_stars, pvals))
-        self.coef["P-val"] = pvals
-        self.coef["Sig"] = stars
+
+        self.coef_posterior["P-val"] = pvals
+        self.coef_posterior["Sig"] = stars
+
+    def calc_bayes_factors(self, save_nested_models=False):
+        # Make nested model formulae
+        nested_models: dict = self._make_nested_models(self.terms)
+
+        # Setup output columns in population coefs table
+        self.coef_posterior["BF_elpd"] = np.nan
+        self.coef_posterior["ELPD_Diff"] = np.nan
+
+        # Az compare needs dict of models to compare
+        models = dict(full_model=self.inference_obj)
+
+        for term, formula in nested_models.items():
+
+            # Estimate nested model
+            model_obj = self._build_bambi_model(self.data, formula, self.family)
+            inference_obj = self._fit_bambi_model(
+                model_obj,
+                verbose=False,
+                draws=self._draws,
+                tune=self._tune,
+                inference_method=self.backend,
+                progressbar=False,
+                idata_kwargs=dict(log_likelihood=True),
+            )
+
+            # Add to comparison dictionary and compare
+            models[term] = inference_obj
+            comparison = az.compare(models)
+
+            if save_nested_models:
+                self.nested_model_inference_obj[term] = inference_obj
+
+            # Get stats of interest
+            elpd_diff = comparison.loc[term, "elpd_diff"]
+            # Bayes factor is ratio between full model and nested model using difference in expected log pointwise predictive density, via efficient leave-one-out cross-validation
+            # Diff cause we're in log space
+            BF = np.exp(elpd_diff)
+
+            # Save to results
+            self.coef_posterior.loc[term, "BF_elpd"] = BF
+            self.coef_posterior.loc[term, "ELPD_Diff"] = elpd_diff
+
+            # Remove from dict for next iteration of comparison
+            del models[term]
 
     def _calc_fixef(self, group_var):
         """
@@ -792,7 +877,12 @@ class Lmer(object):
 
         return df.round(3)
 
-    def summary(self, summarize_posterior_with="mean", return_summary=True):
+    def summary(
+        self,
+        summarize_posterior_with="mean",
+        return_summary=True,
+        save_nested_models=False,
+    ):
         """
         Summarize the posterior and estimates of a fitted model. This adds summary tables for population effects (`self.coef`), random effects (`self.ranef`), and fixed effects (`self.fixef`) to the model object. It also adds posterior predictive fits (`self.fits`) and residuals (`self.residuals`) to the model data. Optionally print a summary of the model fit in the style of R's `summary()` function.
 
@@ -832,6 +922,10 @@ class Lmer(object):
             warn(
                 "P-values are not available for median-based summaries. Use `summarize_posterior_with ='mean'` for p-values."
             )
+
+        if self.calc_nested_model_comparison:
+            print("Calculating Bayes Factors for fixed effects...")
+            self.calc_bayes_factors(save_nested_models=save_nested_models)
 
         # Print R style summary and return population fixed effects
         if return_summary:
