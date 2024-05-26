@@ -8,6 +8,7 @@ __all__ = [
     "tost_equivalence",
     "welch_dof",
     "vif",
+    "compare_models_elpd_t_test",
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -18,6 +19,7 @@ import pandas as pd
 import copy
 from scipy.special import expit
 from scipy.stats import pearsonr, spearmanr, ttest_ind, ttest_rel, ttest_1samp
+from scipy.stats import t as t_dist
 from functools import partial
 from itertools import product
 from pymer4.models import Lmer
@@ -681,3 +683,37 @@ def rsquared_adj(r, nobs, df_res, has_constant=True):
         return 1.0 - (nobs - 1) / df_res * (1.0 - r)
     else:
         return 1.0 - nobs / df_res * (1.0 - r)
+
+
+def compare_models_elpd_t_test(
+    elpd_diff,
+    elpd_diff_se,
+    se1,
+    p1,
+    se2,
+    p2,
+):
+    """
+    WARNING: EXPERIMENTAL
+    Compares two models using adjusted T-test based on their ELPD, standard errors,
+    and effective number of parameters. Uses a modified version of the Welch-satterthwaite equation to approximate the degrees of freedom using uncertainty of the effective number of parameters and ELPD standard errors.
+
+    Parameters:
+    - elpd1, se1, p1: ELPD, SE of ELPD, and effective number of parameters for Model 1
+    - elpd2, se2, p2: ELPD, SE of ELPD, and effective number of parameters for Model 2
+    - elpd_diff, se_diff: Difference in ELPD and SE of this difference between Model 1 and Model 2
+
+    Returns:
+    - T-statistic and p-value comparing the models
+    """
+    # T-statistic
+    t_stat = elpd_diff / elpd_diff_se
+
+    # Degrees of freedom using adjusted the Welch-Satterthwaite equation
+    # uses effective number of parameters (and their corresponding standard errors) to # approximate the degrees of freedom.
+    df = ((se1**2 + se2**2) ** 2) / ((se1**4 / (p1 - 1)) + (se2**4 / (p2 - 1)))
+
+    # p-value from the t-distribution
+    p_value = 2 * (1 - t_dist.cdf(abs(t_stat), df))
+
+    return t_stat, df, p_value

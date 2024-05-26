@@ -12,8 +12,10 @@ import bambi as bmb
 import arviz as az
 from contextlib import redirect_stdout, nullcontext
 import os
-from pymer4.utils import _select_az_params, _sig_stars
-from warnings import warn
+from pymer4.utils import _select_az_params, _sig_stars, _sig_stars_bf, with_no_logging
+from pymer4.stats import compare_models_elpd_t_test
+import warnings
+from tqdm import TqdmWarning
 
 
 class Lmer(object):
@@ -78,7 +80,7 @@ class Lmer(object):
         self.data = copy(data)
 
         # Initialize bambi model object and extract attributes
-        self.model_obj = self._build_bambi_model(self.data, formula, family, **kwargs)
+        self.model_obj = self._static_bambi_build(self.data, formula, family, **kwargs)
         self.family = self.model_obj.family.name
         self.formula = self.model_obj.formula.main
 
@@ -103,10 +105,10 @@ class Lmer(object):
 
         # Sample from priors to get summarized predictive distributions
         # for each model term and summarize
-        self._build_priors()
+        self._summarize_priors()
 
         # NOTE: Only if we want to store design matrices for rfx terms
-        # self._build_rfx_design_matrices(fm_design_matrix)
+        # self._utils_make_rfx_matrices(fm_design_matrix)
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -115,31 +117,59 @@ class Lmer(object):
         return out
 
     @staticmethod
-    def _build_bambi_model(data, formula, family, **kwargs):
+    def _static_bambi_build(data, formula, family, **kwargs):
+        """
+        Pure function to build a bambi model object
+
+        Args:
+            data (pd.DataFrame): data frame
+            formula (str): string formula
+            family (str): family of distribution
+            **kwargs: additional arguments to pass to `bmb.Model`
+
+        Returns:
+            bmb.Model: bambi Model object after calling `.build()`
+        """
 
         model_obj = bmb.Model(formula, data=data, family=family, **kwargs)
         model_obj.build()
         return model_obj
 
     @staticmethod
-    def _fit_bambi_model(
+    def _static_bambi_fit(
         model_obj, verbose, draws, tune, inference_method, progressbar, **kwargs
     ):
+        """
+        Pure function to fit a bambi model object and hide compilation messages if verbose is True
+
+        Args:
+            model_obj (bmb.Model): bambi Model object
+            verbose (bool): suppress compilation messages
+            draws (int): number of samples
+            tune (int): number of tuning steps ("burn-in")
+            inference_method (str): what sampler to use (see bambi docs)
+            progressbar (bool): hide or show progress bar
+
+        Returns:
+            az.InferenceData: inference object with posteriors
+        """
 
         # Hide basic compilation messages if lowest verbosity (0)
         with open(os.devnull, "w") as f:
             with redirect_stdout(f) if verbose else nullcontext():
-                inference_obj = model_obj.fit(
-                    draws=draws,
-                    tune=tune,
-                    inference_method=inference_method,
-                    progressbar=progressbar,
-                    **kwargs,
-                )
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=TqdmWarning)
+                    inference_obj = model_obj.fit(
+                        draws=draws,
+                        tune=tune,
+                        inference_method=inference_method,
+                        progressbar=progressbar,
+                        **kwargs,
+                    )
         return inference_obj
 
     @staticmethod
-    def _make_nested_models(terms: dict):
+    def _static_make_nested_formulae(terms: dict) -> dict:
         """Given a dictionary of terms from a model, generate a dictionary of nested models for each fixed effect term. This is useful for calculating Bayes Factors for each fixed effect term in the model."""
         # NOTE: May need to verify this against formula that are specified in mode esoteric ways, but still supported by bambi
 
@@ -158,90 +188,45 @@ class Lmer(object):
 
         return nested_model_formulae
 
-    def fit(
-        self,
-        summary=True,
-        draws=1000,
-        tune=1000,
-        inference_method="nuts_numpyro",
-        summarize_posterior_with="mean",
-        nested_model_comparison=False,
-        save_nested_models=False,
-        refit=False,
-        progressbar=False,
-        verbose=False,
-        **kwargs,
-    ):
+    def _rename_map_priors(self) -> tuple[dict, list]:
         """
-        Perform bayesian estimation via the requestined inference method. Defaults to using NUTS sampler with numpyro backend which is a bit faster than PyMC's `'mcmc'` sampler with early identitcal estimates. The underlying `arviz` inference object can be accessed at `.inference_object`. This method will also summarize posterior distributions following BARG guidelines from [Kruschke (2021, NHB)](https://www.nature.com/articles/s41562-021-01177-7).
-
-        Args:
-            summary (bool, optional): print an R style summary and return population coefficients table. Defaults to True.
-            draws (int, optional): _description_. Defaults to 1000.
-            tune (int, optional): _description_. Defaults to 1000.
-            inference_method (str, optional): _description_. Defaults to "nuts_numpyro".
-            summarize_posterior_with (str, optional): How to summarize posterior distribution. "mean" uses density-based values while "median" uses quantile-based values. Defaults to "mean".
-            progressbar (bool, optional): _description_. Defaults to False.
-            verbose (bool, optional): _description_. Defaults to False.
-
+        What the output column names of the prior summary statistics table should be and in what order. This effects `model.coef_prior`.
 
         Returns:
-            pd.DataFrame: table of posterior parameter summaries if `summary=True`
+            tuple: dictionary of column name mappings and list of column names in desired order
         """
 
-        # Only perform sampling if model hasn't been fit or if refit is True
-        if (not self.fitted) or refit:
+        if self.prior_summary_statistic == "mean":
+            rename_map = {
+                "mean": "Estimate",
+                "hdi_2.5%": "2.5_hdi",
+                "hdi_97.5%": "97.5_hdi",
+                "sd": "SD",
+            }
+            sort_order = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
+        elif self.prior_summary_statistic == "median":
+            rename_map = {
+                "median": "Estimate",
+                "eti_2.5%": "2.5_eti",
+                "eti_97.5%": "97.5_eti",
+                "mad": "MAD",
+            }
+            sort_order = ["Estimate", "2.5_eti", "97.5_eti", "MAD"]
+        return rename_map, sort_order
 
-            # Set hyper-parameters
-            self._draws = draws
-            self._tune = tune
-            self.backend = inference_method
-            self.fitted = True
-            self.calc_nested_model_comparison = nested_model_comparison
+    def _rename_map_posteriors(self) -> tuple[dict, list]:
+        """
+        What the output column names of the posteriory summar statistics table should be and in what order. This effects `model.coef_posterior`, `model.fixef`, and `model.ranef` tables.
 
-            self.inference_obj = self._fit_bambi_model(
-                self.model_obj,
-                verbose,
-                draws=self._draws,
-                tune=self._tune,
-                inference_method=self.backend,
-                progressbar=progressbar,
-                idata_kwargs=(
-                    dict(log_likelihood=True)
-                    if self.calc_nested_model_comparison
-                    else None
-                ),
-                **kwargs,
-            )
-
-            # Add priors to inference object
-            # NOTE: This is a little annoying cause we already called self.model_obj.prior_predictive during initialization. We could store the prior predictive in the model object and then add it to the inference object here, but that would be a bit of a hack. We could also just call it again here, but that would be inefficient. So we'll just leave it as is for now.
-            priors_inference_obj = self.model_obj.prior_predictive(draws=draws)
-            self.inference_obj.add_groups(
-                {
-                    "prior": priors_inference_obj.prior,
-                    "prior_predictive": priors_inference_obj.prior_predictive,
-                }
-            )
-
-            # NOTE: self.summary() can rewrite this attribute by design
-            self.posterior_summary_statistic = summarize_posterior_with
-
-        # Calculate posterior and fit summary statistics
-        # This can be called multiple times without re-fitting
-        return self.summary(
-            summarize_posterior_with,
-            return_summary=summary,
-            save_nested_models=save_nested_models,
-        )
-
-    def _coefs_rename_map(self):
+        Returns:
+            tuple: dictionary of column name mappings and list of column names in desired order
+        """
         if self.posterior_summary_statistic == "mean":
             rename_map = {
                 "mean": "Estimate",
                 "sd": "SD",
                 "mcse_mean": "MCSE",
-                "r_hat": "Rubin_Gelman",
+                "r_hat": "Rhat",
                 "hdi_2.5%": "2.5_hdi",
                 "hdi_97.5%": "97.5_hdi",
                 "ess_bulk": "ESS_Bulk",
@@ -253,7 +238,7 @@ class Lmer(object):
                 "97.5_hdi",
                 "SD",
                 "MCSE",
-                "Rubin_Gelman",
+                "Rhat",
                 "ESS_Bulk",
                 "ESS_Tail",
             ]
@@ -262,7 +247,7 @@ class Lmer(object):
                 "median": "Estimate",
                 "mad": "MAD",
                 "mcse_median": "MCSE",
-                "r_hat": "Rubin_Gelman",
+                "r_hat": "Rhat",
                 "eti_2.5%": "2.5_eti",
                 "eti_97.5%": "97.5_eti",
                 "ess_median": "ESS_Median",
@@ -274,13 +259,19 @@ class Lmer(object):
                 "97.5_eti",
                 "MAD",
                 "MCSE",
-                "Rubin_Gelman",
+                "Rhat",
                 "ESS_Median",
                 "ESS_Tail",
             ]
         return rename_map, sort_order
 
-    def _fits_rename_map(self):
+    def _rename_map_fits(self) -> tuple[dict, list]:
+        """
+        What the output column names of the fits ("y-hat") summary statistics table should be and in what order. This effects `model.fits` and the `'fits'` column in `model.data`.
+
+        Returns:
+            tuple: dictionary of column name mappings and list of column names in desired order
+        """
 
         if self.posterior_summary_statistic == "mean":
             rename_map = {
@@ -312,120 +303,7 @@ class Lmer(object):
             ]
         return rename_map, sort_order
 
-    def _priors_rename_map(self):
-
-        if self.prior_summary_statistic == "mean":
-            rename_map = {
-                "mean": "Estimate",
-                "hdi_2.5%": "2.5_hdi",
-                "hdi_97.5%": "97.5_hdi",
-                "sd": "SD",
-            }
-            sort_order = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
-        elif self.prior_summary_statistic == "median":
-            rename_map = {
-                "median": "Estimate",
-                "eti_2.5%": "2.5_eti",
-                "eti_97.5%": "97.5_eti",
-                "mad": "MAD",
-            }
-            sort_order = ["Estimate", "2.5_eti", "97.5_eti", "MAD"]
-        return rename_map, sort_order
-
-    def _build_posteriors(self):
-
-        rename_map, sort_order = self._coefs_rename_map()
-
-        # Population level parameters
-        self.coef_posterior = az.summary(
-            self.inference_obj,
-            kind="all",
-            var_names=self.terms["common_terms"],
-            hdi_prob=0.95,
-            group="posterior",
-            stat_focus=self.posterior_summary_statistic,
-            round_to=None,
-        ).rename(columns=rename_map)[sort_order]
-
-        # Make sure intercept is always first row
-        index_row = self.coef_posterior.loc["Intercept"]
-        self.coef_posterior = pd.concat(
-            [index_row.to_frame().T, self.coef_posterior.drop("Intercept")]
-        )
-
-        # Cluster RFX
-        # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
-        rfx = dict()
-        # Instead of a single data-frame we store a dictionary of data-frames
-        # because we have summary statistics over distributions for each rfx term
-        for term in self.terms["group_terms"]:
-            summary = az.summary(
-                self.inference_obj,
-                kind="all",
-                var_names=term,
-                filter_vars="like",
-                group="posterior",
-                hdi_prob=0.95,
-                stat_focus=self.posterior_summary_statistic,
-            ).rename(columns=rename_map)[sort_order]
-            # Filter out row with variance across rfx, as the az.summary includes it
-            to_remove = summary.filter(like="_sigma", axis=0).index
-            summary = summary[~summary.index.isin(to_remove)]
-            rfx[term] = summary
-
-        # Store them
-        self.ranef = rfx
-
-        # Cluster RFX Variance
-        self.ranef_var = az.summary(
-            self.inference_obj,
-            kind="all",
-            var_names=["_sigma"],
-            filter_vars="like",
-            group="posterior",
-            hdi_prob=0.95,
-            stat_focus=self.posterior_summary_statistic,
-        ).rename(columns=rename_map)[sort_order]
-
-        # Cluster FFX
-        # Wrap in try because this is not always possible to determine automatically
-        # with more complicated rfx terms
-        try:
-            # Get unique cluster names
-            cluster_names = list(
-                set([term.split("|")[-1] for term in self.terms["group_terms"]])
-            )
-            fixef = dict()
-            for name in cluster_names:
-                fixef[name] = self._calc_fixef(name)
-            self.fixef = fixef
-        except Exception:
-            warn(
-                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually combine `model.coef` and `model.ranef` if you want `model.fixef`. You can try to use the internal function `model._calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item'). However, this may fail again and you need to resort to manual labour :(",
-            )
-
-        # Alias attributes for backwards compatibility
-        self.coef = self.coef_posterior
-        self.coefs = self.coef
-        self.fixefs = self.fixef
-        self.ranefs = self.ranef
-
-    def _empty_prev_fit_summary(self):
-
-        self.coef_posterior = self.coef = self.coefs = None
-        self.fixef = self.fixefs = None
-        self.ranef = self.ranefs = None
-        self.ranef_var = None
-        self.fits = None
-        self.residuals = None
-        self.posterior_predictions = None
-        _, sort_order = self._fits_rename_map()
-        sort_order += ["residuals"]
-        self.data = self.data.drop(columns=sort_order, errors="ignore")
-        self.posterior_summary_statistic = None
-        self.nested_model_inference_obj = dict()
-
-    def _calc_p_values(self):
+    def _infer_hdi_pval(self):
         """
         Calculate p-values via 95% posterior density intervals coverage of the point-value 0. Conceptually analogous to comparing a 95% confidence interval to 0 in frequentist statistics. We use 95% highest-density-intervals which can appropriately handle skewed posteriors. See [Michael Frank's Book](https://michael-franke.github.io/intro-data-analysis/ch-03-05-Bayes-testing-estimation.html) for more details.
         """
@@ -448,25 +326,34 @@ class Lmer(object):
             pvals.append(p_value)
         stars = list(map(_sig_stars, pvals))
 
-        self.coef_posterior["P-val"] = pvals
-        self.coef_posterior["Sig"] = stars
+        self.coef_posterior["P-val_hdi"] = pvals
+        self.coef_posterior["Sig_hdi"] = stars
 
-    def calc_bayes_factors(self, save_nested_models=False):
+    # TODO:
+    def _infer_savage_dickey_bf(self):
+        pass
+
+    def _infer_model_comparison_bf(self, save_nested_models=False):
+
+        # Always reset previous saved nested models to avoid confusion
+        self.nested_model_inference_obj = dict()
+
         # Make nested model formulae
-        nested_models: dict = self._make_nested_models(self.terms)
+        nested_models: dict = self._static_make_nested_formulae(self.terms)
 
         # Setup output columns in population coefs table
-        self.coef_posterior["BF_elpd"] = np.nan
-        self.coef_posterior["ELPD_Diff"] = np.nan
+        # self.coef_posterior["BF_elpd"] = np.nan
+        # self.coef_posterior["ELPD_Diff"] = np.nan
 
         # Az compare needs dict of models to compare
         models = dict(full_model=self.inference_obj)
+        out = dict()
 
         for term, formula in nested_models.items():
 
             # Estimate nested model
-            model_obj = self._build_bambi_model(self.data, formula, self.family)
-            inference_obj = self._fit_bambi_model(
+            model_obj = self._static_bambi_build(self.data, formula, self.family)
+            inference_obj = self._static_bambi_fit(
                 model_obj,
                 verbose=False,
                 draws=self._draws,
@@ -483,18 +370,49 @@ class Lmer(object):
             if save_nested_models:
                 self.nested_model_inference_obj[term] = inference_obj
 
-            # Get stats of interest
+            # NOTE: May need to adjust this if diff is always best model - worst model and not full model - nested model?
+            # Diffs in model expected log pointwise predictive density -> BF
             elpd_diff = comparison.loc[term, "elpd_diff"]
+            # elpd_diff_se = comparison.loc[term, "dse"]
+
             # Bayes factor is ratio between full model and nested model using difference in expected log pointwise predictive density, via efficient leave-one-out cross-validation
             # Diff cause we're in log space
             BF = np.exp(elpd_diff)
 
-            # Save to results
-            self.coef_posterior.loc[term, "BF_elpd"] = BF
-            self.coef_posterior.loc[term, "ELPD_Diff"] = elpd_diff
+            # NOTE: Below is if we want to approximate a t-test but isn't validated
+            # Null model
+            # elpd_se = comparison.loc[term, "se"]
+            # eff_parms = comparison.loc[term, "p_loo"]
 
-            # Remove from dict for next iteration of comparison
+            # Full model
+            # elpd_se_full = comparison.loc["full_model", "se"]
+            # eff_parms_full = comparison.loc["full_model", "p_loo"]
+
+            # t_stat, df, p_val = compare_models_elpd_t_test(
+            #     elpd_diff,
+            #     elpd_diff_se,
+            #     elpd_se,
+            #     eff_parms,
+            #     elpd_se_full,
+            #     eff_parms_full,
+            # )
+            out[term] = {
+                "BF_elpd": BF,
+                "Sig_elpd": _sig_stars_bf(BF),
+                # "T-stat_elpd": t_stat,
+                # "DF_elpd": df,
+                # "P-val_elpd": p_val,
+            }
+
+            # Remove from dict for next iteration of comparison to save memory
             del models[term]
+
+        self.nested_model_comparison = pd.DataFrame(out).T
+        self.coef_posterior = pd.concat(
+            [self.coef_posterior, self.nested_model_comparison], axis=1
+        )
+        self.coef = self.coef_posterior
+        self.coefs = self.coef_posterior
 
     def _calc_fixef(self, group_var):
         """
@@ -554,7 +472,102 @@ class Lmer(object):
 
         return pd.DataFrame(fixef, index=new_index)
 
-    def _build_fits(self):
+    def _summarize_priors(self):
+        """Adds a .prior_coef attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
+
+        # Suppress "sampling message"
+        with with_no_logging():
+            priors = self.model_obj.prior_predictive()
+
+        rename_map, sort_order = self._rename_map_priors()
+        self.coef_prior = az.summary(
+            priors,
+            kind="stats",
+            var_names=self.terms["common_terms"],
+            hdi_prob=0.95,
+            stat_focus=self.prior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
+
+    def _summarize_posteriors(self):
+
+        rename_map, sort_order = self._rename_map_posteriors()
+
+        # Population level parameters
+        self.coef_posterior = az.summary(
+            self.inference_obj,
+            kind="all",
+            var_names=self.terms["common_terms"],
+            hdi_prob=0.95,
+            group="posterior",
+            stat_focus=self.posterior_summary_statistic,
+            round_to=None,
+        ).rename(columns=rename_map)[sort_order]
+
+        # Make sure intercept is always first row
+        index_row = self.coef_posterior.loc["Intercept"]
+        self.coef_posterior = pd.concat(
+            [index_row.to_frame().T, self.coef_posterior.drop("Intercept")]
+        )
+
+        # Cluster RFX
+        # NOTE: These are equivalent to calleing ranef() in R, not fixef(), i.e. they are cluster level *deviances* from population parameters. Add them to the coefs table to get parameter estimates per cluster
+        rfx = dict()
+        # Instead of a single data-frame we store a dictionary of data-frames
+        # because we have summary statistics over distributions for each rfx term
+        for term in self.terms["group_terms"]:
+            summary = az.summary(
+                self.inference_obj,
+                kind="all",
+                var_names=term,
+                filter_vars="like",
+                group="posterior",
+                hdi_prob=0.95,
+                stat_focus=self.posterior_summary_statistic,
+            ).rename(columns=rename_map)[sort_order]
+            # Filter out row with variance across rfx, as the az.summary includes it
+            to_remove = summary.filter(like="_sigma", axis=0).index
+            summary = summary[~summary.index.isin(to_remove)]
+            rfx[term] = summary
+
+        # Store them
+        self.ranef = rfx
+
+        # Cluster RFX Variance
+        self.ranef_var = az.summary(
+            self.inference_obj,
+            kind="all",
+            var_names=["_sigma"],
+            filter_vars="like",
+            group="posterior",
+            hdi_prob=0.95,
+            stat_focus=self.posterior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
+
+        # TODO: don't do this by default, only if requested. Instead make it like rfx above
+        # Cluster FFX
+        # Wrap in try because this is not always possible to determine automatically
+        # with more complicated rfx terms
+        try:
+            # Get unique cluster names
+            cluster_names = list(
+                set([term.split("|")[-1] for term in self.terms["group_terms"]])
+            )
+            fixef = dict()
+            for name in cluster_names:
+                fixef[name] = self._calc_fixef(name)
+            self.fixef = fixef
+        except Exception:
+            warnings.warn(
+                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually combine `model.coef` and `model.ranef` if you want `model.fixef`. You can try to use the internal function `model._calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item'). However, this may fail again and you need to resort to manual labour :(",
+            )
+
+        # Alias attributes for backwards compatibility
+        self.coef = self.coef_posterior
+        self.coefs = self.coef
+        self.fixefs = self.fixef
+        self.ranefs = self.ranef
+
+    def _summarize_fits(self):
         """Adds .fits (also accessible as .posterior_predictions) and .residuals
         to model object as well as dataframe. Fits are the posterior predictive distribution of the model. Residuals are the difference between the observed data and the fits.
         """
@@ -583,20 +596,83 @@ class Lmer(object):
         self.residuals = self.data[self.terms["response_term"]] - self.fits
         self.data["residuals"] = self.residuals.copy()
 
-    def _build_priors(self):
-        """Adds a .prior_coef attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
+    def _pprint_ranef_var(self):
+        """
+        Format model rfx variances to look like lme4. Used by .summary()
+        """
 
-        priors = self.model_obj.prior_predictive()
-        rename_map, sort_order = self._priors_rename_map()
-        self.coef_prior = az.summary(
-            priors,
-            kind="stats",
-            var_names=self.terms["common_terms"],
-            hdi_prob=0.95,
-            stat_focus=self.prior_summary_statistic,
-        ).rename(columns=rename_map)[sort_order]
+        df = self.ranef_var.copy()
+        # Format index
+        new_index = []
+        names = []
+        for name in df.index:
+            n = name.split("_sigma")[0]
+            if n in self.terms["group_terms"]:
+                term_name, group_name = n.split("|")
+                term_name = "(Intercept)" if term_name == "1" else term_name
+                new_index.append(group_name)
+                names.append(term_name)
+            else:
+                new_index.append("Residual")
+                names.append(n)
+        df.index = new_index
 
-    def _build_rfx_design_matrices(self, fm_design_matrix):
+        # Format columns
+        df = (df.assign(Name=names))[
+            [
+                "Name",
+                "Estimate",
+                f"{'2.5_hdi' if self.posterior_summary_statistic == 'mean' else '2.5_eti'}",
+                f"{'97.5_hdi' if self.posterior_summary_statistic == 'mean' else '97.5_eti'}",
+                "Rhat",
+            ]
+        ]
+
+        return df.round(3)
+
+    def _pprint_bayes_explainer(self):
+        """Explains bayes stats and significance codes. Used by .summary()"""
+        pass
+
+    def _pprint_summary(self):
+
+        print(f"Linear mixed model fit by: {self.backend}\n")
+
+        print("Formula: {}\n".format(self.formula))
+        print("Family: {}\n".format(self.family))
+        print(
+            "Number of observations: %s\t Groups: %s\n"
+            % (self.data.shape[0], self.grps)
+        )
+        print(f"Posterior sampling: {self.backend}\n")
+        print(f"Posterior summary statistic: {self.posterior_summary_statistic}\n")
+        print("Random effects:\n")
+        print("%s\n" % (self._pprint_ranef_var()))
+        if self.coef is None:
+            print("No fixed effects estimated\n")
+            return
+        else:
+            print("Fixed effects:\n")
+            return self.coef.round(3)
+
+    def _utils_empty_previous_summaries(self):
+
+        self.coef_posterior = self.coef = self.coefs = None
+        self.fixef = self.fixefs = None
+        self.ranef = self.ranefs = None
+        self.ranef_var = None
+        self.fits = None
+        self.residuals = None
+        self.posterior_predictions = None
+        _, sort_order = self._rename_map_fits()
+        sort_order += ["residuals"]
+        self.data = self.data.drop(columns=sort_order, errors="ignore")
+        self.posterior_summary_statistic = None
+
+    def _utils_make_rfx_matrices(self):
+
+        # Get bambi's internal design matrix object
+        fm_design_matrix = self.model_obj.response_component.design
 
         # We need to slice the combined rfx numpy array bambi gives us
         # using stored column slices for each rfx term
@@ -611,155 +687,100 @@ class Lmer(object):
                 design_mat, columns=fm_design_matrix.group.terms[rfx].groups
             )
 
-    def _plot_priors(self, **kwargs):
-        """Helper function for .plot_summary when requesting prior plots because this
-        calls a custom bambi method rather than an arviz function"""
+    def _utils_build_summary(self):
 
-        hdi_prob = kwargs.pop("hdi_prob", 0.95)
-        hdi_prob = kwargs.pop("ci", 95) / 100
-        params = kwargs.pop("params", "default")
-        if params == "default":
-            var_names = None
-        elif params in ["coef", "coefs", "fixefs", "fixef"]:
-            var_names = self.terms["common_terms"]
-        elif params in ["ranefs", "rfx", "ranef"]:
-            var_names = self.terms["group_terms"]
-        return self.model_obj.plot_priors(
-            hdi_prob=hdi_prob, var_names=var_names, **kwargs
-        )
+        # Create summary tables for population, fixed, and random parameters
+        self._summarize_posteriors()
 
-    def diagnostics(self, params="default", **kwargs):
+        # Add fits (predictions on same data) and residuals to
+        # self.data marginalizing over posterior
+        self._summarize_fits()
 
-        if not self.fitted:
-            raise RuntimeError("Model must be fitted to plot summary!")
-
-        var_names = _select_az_params(params)
-        return az.summary(
-            self.inference_obj,
-            kind="diagnostics",
-            var_names=var_names,
-            filter_vars="like",
-            **kwargs,
-        )
-
-    def _get_terms_for_plotting(self, params):
-        """Helper function to aid in variable selection with az.plot_* funcs"""
-
-        if params in ["default"]:
-            var_names = self.terms["common_terms"] + [
-                f"{e}_sigma" for e in self.terms["group_terms"]
-            ]
-            filter_vars = None
-
-        elif params in ["coef", "coefs"]:
-            var_names = self.terms["common_terms"]
-            filter_vars = None
-
-        # TODO: split up into separate elifs after adding fixed computation
-        elif params in ["fixef", "fixefs", "ranef", "ranefs", "rfx"]:
-            var_names = self.terms["group_terms"]
-            filter_vars = "like"
-
-        elif params in ["response"]:
-            var_names = self.terms["response_term"]
-            filter_vars = "like"
-
-        elif params in [None, "all"]:
-            var_names = None
-            filter_vars = None
+        # HDI p-values and Savage-Dickey Bayes Factors
+        if self.posterior_summary_statistic == "mean":
+            self._infer_hdi_pval()
+            # self._infer_savage_dickey_bf()
         else:
-            raise ValueError(f"params = {params} not understood")
+            warnings.warn(
+                "P-values are not available for median-based summaries. Use `summarize_posterior_with ='mean'` for p-values."
+            )
 
-        return var_names, filter_vars
-
-    def plot_summary(
-        self, kind="trace", dist="posterior", params="default", ci=95, **kwargs
+    def fit(
+        self,
+        summary=True,
+        draws=1000,
+        tune=1000,
+        inference_method="nuts_numpyro",
+        summarize_posterior_with="mean",
+        perform_model_comparison=False,
+        save_nested_models=False,
+        progressbar=False,
+        verbose=False,
+        **kwargs,
     ):
-
-        if not self.fitted:
-            raise RuntimeError("Model must be fitted to plot summary!")
-
-        hdi_prob = kwargs.pop("ci", 95) / 100
-        kwargs.update({"hdi_prob": hdi_prob})
-
-        # Trace plots for inspecting sampler
-        if kind == "trace":
-            if dist != "posterior":
-                raise ValueError(
-                    f"{kind} plots are only supported with dist='posterior'"
-                )
-            if "combined" not in kwargs:
-                kwargs.update({"combined": False})
-            _ = kwargs.pop("hdi_prob", None)
-            var_names, filter_vars = self._get_terms_for_plotting(params)
-            plot_func = az.plot_trace
-
-        # Summary plots for model terms and HDIs/CIs
-        elif kind in ["summary", "forest", "ridge"]:
-            if dist != "posterior":
-                raise ValueError(
-                    f"{kind} plots are only supported with dist='posterior'"
-                )
-            if "combined" not in kwargs:
-                kwargs.update({"combined": True})
-            var_names, filter_vars = self._get_terms_for_plotting(params)
-            if kind == "ridge":
-                kwargs.update({"kind": "ridgeplot"})
-            plot_func = az.plot_forest
-
-        # Posterior distribution plots
-        elif kind in ["posterior_dist", "posterior", "posteriors"]:
-            var_names, filter_vars = self._get_terms_for_plotting(params)
-            plot_func = az.plot_posterior
-
-        # Prior distribution plots
-        # Different plotting call cause it's through bambi
-        elif kind in ["prior_dist", "prior", "priors"]:
-
-            # By default plot all priors
-            params = None if params == "default" else params
-            var_names, _ = self._get_terms_for_plotting(params)
-            # If requesting only rfx we need exact names so append _sigma to name
-            if params in ["fixef", "fixefs", "ranef", "ranefs", "rfx"]:
-                var_names = [f"{name}_sigma" for name in var_names]
-            _ = kwargs.pop("dist", None)
-            kwargs.update({"var_names": var_names})
-            return self.model_obj.plot_priors(**kwargs)
-
-        # Y-hat/prediction plots
-        elif kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
-            _ = kwargs.pop("hdi_prob", None)
-            _ = kwargs.pop("dist", None)
-            return az.plot_ppc(self.inference_obj, group=dist, **kwargs)
-        else:
-            raise ValueError(f"${kind} plot not supported")
-
-        return plot_func(
-            self.inference_obj,
-            var_names=var_names,
-            filter_vars=filter_vars,
-            **kwargs,
-        )
-
-    def plot_priors(self, **kwargs):
-        return self.plot_summary(kind="priors", dist="priors", **kwargs)
-
-    def plot_posteriors(self, **kwargs):
-        return self.plot_summary(kind="posteriors", dist="posteriors", **kwargs)
-
-    def simulate(self, num_datasets, use_rfx=True, verbose=False):
         """
-        Simulate new responses based upon estimates from a fitted model. By default group/cluster means for simulated data will match those of the original data. Unlike predict, this is a non-deterministic operation because lmer will sample random-efects values for all groups/cluster and then sample data points from their respective conditional distributions.
+        Perform bayesian estimation via the requestined inference method. Defaults to using NUTS sampler with numpyro backend which is a bit faster than PyMC's `'mcmc'` sampler with early identitcal estimates. The underlying `arviz` inference object can be accessed at `.inference_object`. This method will also summarize posterior distributions following BARG guidelines from [Kruschke (2021, NHB)](https://www.nature.com/articles/s41562-021-01177-7).
 
         Args:
-            num_datasets (int): number of simulated datasets to generate. Each simulation always generates a dataset that matches the size of the original data
-            use_rfx (bool): wehther to match group/cluster means in simulated data
-            verbose (bool): whether to print R messages to console
+            summary (bool, optional): print an R style summary and return population coefficients table. Defaults to True.
+            draws (int, optional): _description_. Defaults to 1000.
+            tune (int, optional): _description_. Defaults to 1000.
+            inference_method (str, optional): _description_. Defaults to "nuts_numpyro".
+            summarize_posterior_with (str, optional): How to summarize posterior distribution. "mean" uses density-based values while "median" uses quantile-based values. Defaults to "mean".
+            progressbar (bool, optional): _description_. Defaults to False.
+            verbose (bool, optional): _description_. Defaults to False.
+
 
         Returns:
-            np.ndarray: simulated data values
+            pd.DataFrame: table of posterior parameter summaries if `summary=True`
         """
-        raise NotImplementedError("This method is not yet implemented")
+
+        # Save requested hyper-parameters
+        self._draws = draws
+        self._tune = tune
+        self.backend = inference_method
+        self.fitted = True
+
+        # Perform inference
+        self.inference_obj = self._static_bambi_fit(
+            self.model_obj,
+            verbose,
+            draws=self._draws,
+            tune=self._tune,
+            inference_method=self.backend,
+            progressbar=progressbar,
+            idata_kwargs=(
+                dict(log_likelihood=True) if perform_model_comparison else None
+            ),
+            **kwargs,
+        )
+
+        # Add priors to inference object
+        # NOTE: This is a little annoying cause we already called self.model_obj.prior_predictive during initialization. We could store the prior predictive in the model object and then add it to the inference object here, but that would be a bit of a hack. We could also just call it again here, but that would be inefficient. So we'll just leave it as is for now.
+        priors_inference_obj = self.model_obj.prior_predictive(draws=draws)
+        self.inference_obj.add_groups(
+            {
+                "prior": priors_inference_obj.prior,
+                "prior_predictive": priors_inference_obj.prior_predictive,
+            }
+        )
+
+        # Delete any previous arviz summary objects
+        self._utils_empty_previous_summaries()
+
+        # Set the user requested summary statistic
+        self.posterior_summary_statistic = summarize_posterior_with
+
+        # Calculate posterior and fit summary statistics, using the user requested summary statistic
+        self._utils_build_summary()
+
+        # Calculate Bayes Factors for each fixed effect term via model comparison if requested
+        if perform_model_comparison:
+            print("Performing nested model comparison for fixed effects...")
+            self._infer_model_comparison_bf(save_nested_models=save_nested_models)
+
+        if summary:
+            return self._pprint_summary()
 
     def predict(
         self,
@@ -838,50 +859,15 @@ class Lmer(object):
             .assign(Kind=kind)
         )
 
-        rename_map, sort_order = self._fits_rename_map()
+        rename_map, sort_order = self._rename_map_fits()
         output = output.rename(columns=rename_map)[sort_order]
 
         return output
-
-    def _pprint_ranef_var(self):
-        """
-        Format model rfx variances to look like lme4. Used by .summary()
-        """
-
-        df = self.ranef_var.copy()
-        # Format index
-        new_index = []
-        names = []
-        for name in df.index:
-            n = name.split("_sigma")[0]
-            if n in self.terms["group_terms"]:
-                term_name, group_name = n.split("|")
-                term_name = "(Intercept)" if term_name == "1" else term_name
-                new_index.append(group_name)
-                names.append(term_name)
-            else:
-                new_index.append("Residual")
-                names.append(n)
-        df.index = new_index
-
-        # Format columns
-        df = (df.assign(Name=names))[
-            [
-                "Name",
-                "Estimate",
-                f"{'2.5_hdi' if self.posterior_summary_statistic == 'mean' else '2.5_eti'}",
-                f"{'97.5_hdi' if self.posterior_summary_statistic == 'mean' else '97.5_eti'}",
-                "Rubin_Gelman",
-            ]
-        ]
-
-        return df.round(3)
 
     def summary(
         self,
         summarize_posterior_with="mean",
         return_summary=True,
-        save_nested_models=False,
     ):
         """
         Summarize the posterior and estimates of a fitted model. This adds summary tables for population effects (`self.coef`), random effects (`self.ranef`), and fixed effects (`self.fixef`) to the model object. It also adds posterior predictive fits (`self.fits`) and residuals (`self.residuals`) to the model data. Optionally print a summary of the model fit in the style of R's `summary()` function.
@@ -903,51 +889,119 @@ class Lmer(object):
             )
 
         # Remove previous summary stats if they exist
-        self._empty_prev_fit_summary()
+        self._utils_empty_previous_summaries()
 
         # Update user choice, shared across private methods below
         self.posterior_summary_statistic = summarize_posterior_with
 
-        # Create summary tables for population, fixed, and random parameters
-        self._build_posteriors()
-
-        # Add fits (predictions on same data) and residuals to
-        # self.data marginalizing over posterior
-        self._build_fits()
-
-        # Add posterior p-values
-        if self.posterior_summary_statistic == "mean":
-            self._calc_p_values()
-        else:
-            warn(
-                "P-values are not available for median-based summaries. Use `summarize_posterior_with ='mean'` for p-values."
-            )
-
-        if self.calc_nested_model_comparison:
-            print("Calculating Bayes Factors for fixed effects...")
-            self.calc_bayes_factors(save_nested_models=save_nested_models)
+        self._utils_build_summary()
 
         # Print R style summary and return population fixed effects
         if return_summary:
-            print(f"Linear mixed model fit by: {self.backend}\n")
+            return self._pprint_summary()
 
-            print("Formula: {}\n".format(self.formula))
-            print("Family: {}\n".format(self.family))
-            print(
-                "Number of observations: %s\t Groups: %s\n"
-                % (self.data.shape[0], self.grps)
-            )
-            print(f"Posterior sampling: {self.backend}\n")
-            print(f"Posterior summary statistic: {self.posterior_summary_statistic}\n")
-            # print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
-            print("Random effects:\n")
-            print("%s\n" % (self._pprint_ranef_var()))
-            if self.coef is None:
-                print("No fixed effects estimated\n")
-                return
-            else:
-                print("Fixed effects:\n")
-                return self.coef.round(3)
+    def diagnostics(self, params="default", **kwargs):
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to plot summary!")
+
+        var_names = _select_az_params(params)
+        return az.summary(
+            self.inference_obj,
+            kind="diagnostics",
+            var_names=var_names,
+            filter_vars="like",
+            **kwargs,
+        )
+
+    def simulate(self, num_datasets, use_rfx=True, verbose=False):
+        """
+        Simulate new responses based upon estimates from a fitted model. By default group/cluster means for simulated data will match those of the original data. Unlike predict, this is a non-deterministic operation because lmer will sample random-efects values for all groups/cluster and then sample data points from their respective conditional distributions.
+
+        Args:
+            num_datasets (int): number of simulated datasets to generate. Each simulation always generates a dataset that matches the size of the original data
+            use_rfx (bool): wehther to match group/cluster means in simulated data
+            verbose (bool): whether to print R messages to console
+
+        Returns:
+            np.ndarray: simulated data values
+        """
+        raise NotImplementedError("This method is not yet implemented")
+
+    def plot_priors(self, **kwargs):
+        return self.plot_summary(kind="priors", dist="priors", **kwargs)
+
+    def plot_posteriors(self, **kwargs):
+        return self.plot_summary(kind="posteriors", dist="posteriors", **kwargs)
+
+    def plot_summary(
+        self, kind="trace", dist="posterior", params="default", ci=95, **kwargs
+    ):
+
+        if not self.fitted:
+            raise RuntimeError("Model must be fitted to plot summary!")
+
+        hdi_prob = kwargs.pop("ci", 95) / 100
+        kwargs.update({"hdi_prob": hdi_prob})
+
+        # Trace plots for inspecting sampler
+        if kind == "trace":
+            if dist != "posterior":
+                raise ValueError(
+                    f"{kind} plots are only supported with dist='posterior'"
+                )
+            if "combined" not in kwargs:
+                kwargs.update({"combined": False})
+            _ = kwargs.pop("hdi_prob", None)
+            var_names, filter_vars = self._get_terms_for_plotting(params)
+            plot_func = az.plot_trace
+
+        # Summary plots for model terms and HDIs/CIs
+        elif kind in ["summary", "forest", "ridge"]:
+            if dist != "posterior":
+                raise ValueError(
+                    f"{kind} plots are only supported with dist='posterior'"
+                )
+            if "combined" not in kwargs:
+                kwargs.update({"combined": True})
+            var_names, filter_vars = self._get_terms_for_plotting(params)
+            if kind == "ridge":
+                kwargs.update({"kind": "ridgeplot"})
+            plot_func = az.plot_forest
+
+        # Posterior distribution plots
+        elif kind in ["posterior_dist", "posterior", "posteriors"]:
+            var_names, filter_vars = self._get_terms_for_plotting(params)
+            plot_func = az.plot_posterior
+
+        # Prior distribution plots
+        # Different plotting call cause it's through bambi
+        elif kind in ["prior_dist", "prior", "priors"]:
+
+            # By default plot all priors
+            params = None if params == "default" else params
+            var_names, _ = self._get_terms_for_plotting(params)
+            # If requesting only rfx we need exact names so append _sigma to name
+            if params in ["fixef", "fixefs", "ranef", "ranefs", "rfx"]:
+                var_names = [f"{name}_sigma" for name in var_names]
+            _ = kwargs.pop("dist", None)
+            kwargs.update({"var_names": var_names})
+            return self.model_obj.plot_priors(**kwargs)
+
+        # Y-hat/prediction plots
+        elif kind in ["ppc", "yhat", "preds", "predictions", "fits"]:
+            _ = kwargs.pop("hdi_prob", None)
+            _ = kwargs.pop("dist", None)
+            return az.plot_ppc(self.inference_obj, group=dist, **kwargs)
+        else:
+            raise ValueError(f"${kind} plot not supported")
+
+        return plot_func(
+            self.inference_obj,
+            var_names=var_names,
+            filter_vars=filter_vars,
+            **kwargs,
+        )
 
     def plot(
         self,
@@ -982,3 +1036,20 @@ class Lmer(object):
             raise RuntimeError("Model must be fit before plotting!")
 
         raise NotImplementedError("This method is not yet implemented")
+
+    def _plot_priors(self, **kwargs):
+        """Helper function for .plot_summary when requesting prior plots because this
+        calls a custom bambi method rather than an arviz function"""
+
+        hdi_prob = kwargs.pop("hdi_prob", 0.95)
+        hdi_prob = kwargs.pop("ci", 95) / 100
+        params = kwargs.pop("params", "default")
+        if params == "default":
+            var_names = None
+        elif params in ["coef", "coefs", "fixefs", "fixef"]:
+            var_names = self.terms["common_terms"]
+        elif params in ["ranefs", "rfx", "ranef"]:
+            var_names = self.terms["group_terms"]
+        return self.model_obj.plot_priors(
+            hdi_prob=hdi_prob, var_names=var_names, **kwargs
+        )

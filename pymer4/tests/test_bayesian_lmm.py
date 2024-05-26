@@ -9,17 +9,21 @@ class Test_Basic_Usage:
 
     EXPECTED_PRIOR_MEAN_SUMMARY_COLS = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
     EXPECTED_PRIOR_MEDIAN_SUMMARY_COLS = ["Estimate", "2.5_eti", "97.5_eti", "MAD"]
+    EXPECTED_MODEL_COMPARISON_COLS = [
+        "BF_elpd",
+        "Sig_elpd",
+    ]
     EXPECTED_POSTERIOR_MEAN_SUMMARY_COLS = [
         "Estimate",
         "2.5_hdi",
         "97.5_hdi",
         "SD",
         "MCSE",
-        "Rubin_Gelman",
+        "Rhat",
         "ESS_Bulk",
         "ESS_Tail",
-        "P-val",
-        "Sig",
+        "P-val_hdi",
+        "Sig_hdi",
     ]
     EXPECTED_POSTERIOR_MEDIAN_SUMMARY_COLS = [
         "Estimate",
@@ -27,7 +31,7 @@ class Test_Basic_Usage:
         "97.5_eti",
         "MAD",
         "MCSE",
-        "Rubin_Gelman",
+        "Rhat",
         "ESS_Median",
         "ESS_Tail",
     ]
@@ -191,7 +195,7 @@ class Test_Basic_Usage:
         # We can change this by passing chains and draws to .fit()
         # We can also change other parameters supported by bambi like tune
         # Change num changes and draws
-        sleep_model.fit(chains=2, draws=500, refit=True, summary=False)
+        sleep_model.fit(chains=2, draws=500, summary=False)
         assert sleep_model.inference_obj.posterior.sizes == {
             "chain": 2,
             "draw": 500,
@@ -201,18 +205,38 @@ class Test_Basic_Usage:
 
         # Change inference method to pymc's mcmc sampler, which is a bit slower
         # Reduce chains and draws just for testing speed
-        sleep_model.fit(
-            refit=True, chains=2, draws=100, inference_method="mcmc", summary=False
-        )
+        sleep_model.fit(chains=2, draws=100, inference_method="mcmc", summary=False)
         assert (
             sleep_model.inference_obj.sample_stats.attrs["inference_library"] == "pymc"
         )
 
-    def bayesian_pvals(self, sleepstudy):
+    def test_model_comparison(self, sleepstudy):
 
         sleep_model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
+        sleep_model.fit(perform_model_comparison=True)
+        assert isinstance(sleep_model.nested_model_comparison, pd.DataFrame)
+        assert (
+            sleep_model.nested_model_comparison.shape[0]
+            == sleep_model.coef.shape[0] - 1
+        )
+        assert (
+            sleep_model.nested_model_comparison.columns.to_list()
+            == self.EXPECTED_MODEL_COMPARISON_COLS
+        )
+
+        # Now just testing fitting and refitting with model comparison to make sure
+        # attribute saving is working
+        sleep_model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
         sleep_model.fit(summary=False)
-        # TODO:
+        coef_shape = sleep_model.coef_posterior.shape[1]
+
+        # With model comparison we augment model.coefs
+        sleep_model.fit(perform_model_comparison=True)
+        assert isinstance(sleep_model.nested_model_comparison, pd.DataFrame)
+        assert (
+            sleep_model.coefs.shape[1]
+            == coef_shape + sleep_model.nested_model_comparison.shape[1]
+        )
 
     def test_sleepstudy_precision(self, sleepstudy):
         """Check numpyro fit against pymc"""

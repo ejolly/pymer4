@@ -1,4 +1,5 @@
 """Utility functions"""
+
 __all__ = [
     "get_resource_path",
     "_check_random_state",
@@ -24,6 +25,8 @@ __all__ = [
     "R2con",
     "con2R",
     "_select_az_params",
+    "with_no_logging",
+    "_sig_stars_bf",
 ]
 
 __author__ = ["Eshin Jolly"]
@@ -34,6 +37,8 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrices
 from scipy.stats import chi2
+from contextlib import contextmanager
+import logging
 
 MAX_INT = np.iinfo(np.int32).max
 
@@ -79,6 +84,36 @@ def _sig_stars(val):
         star = "*"
     elif 0.05 <= val < 0.1:
         star = "."
+    return star
+
+
+def _sig_stars_bf(val):
+    """
+    Adds sig stars to coef table prettier output.
+    Assumes H1/H0
+    Reference: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6538819/
+    """
+    star = ""
+    if 100 <= val:
+        star = "****"
+    elif 30 <= val < 100:
+        star = "***"
+    elif 10 < val < 30:
+        star = "**"
+    elif 3 <= val < 10:
+        star = "*"
+    elif 1 <= val < 3:
+        star = " "
+    elif 1 / 3 <= val <= 1.0:
+        star = " "
+    elif 1 / 10 <= val < 1 / 3:
+        star = "°"
+    elif 1 / 30 <= val < 1 / 10:
+        star = "°°"
+    elif 1 / 100 <= val < 1 / 30:
+        star = "°°°"
+    elif val < 1 / 100:
+        star = "°°°°"
     return star
 
 
@@ -657,3 +692,27 @@ def _select_az_params(params):
         return ["~_sigma"]
     else:
         return None
+
+
+@contextmanager
+def with_no_logging(highest_level=logging.CRITICAL):
+    """
+    A context manager that will prevent any logging messages
+    triggered during the body from being processed.
+    :param highest_level: the maximum logging level in use.
+      This would only need to be changed if a custom level greater than CRITICAL
+      is defined.
+    """
+    # two kind-of hacks here:
+    #    * can't get the highest logging level in effect => delegate to the user
+    #    * can't get the current module-level override => use an undocumented
+    #       (but non-private!) interface
+
+    previous_level = logging.root.manager.disable
+
+    logging.disable(highest_level)
+
+    try:
+        yield
+    finally:
+        logging.disable(previous_level)
