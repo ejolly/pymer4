@@ -90,7 +90,6 @@ def _sig_stars(val):
 def _sig_stars_bf(val):
     """
     Adds sig stars to coef table prettier output.
-    Assumes H1/H0
     Reference: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6538819/
     """
     star = ""
@@ -103,9 +102,11 @@ def _sig_stars_bf(val):
     elif 3 <= val < 10:
         star = "*"
     elif 1 <= val < 3:
+        star = "-"
+    elif val == 1:
         star = " "
     elif 1 / 3 <= val <= 1.0:
-        star = " "
+        star = "-"
     elif 1 / 10 <= val < 1 / 3:
         star = "°"
     elif 1 / 30 <= val < 1 / 10:

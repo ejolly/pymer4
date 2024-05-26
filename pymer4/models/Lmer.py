@@ -14,6 +14,7 @@ from contextlib import redirect_stdout, nullcontext
 import os
 from pymer4.utils import _select_az_params, _sig_stars, _sig_stars_bf, with_no_logging
 from pymer4.stats import compare_models_elpd_t_test
+from scipy.stats import t as t_dist
 import warnings
 from tqdm import TqdmWarning
 
@@ -69,6 +70,7 @@ class Lmer(object):
         self.posterior_summary_statistic = "mean"  # how we summarize posteriors
         self.calc_nested_model_comparison = False  # whether to calculate Bayes Factors
         self.nested_model_inference_obj = dict()  # store nested model inference objects
+        self.diagnostics = dict()  # store diagnostics
         self._draws = 1000  # default number of draws
         self._tune = 1000  # default number of tuning steps
         self.backend = "nuts_numpyrio"  # inference backend used
@@ -203,7 +205,7 @@ class Lmer(object):
                 "hdi_97.5%": "97.5_hdi",
                 "sd": "SD",
             }
-            sort_order = ["Estimate", "2.5_hdi", "97.5_hdi", "SD"]
+            sort_order = ["Estimate", "SD", "2.5_hdi", "97.5_hdi"]
         elif self.prior_summary_statistic == "median":
             rename_map = {
                 "median": "Estimate",
@@ -211,7 +213,7 @@ class Lmer(object):
                 "eti_97.5%": "97.5_eti",
                 "mad": "MAD",
             }
-            sort_order = ["Estimate", "2.5_eti", "97.5_eti", "MAD"]
+            sort_order = ["Estimate", "MAD", "2.5_eti", "97.5_eti"]
         return rename_map, sort_order
 
     def _rename_map_posteriors(self) -> tuple[dict, list]:
@@ -225,43 +227,31 @@ class Lmer(object):
             rename_map = {
                 "mean": "Estimate",
                 "sd": "SD",
-                "mcse_mean": "MCSE",
                 "r_hat": "Rhat",
                 "hdi_2.5%": "2.5_hdi",
                 "hdi_97.5%": "97.5_hdi",
-                "ess_bulk": "ESS_Bulk",
-                "ess_tail": "ESS_Tail",
             }
             sort_order = [
                 "Estimate",
+                "SD",
                 "2.5_hdi",
                 "97.5_hdi",
-                "SD",
-                "MCSE",
                 "Rhat",
-                "ESS_Bulk",
-                "ESS_Tail",
             ]
         elif self.posterior_summary_statistic == "median":
             rename_map = {
                 "median": "Estimate",
                 "mad": "MAD",
-                "mcse_median": "MCSE",
                 "r_hat": "Rhat",
                 "eti_2.5%": "2.5_eti",
                 "eti_97.5%": "97.5_eti",
-                "ess_median": "ESS_Median",
-                "ess_tail": "ESS_Tail",
             }
             sort_order = [
                 "Estimate",
+                "MAD",
                 "2.5_eti",
                 "97.5_eti",
-                "MAD",
-                "MCSE",
                 "Rhat",
-                "ESS_Median",
-                "ESS_Tail",
             ]
         return rename_map, sort_order
 
@@ -326,12 +316,47 @@ class Lmer(object):
             pvals.append(p_value)
         stars = list(map(_sig_stars, pvals))
 
+        # Make sure the index is in the same order as the terms
+        assert self.coef_posterior.index.to_list() == self.terms["common_terms"]
         self.coef_posterior["P-val_hdi"] = pvals
         self.coef_posterior["Sig_hdi"] = stars
 
-    # TODO:
-    def _infer_savage_dickey_bf(self):
-        pass
+    def _infer_savage_dickey_bf(self, ref_val=0):
+        """Compute Bayes Factors for each model term using the Savage-Dickey method. This is a simple method that compares the posterior density at zero to the prior density at zero. This follows the same implementation `az.plot_bf()` which computes this value for plotting but doesn't expose a standalone function"""
+
+        bfs = []
+        for term in self.terms["common_terms"]:
+
+            # Get the prior and posterior distributions for the term
+            posterior = az.data.extract(
+                self.inference_obj, var_names=term, group="posterior"
+            ).values
+            prior = az.data.extract(
+                self.inference_obj, var_names=term, group="prior"
+            ).values
+            prior = self.inference_obj.prior[term].values.flatten()
+            posterior = self.inference_obj.posterior[term].values.flatten()
+
+            # Compute posterior and prior densities at the reference value
+            if posterior.dtype.kind == "f":
+                posterior_grid, posterior_pdf = az.stats.density_utils._kde_linear(
+                    posterior
+                )
+                prior_grid, prior_pdf = az.stats.density_utils._kde_linear(prior)
+                posterior_at_ref_val = np.interp(ref_val, posterior_grid, posterior_pdf)
+                prior_at_ref_val = np.interp(ref_val, prior_grid, prior_pdf)
+
+            elif posterior.dtype.kind == "i":
+                posterior_at_ref_val = (posterior == ref_val).mean()
+                prior_at_ref_val = (prior == ref_val).mean()
+
+            # Compute the Bayes Factor (BF10)
+            bfs.append(prior_at_ref_val / posterior_at_ref_val)
+
+        # Make sure the index is in the same order as the terms
+        assert self.coef_posterior.index.to_list() == self.terms["common_terms"]
+        self.coef_posterior["BF_10"] = bfs
+        self.coef_posterior["Sig_BF_10"] = list(map(_sig_stars_bf, bfs))
 
     def _infer_model_comparison_bf(self, save_nested_models=False):
 
@@ -370,46 +395,45 @@ class Lmer(object):
             if save_nested_models:
                 self.nested_model_inference_obj[term] = inference_obj
 
-            # NOTE: May need to adjust this if diff is always best model - worst model and not full model - nested model?
             # Diffs in model expected log pointwise predictive density -> BF
-            elpd_diff = comparison.loc[term, "elpd_diff"]
-            # elpd_diff_se = comparison.loc[term, "dse"]
-
-            # Bayes factor is ratio between full model and nested model using difference in expected log pointwise predictive density, via efficient leave-one-out cross-validation
-            # Diff cause we're in log space
-            BF = np.exp(elpd_diff)
-
-            # NOTE: Below is if we want to approximate a t-test but isn't validated
-            # Null model
-            # elpd_se = comparison.loc[term, "se"]
-            # eff_parms = comparison.loc[term, "p_loo"]
-
-            # Full model
-            # elpd_se_full = comparison.loc["full_model", "se"]
+            elpd = comparison.loc[term, "elpd_loo"]
+            eff_parms = comparison.loc[term, "p_loo"]
+            elpd_full = comparison.loc["full_model", "elpd_loo"]
             # eff_parms_full = comparison.loc["full_model", "p_loo"]
 
-            # t_stat, df, p_val = compare_models_elpd_t_test(
-            #     elpd_diff,
-            #     elpd_diff_se,
-            #     elpd_se,
-            #     eff_parms,
-            #     elpd_se_full,
-            #     eff_parms_full,
-            # )
+            # Compute diff manually because we don't know direction in
+            # az.compare which auto-sorts by best model
+            elpd_diff = elpd_full - elpd
+            elpd_diff_se = comparison.loc[term, "dse"]
+
+            # Bayes factor is ratio between full model and nested model using difference in expected log pointwise predictive density, via efficient leave-one-out cross-validation
+            # Exponentiate difference of log densities to get ratio of densities
+            BF = np.exp(elpd_diff)
+            t_ratio = elpd_diff / elpd_diff_se
+            p_val = 2 * (1 - t_dist.cdf(abs(t_ratio), eff_parms))
+
             out[term] = {
+                "ELPD_Diff": elpd_diff,
+                "ELPD_Diff_SE": elpd_diff_se,
+                "Eff_Params": eff_parms,
                 "BF_elpd": BF,
-                "Sig_elpd": _sig_stars_bf(BF),
-                # "T-stat_elpd": t_stat,
-                # "DF_elpd": df,
-                # "P-val_elpd": p_val,
+                "Sig_BF_elpd": _sig_stars_bf(BF),
+                "T-stat_elpd": t_ratio,
+                "P-val_elpd": p_val,
             }
 
             # Remove from dict for next iteration of comparison to save memory
             del models[term]
 
         self.nested_model_comparison = pd.DataFrame(out).T
+
+        # Only concatenate BF to keep output table clean
         self.coef_posterior = pd.concat(
-            [self.coef_posterior, self.nested_model_comparison], axis=1
+            [
+                self.coef_posterior,
+                self.nested_model_comparison[["BF_elpd", "Sig_BF_elpd"]],
+            ],
+            axis=1,
         )
         self.coef = self.coef_posterior
         self.coefs = self.coef_posterior
@@ -596,6 +620,22 @@ class Lmer(object):
         self.residuals = self.data[self.terms["response_term"]] - self.fits
         self.data["residuals"] = self.residuals.copy()
 
+    def _summarize_diagnostics(self, stat_focus="mean"):
+
+        self.diagnostics["common_terms"] = az.summary(
+            self.inference_obj,
+            kind="diagnostics",
+            var_names=self.terms["common_terms"],
+            stat_focus=stat_focus,
+        )
+
+        self.diagnostics["group_terms"] = az.summary(
+            self.inference_obj,
+            kind="diagnostics",
+            var_names=self.terms["group_terms"],
+            stat_focus=stat_focus,
+        )
+
     def _pprint_ranef_var(self):
         """
         Format model rfx variances to look like lme4. Used by .summary()
@@ -632,7 +672,17 @@ class Lmer(object):
 
     def _pprint_bayes_explainer(self):
         """Explains bayes stats and significance codes. Used by .summary()"""
-        pass
+
+        print("P-val_hdi Codes:")
+        print("0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+        print("(proportion of 95% HDI posterior samples that are > 0 or < 0)\n")
+        print("BF_10 Codes:")
+        print("\t  extreme     v-strong     strong     moderate    anecedotal")
+        print("H1\t> '****' 100   '***'  30    '**'  10   '*'    3     '-'   1")
+        print("H0\t0 '°°°°' 0.01  '°°°' 0.033  '°°' 0.10  '°'   0.33   '-'   1")
+        print(
+            "(BF_10 = density-ratio of P(est=0 | prior) / P(est=0 | likliehood * prior)\n"
+        )
 
     def _pprint_summary(self):
 
@@ -653,6 +703,7 @@ class Lmer(object):
             return
         else:
             print("Fixed effects:\n")
+            self._pprint_bayes_explainer()
             return self.coef.round(3)
 
     def _utils_empty_previous_summaries(self):
@@ -696,10 +747,13 @@ class Lmer(object):
         # self.data marginalizing over posterior
         self._summarize_fits()
 
+        # Calculate diagnostics
+        self._summarize_diagnostics()
+
         # HDI p-values and Savage-Dickey Bayes Factors
         if self.posterior_summary_statistic == "mean":
+            self._infer_savage_dickey_bf()
             self._infer_hdi_pval()
-            # self._infer_savage_dickey_bf()
         else:
             warnings.warn(
                 "P-values are not available for median-based summaries. Use `summarize_posterior_with ='mean'` for p-values."
@@ -899,20 +953,6 @@ class Lmer(object):
         # Print R style summary and return population fixed effects
         if return_summary:
             return self._pprint_summary()
-
-    def diagnostics(self, params="default", **kwargs):
-
-        if not self.fitted:
-            raise RuntimeError("Model must be fitted to plot summary!")
-
-        var_names = _select_az_params(params)
-        return az.summary(
-            self.inference_obj,
-            kind="diagnostics",
-            var_names=var_names,
-            filter_vars="like",
-            **kwargs,
-        )
 
     def simulate(self, num_datasets, use_rfx=True, verbose=False):
         """
