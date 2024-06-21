@@ -67,6 +67,8 @@ class Lmer(object):
         fits (numpy.ndarray): model fits/predictions
         model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
+        ranef_df (pd.DataFrame): Contains the best linear unbiased predictors (BLUPs) (also called the conditional modes) and the conditional standard deviations of the random effects
+        varcorr_df (pd.DataFrame): Contains the variances, standard deviations, and correlations between the random-effects terms
 
     """
 
@@ -108,6 +110,8 @@ class Lmer(object):
         self.sig_type = None
         self.factors_prev_ = None
         self.contrasts = None
+        self.ranef_df = None
+        self.varcorr_df = None
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -824,6 +828,41 @@ class Lmer(object):
             self.ranef = [R2pandas(e).drop(columns=["index"]) for e in ranefs]
         else:
             self.ranef = R2pandas(ranefs[0]).drop(columns=["index"])
+
+        # Cluster (e.g subject) level random deviations and their associated conditional standard deviations
+
+        rstring = """
+            function(model){
+            ranef_df <- as.data.frame(ranef(model, condVar=TRUE))
+            }
+        """
+
+        get_ranef_r_df = robjects.r(rstring)
+        ranef_r_df = get_ranef_r_df(self.model_obj)
+
+        # ranef_r_df[2] is an R FactorVector so we extract its metadata labels as strings.
+        # [factor - 1] is used because R indexing starts at 1 and Python indexing starts at 0.
+        factors_as_strings = [
+            ranef_r_df[2].levels[factor - 1] for factor in ranef_r_df[2]
+        ]
+
+        # Converting the R dataframe to a Pandas dataframe
+        self.ranef_df = robjects.pandas2ri.rpy2py(ranef_r_df)
+
+        # replace the R factors in the grp column with their associated strings
+        self.ranef_df["grp"] = factors_as_strings
+
+        # Estimated variances, standard deviations, and correlations between the random-effects
+
+        rstring = """
+            function(model){
+            varcorr_df <- as.data.frame(VarCorr(model, condVar=TRUE))
+            }
+        """
+
+        get_varcorr_df = robjects.r(rstring)
+        varcorr_r_df = get_varcorr_df(self.model_obj)
+        self.varcorr_df = robjects.pandas2ri.rpy2py(varcorr_r_df)
 
         # Model residuals
         rstring = """
