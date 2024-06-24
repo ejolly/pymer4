@@ -840,15 +840,12 @@ class Lmer(object):
         get_ranef_r_df = robjects.r(rstring)
         ranef_r_df = get_ranef_r_df(self.model_obj)
 
-        # ranef_r_df[2] is an R FactorVector so we extract its metadata labels as strings.
-        # [factor - 1] is used because R indexing starts at 1 and Python indexing starts at 0.
-
-
         # Converting the R dataframe to a Pandas dataframe.
         self.ranef_df = robjects.pandas2ri.rpy2py(ranef_r_df)
 
-        # ranef_r_df[2] is an R FactorVector that is automatically converted to int R factors for Pandas.
-        # So we replace the int R factors in the grp column with their associated strings
+        # ranef_r_df[2] is an R FactorVector that is automatically converted to int R factors for Pandas
+        # so we replace the int R factors in the grp column with their associated strings.
+        # [factor - 1] is used because factor is an R index which starts at 1 (Python indexing starts at 0).
         self.ranef_df["grp"] = [
             ranef_r_df[2].levels[factor - 1] for factor in ranef_r_df[2]
         ]
