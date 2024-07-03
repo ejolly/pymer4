@@ -68,8 +68,6 @@ class Lmer(object):
         model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
         ranef_df (pd.DataFrame): Contains the best linear unbiased predictors (BLUPs) (also called the conditional modes) and the conditional standard deviations of the random effects
-        varcorr_df (pd.DataFrame): Contains the variances, standard deviations, and correlations between the random-effects terms
-
     """
 
     def __init__(self, formula, data, family="gaussian"):
@@ -111,7 +109,6 @@ class Lmer(object):
         self.factors_prev_ = None
         self.contrasts = None
         self.ranef_df = None
-        self.varcorr_df = None
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -852,18 +849,6 @@ class Lmer(object):
         # The R indices are automatically preserved as strings but they are just integers which do not need to be as
         # strings. We therefore reset the index.
         self.ranef_df.reset_index(drop=True, inplace=True)
-
-        # Estimated variances, standard deviations, and correlations between the random-effects
-
-        rstring = """
-            function(model){
-            varcorr_df <- as.data.frame(VarCorr(model, condVar=TRUE))
-            }
-        """
-
-        get_varcorr_df = robjects.r(rstring)
-        varcorr_r_df = get_varcorr_df(self.model_obj)
-        self.varcorr_df = robjects.pandas2ri.rpy2py(varcorr_r_df)
 
         # Model residuals
         rstring = """
