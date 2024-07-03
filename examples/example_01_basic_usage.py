@@ -116,6 +116,22 @@ print(model.fixef.head(5))
 print(model.ranef.head(5))
 
 ###############################################################################
+
+# Get group level deviates from population level coefficients (also called conditional modes) as well as their
+# associated conditional standard deviations in the form of a dataframe
+
+# Get a dataframe containing information about the random effects. The dataframe contains the following columns:
+# grpvar: grouping variable
+# term: random-effects term, e.g. 1 for “(Intercept)” in R
+# grp: level of the grouping variable (e.g., which Subject)
+# condval: value of the conditional mean (similar to above)
+# condsd: conditional standard deviation.
+# This is obtained from R with the following R code: as.data.frame(ranef(model_fit, condVar=TRUE)
+# where model_fit is the glmer fit.
+
+print(model.ranef_df)
+
+###############################################################################
 # :code:`Lmer` models also have some basic plotting abilities that :code:`Lm` models do not
 
 # Visualize coefficients with group/cluster fits overlaid ("forest plot")
