@@ -1,9 +1,7 @@
-import os
-
 import pandas as pd
-from pytest import fixture
-
 from pymer4.utils import get_resource_path
+import os
+from pytest import fixture
 
 
 @fixture(scope="module")

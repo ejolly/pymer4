@@ -5,29 +5,28 @@ Pymer4 Lmer Class
 Main class to wrap R's lme4 library
 """
 
-import traceback
-import warnings
-from copy import copy
 
-import matplotlib.pyplot as plt
+from copy import copy
+from rpy2.robjects.packages import importr
+import rpy2.robjects as robjects
+from rpy2.rinterface_lib import callbacks
+import rpy2.rinterface as rinterface
+from rpy2.robjects.conversion import localconverter
+from rpy2.robjects import numpy2ri
+import warnings
+import traceback
 import numpy as np
 import pandas as pd
-import rpy2.rinterface as rinterface
-import rpy2.robjects as robjects
+import matplotlib.pyplot as plt
 import seaborn as sns
-from pandas.api.types import CategoricalDtype
-from rpy2.rinterface_lib import callbacks
-from rpy2.robjects import numpy2ri
-from rpy2.robjects.conversion import localconverter
-from rpy2.robjects.packages import importr
-
-from ..bridge import con2R, pandas2R, R2pandas, R2numpy
 from ..utils import (
     _sig_stars,
     _perm_find,
     _return_t,
     _to_ranks_by_group,
 )
+from ..bridge import con2R, pandas2R, R2pandas, R2numpy
+from pandas.api.types import CategoricalDtype
 
 # Import R libraries we need
 base = importr("base")
@@ -40,6 +39,7 @@ consolewrite_print_backup = callbacks.consolewrite_print
 
 class Lmer(object):
     """
+
     Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
 
     Args:
@@ -68,6 +68,7 @@ class Lmer(object):
         model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
         ranef_df (pd.DataFrame): Contains the best linear unbiased predictors (BLUPs) (also called the conditional modes) and the conditional standard deviations of the random effects
+
     """
 
     def __init__(self, formula, data, family="gaussian"):

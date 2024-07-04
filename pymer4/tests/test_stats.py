@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-
+import os
 from pymer4.models import Lmer, Lm2
+from pymer4.utils import get_resource_path
 from pymer4.stats import (
     cohens_d,
     perm_test,
