@@ -120,7 +120,7 @@ print(model.ranef.head(5))
 # Get group level deviates from population level coefficients (also called conditional modes) as well as their
 # associated conditional standard deviations in the form of a dataframe
 
-# Get a dataframe containing information about the random effects. The dataframe contains the following columns:
+# :code:`model.ranef_df` is a dataframe containing information about the random effects. The dataframe contains the following columns:
 # grpvar: grouping variable
 # term: random-effects term, e.g. 1 for “(Intercept)” in R
 # grp: level of the grouping variable (e.g., which Subject)
