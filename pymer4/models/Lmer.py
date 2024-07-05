@@ -38,8 +38,8 @@ consolewrite_print_backup = callbacks.consolewrite_print
 
 
 class Lmer(object):
-    """
 
+    """
     Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
 
     Args:
