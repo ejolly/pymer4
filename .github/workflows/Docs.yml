@@ -1,0 +1,71 @@
+name: Manual Deploy Docs
+on: 
+  workflow_dispatch:
+
+env:
+  PACKAGE_NAME: pymer4
+  DEPLOY_PY_VER: 3.8  # only this job deploys docs, anaconda.org, pypi
+  DEPLOY_OS: ubuntu-latest
+  CONDA_BLD_PATH: /tmp/ci_conda_bld
+
+defaults:
+  run:
+    # login shell to source the conda hook in .bash_profile
+    shell:
+      bash -l {0}
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        py_ver: [3.8]
+        os: [ubuntu-latest]
+
+    steps:
+
+      # ------------------------------------------------------------
+      # Step up miniconda
+      - name: Download Miniconda
+        uses: conda-incubator/setup-miniconda@059455a698430d8b68fa317268fa2e3da3492a98
+        with:
+          miniconda-version: "latest"
+
+      # ------------------------------------------------------------
+      # Get code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+
+      # ------------------------------------------------------------
+      # Setup conda build environment and build package
+      # env defined here are just for convenience when writing bash commands
+      - name: Install package
+        env:
+          PY_VER: ${{ matrix.py_ver }}
+        run: |
+          conda config --set always_yes yes --set changeps1 no
+          conda create -n pkg_test -c conda-forge python=$PY_VER 'r-lmerTest' 'r-emmeans' 'rpy2'
+
+          conda activate pkg_test
+          pip install -r requirements-dev.txt
+          pip install .
+
+      # ------------------------------------------------------------
+      # Build docs
+      - name: Build Docs
+        run: |
+          conda activate pkg_test
+          python -c "from pymer4.test_install import test_install; test_install()"
+          cd docs && make clean && make html
+          touch _build/html/.nojekyll
+
+      # Deploy docs
+      - name: Deploy docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: crazy-max/ghaction-github-pages@v2
+        with:
+          target_branch: gh-pages
+          build_dir: docs/_build/html

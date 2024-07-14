@@ -2,7 +2,7 @@
 *.DS_Store
 *.ipynb_checkpoints
 *.pyc
-build/*
+build/
 docs/_build/
 docs/modules/
 .cache/*
@@ -19,7 +19,10 @@ dev/
 pytest.ini
 env/*
 conda/build/*
+conda_noarch/build/*
 .pytest_cache
 .tox
 .venv
 environment.yml
+*.pickle
+*.joblib

@@ -9,11 +9,6 @@ on:
       - master
       - main
   workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: 'Run workflow with ssh debugging'
-        required: false
-        default: false
 
   schedule:
     - cron: '0 0 * * 0'
@@ -33,7 +28,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        py_ver: [3.7, 3.8, 3.9]
+        py_ver: [3.8, 3.9, '3.10', 3.11]
         os: [ubuntu-latest]
 
     steps:
@@ -71,4 +66,13 @@ jobs:
         run: |
           conda activate pkg_test
           python -c "from pymer4.test_install import test_install; test_install()"
+          black --version
+          black --check --verbose .
           pytest pymer4/tests
+
+      # ------------------------------------------------------------
+      # Build docs
+      - name: Build Docs
+        run: |
+          conda activate pkg_test
+          cd docs && make clean && make html

@@ -320,7 +320,7 @@ class Lmer(object):
             n_boot (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
             factors (dict): dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast or a dict with keys as factor leves and values as desired comparisons in human readable format See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
-            ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
+            ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided. Ordering applies to **all** contrasts!; default is False
             summarize/summary (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
@@ -1613,6 +1613,7 @@ class Lmer(object):
         boot_type="perc",
         quiet=False,
         oldnames=False,
+        seed=None,
     ):
         """
         Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
@@ -1630,6 +1631,7 @@ class Lmer(object):
             quiet (bool): (logical) suppress messages about computationally intensive profiling?
             oldnames: (logical) use old-style names for variance-covariance parameters, e.g. ".sig01", rather than newer
              (more informative) names such as "sd_(Intercept)|Subject"?
+            seed (int): seed to be passed to bootMer for repeatability.
 
         Returns:
             pd.DataFrame: confidence intervals for the parameters of interest
@@ -1680,6 +1682,7 @@ class Lmer(object):
             + method
             + """'"""
             + ((""",zeta=""" + str(zeta)) if zeta is not None else """""")
+            + ((""",seed=""" + str(seed)) if seed is not None else """""")
             + """,nsim="""
             + str(nsim)
             + """,boot.type='"""

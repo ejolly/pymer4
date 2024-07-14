@@ -226,7 +226,6 @@ def test_lrt(df):
 
     pd.testing.assert_frame_equal(r_lrt_ml_sub, r_lrt_ml_sub, check_dtype=False)
 
-
 def test_ranef_as_data_frame(df, ranef_as_dataframe_correct_results):
     model = Lmer("IV1 ~ (1|Group)", data=df)
     model.fit(summarize=False)
