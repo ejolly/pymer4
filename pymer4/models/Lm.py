@@ -435,7 +435,7 @@ class Lm(object):
                 # Since we're bootstrapping coefficients themselves we don't need the robust info anymore
                 boot_betas = par_for(
                     delayed(_chunk_boot_ols_coefs)(
-                        dat=self.data,
+                        dat=ddat,
                         formula=self.formula,
                         weights=weights,
                         seed=seeds[i],

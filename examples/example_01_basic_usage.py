@@ -116,6 +116,22 @@ print(model.fixef.head(5))
 print(model.ranef.head(5))
 
 ###############################################################################
+
+# Get group level deviates from population level coefficients (also called conditional modes) as well as their
+# associated conditional standard deviations in the form of a dataframe
+
+# :code:`model.ranef_df` is a dataframe containing information about the random effects. The dataframe contains the following columns:
+# grpvar: grouping variable
+# term: random-effects term, e.g. 1 for “(Intercept)” in R
+# grp: level of the grouping variable (e.g., which Subject)
+# condval: value of the conditional mean (similar to above)
+# condsd: conditional standard deviation.
+# This is obtained from R with the following R code: as.data.frame(ranef(model_fit, condVar=TRUE)
+# where model_fit is the glmer fit.
+
+print(model.ranef_df)
+
+###############################################################################
 # :code:`Lmer` models also have some basic plotting abilities that :code:`Lm` models do not
 
 # Visualize coefficients with group/cluster fits overlaid ("forest plot")
@@ -156,7 +172,9 @@ model.plot_summary()
 ###############################################################################
 # Model Persistence
 # -----------------
-# All pymer4 models can be saved and loaded from disk. Doing so will persist *all* model attributes and data i.e. anything accessible with the '.' syntax. Models are saved and loaded using the `HDF5 format <https://support.hdfgroup.org/HDF5/whatishdf5.html/>`_ using the `deepdish <https://deepdish.readthedocs.io/en/latest/>`_ python library. This ensures near universal accesibility on different machines and operating systems. Therefore all filenames must end with :code:`.h5` or :code:`.hdf5`. For :code:`Lmer` models, an additional file ending in :code:`.rds` will be saved in the same directory as the HDF5 file. This is the R model object readable in R using :code:`readRDS`.
+# All pymer4 models can be saved and loaded from disk. Doing so will persist *all* model attributes and data i.e. anything accessible with the '.' syntax. Models are saved and loaded using `Joblib <https://joblib.readthedocs.io/en/latest/persistence.html#persistence>`_ Therefore all filenames must end with :code:`.joblib`. For :code:`Lmer` models, an additional file ending in :code:`.rds` will be saved in the same directory as the HDF5 file. This is the R model object readable in R using :code:`readRDS`.
+#
+# Prior to version 0.8.1 models were saved to HDF5 files using `deepdish <https://github.com/uchicago-cs/deepdish/>`_ but this library is no longer maintained. If you have old models saved as :code:`.h5` or :code:`.hdf5` files you should use the same version of pymer4 that you used to estimate those models.
 #
 # To persist models you can use the dedicated :code:`save_model` and :code:`load_model` functions from the :code:`pymer4.io` module
 
@@ -164,9 +182,9 @@ model.plot_summary()
 from pymer4.io import save_model, load_model
 
 # Save the Lm2 model above
-save_model(model, "mymodel.h5")
+save_model(model, "mymodel.joblib")
 # Load it back up
-model = load_model("mymodel.h5")
+model = load_model("mymodel.joblib")
 # Check that it looks the same
 print(model)
 

@@ -6,7 +6,7 @@
 [![Downloads](https://pepy.tech/badge/pymer4)](https://pepy.tech/project/pymer4)
 [![DOI](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862)
 [![DOI](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205)
-![Python Versions](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)
+![Python Versions](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ejolly/pymer4/issues)
 
 # Pymer4

@@ -210,11 +210,11 @@ class Lm2(object):
             betas = np.array([e["betas"] for e in out])
             fits = np.concatenate([e["pred"] for e in out], axis=0)
             residuals = np.concatenate([e["res"] for e in out], axis=0)
+            self.residuals = residuals
+            self.data["residuals"] = residuals
+            self.fits = fits
+            self.data["fits"] = fits
 
-        self.residuals = residuals
-        self.data["residuals"] = residuals
-        self.fits = fits
-        self.data["fits"] = fits
         # Get the model matrix formula from patsy to make it more reliable to set the results dataframe index like Lmer
         _, x = dmatrices(self.formula, self.data, 1, return_type="dataframe")
         self.design_matrix = x
@@ -299,6 +299,7 @@ class Lm2(object):
                 ]
             ]
         self.fitted = True
+        self.iscorrs = to_corrs
 
         # Fit statistics
         if "Intercept" in self.design_matrix.columns:
@@ -313,31 +314,30 @@ class Lm2(object):
         # don't compute anything from the second-level fits or residuals since those
         # are just univariate mean tests.
 
-        # Method 1: "naive" over the whole dataset
-        self.rsquared = rsquared(fits, residuals, center_tss)
-        self.rsquared_adj = rsquared_adj(
-            self.rsquared, len(residuals), len(residuals) - x.shape[1], center_tss
-        )
+        if not self.iscorrs:
+            # Method 1: "naive" over the whole dataset
+            self.rsquared = rsquared(fits, residuals, center_tss)
+            self.rsquared_adj = rsquared_adj(
+                self.rsquared, len(residuals), len(residuals) - x.shape[1], center_tss
+            )
 
-        # Method 2: calculated separately group. Potentially useful for inspecting 1st
-        # level model fits
-        separate_results = [(e["pred"], e["res"]) for e in out]
-        self.rsquared_per_group = np.array(
-            [rsquared(e[0], e[1], center_tss) for e in separate_results]
-        )
-        self.rsquared_adj_per_group = np.array(
-            [
-                rsquared_adj(
-                    self.rsquared_per_group[i],
-                    len(separate_results[i][0]),
-                    len(separate_results[i][0]) - x.shape[1],
-                    center_tss,
-                )
-                for i in range(len(self.rsquared_per_group))
-            ]
-        )
-
-        self.iscorrs = to_corrs
+            # Method 2: calculated separately group. Potentially useful for inspecting 1st
+            # level model fits
+            separate_results = [(e["pred"], e["res"]) for e in out]
+            self.rsquared_per_group = np.array(
+                [rsquared(e[0], e[1], center_tss) for e in separate_results]
+            )
+            self.rsquared_adj_per_group = np.array(
+                [
+                    rsquared_adj(
+                        self.rsquared_per_group[i],
+                        len(separate_results[i][0]),
+                        len(separate_results[i][0]) - x.shape[1],
+                        center_tss,
+                    )
+                    for i in range(len(self.rsquared_per_group))
+                ]
+            )
 
         if summarize:
             return self.summary()

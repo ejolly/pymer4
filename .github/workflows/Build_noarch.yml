@@ -1,0 +1,137 @@
+name: Build and Deploy noarch
+on:
+  workflow_dispatch:
+    inputs:
+      upload_anaconda:
+        description: 'Upload build to anaconda'
+        required: false
+        default: 'skip'
+        type: choice
+        options:
+          - 'pre-release'
+          - 'main'
+          - 'skip'
+
+env:
+  PACKAGE_NAME: pymer4
+  DEPLOY_PY_VER: 3.8  # only this job runner deploys docs and pypi package
+  DEPLOY_OS: ubuntu-latest
+  CONDA_BLD_PATH: /tmp/ci_conda_bld
+
+defaults:
+  run:
+    # login shell to source the conda hook in .bash_profile
+    shell:
+      bash -l {0}
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: true
+      matrix:
+        py_ver: [3.9]
+        os: [ubuntu-latest]
+        experimental: [true]
+
+    outputs:
+      # tarballs are py3X job-specific
+      conda-tarball: ${{ steps.conda-bld.outputs.conda-tarball }}
+
+    steps:
+
+      # ------------------------------------------------------------
+      # 0. Print some basic github action info
+      - name: diagnostic info
+        run: |
+          echo "OS: ${{ matrix.os }}" 
+          echo "Python: ${{ matrix.py_ver }}" 
+          echo "Conda build path: $CONDA_BLD_PATH"
+          echo "Deploy OS: $DEPLOY_OS"
+          echo "Deploy Python: $DEPLOY_PY_VER"
+          echo "GA event name: ${{ github.event_name }}"
+          echo "GA ref: ${{ github.ref }}"
+
+      # ------------------------------------------------------------
+      # Step up miniconda
+      - name: Download Miniconda
+        uses: conda-incubator/setup-miniconda@059455a698430d8b68fa317268fa2e3da3492a98
+        with:
+          miniconda-version: "latest"
+          python-version: ${{ matrix.py_ver }}
+
+      # ------------------------------------------------------------
+      # Get code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # ------------------------------------------------------------
+      # Setup conda build environment and build package
+      # env defined here are just for convenience when writing bash commands
+      - name: Setup and build package
+        env:
+          OS: ${{ runner.os }}   
+          PY_VER: ${{ matrix.py_ver }}
+        run: |
+          conda config --set always_yes yes --set changeps1 no
+          conda config --set bld_path $CONDA_BLD_PATH
+          conda install -n base -q conda-build
+          conda deactivate
+          echo "# ----------------BUILDING---------------------------------"
+          conda config --show | grep bld_path
+          conda info
+          conda-build ./conda_noarch -c https://conda.anaconda.org/conda-forge --verify
+          tarball=$(conda-build ./conda_noarch --output | tail -1)
+          echo "conda build tarball" $tarball
+          echo "{conda-tarball}={$tarball}" >> $GITHUB_OUTPUT
+
+      # ------------------------------------------------------------
+      # Create new conda env and install package locally
+      # Test installation worked
+      # Get black and pytest from pip because black version on conda lags behind
+      - name: Test installation 
+        env:
+          PY_VER: ${{ matrix.py_ver }}
+        run: |
+          conda create -n env_$PY_VER python=$PY_VER $PACKAGE_NAME -c $CONDA_BLD_PATH -c conda-forge -c defaults
+          conda activate env_$PY_VER
+          conda info | grep active
+          pip install -r requirements-dev.txt
+          python -c "from pymer4.test_install import test_install; test_install()"
+
+      # 4. Run code tests
+      - name: Run Test Suite
+        env:
+          PY_VER: ${{ matrix.py_ver }}
+        run: |
+          conda activate env_$PY_VER
+          conda info | grep active
+          black --version
+          black --check --verbose .
+          pytest pymer4/tests
+
+      # 8a. Deploy package to main conda main channel
+      # Runs when a github release is created, but can also be triggered manually
+      - name: Conda main deploy 
+        if: ${{ (github.event_name == 'release') || (inputs.upload_anaconda == 'main') }}
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          echo 'Conda release on main channel'
+          conda install anaconda-client
+          anaconda -t "$ANACONDA_TOKEN" upload $CONDA_BLD_PATH/**/${PACKAGE_NAME}*.tar.bz2 -l "main"
+
+      # OR -----
+
+      # 8b. Deploy package to pre-release conda channel 
+      # Only runs when triggered manually
+      - name: Conda pre-release deploy
+        if: ${{ inputs.upload_anaconda == 'pre-release' }}
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          echo 'Conda release on pre-release channel'
+          conda install anaconda-client
+          anaconda -t "$ANACONDA_TOKEN" upload $CONDA_BLD_PATH/**/${PACKAGE_NAME}*.tar.bz2 -l "pre-release"
+        

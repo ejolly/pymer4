@@ -67,6 +67,7 @@ class Lmer(object):
         fits (numpy.ndarray): model fits/predictions
         model_obj (lmer model): rpy2 lmer model object
         factors (dict): factors used to fit the model if any
+        ranef_df (pd.DataFrame): Contains the best linear unbiased predictors (BLUPs) (also called the conditional modes) and the conditional standard deviations of the random effects
 
     """
 
@@ -108,6 +109,7 @@ class Lmer(object):
         self.sig_type = None
         self.factors_prev_ = None
         self.contrasts = None
+        self.ranef_df = None
 
     def __repr__(self):
         out = "{}(fitted = {}, formula = {}, family = {})".format(
@@ -318,7 +320,7 @@ class Lmer(object):
             n_boot (int): number of bootstrap intervals if bootstrapped confidence intervals are requests; default 500
             factors (dict): dictionary with column names specified as keys and values as a list for dummy/treatment/polynomial contrast or a dict with keys as factor leves and values as desired comparisons in human readable format See examples below
             permute (int): if non-zero, computes parameter significance tests by permuting test stastics rather than parametrically. Permutation is done by shuffling observations within clusters to respect random effects structure of data.
-            ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided; default is False
+            ordered (bool): whether factors should be treated as ordered polynomial contrasts; this will parameterize a model with K-1 orthogonal polynomial regressors beginning with a linear contrast based on the factor order provided. Ordering applies to **all** contrasts!; default is False
             summarize/summary (bool): whether to print a model summary after fitting; default is True
             verbose (bool): whether to print when and which model and confidence interval are being fitted
             REML (bool): whether to fit using restricted maximum likelihood estimation instead of maximum likelihood estimation; default True
@@ -835,6 +837,30 @@ class Lmer(object):
             self.ranef = [R2pandas(e).drop(columns=["index"]) for e in ranefs]
         else:
             self.ranef = R2pandas(ranefs[0]).drop(columns=["index"])
+
+        # Cluster (e.g subject) level random deviations and their associated conditional standard deviations
+
+        rstring = """
+            function(model){
+            ranef_df <- as.data.frame(ranef(model, condVar=TRUE))
+            }
+        """
+
+        get_ranef_r_df = robjects.r(rstring)
+        ranef_r_df = get_ranef_r_df(self.model_obj)
+
+        # Converting the R dataframe to a Pandas dataframe.
+        self.ranef_df = robjects.pandas2ri.rpy2py(ranef_r_df)
+
+        # ranef_r_df[2] is an R FactorVector that is automatically converted to int R factors for Pandas
+        # so we replace the int R factors in the grp column with their associated strings.
+        # [factor - 1] is used because factor is an R index which starts at 1 (Python indexing starts at 0).
+        self.ranef_df["grp"] = [
+            ranef_r_df[2].levels[factor - 1] for factor in ranef_r_df[2]
+        ]
+        # The R indices are automatically preserved as strings but they are just integers which do not need to be as
+        # strings. We therefore reset the index.
+        self.ranef_df.reset_index(drop=True, inplace=True)
 
         # Model residuals
         rstring = """
@@ -1598,6 +1624,7 @@ class Lmer(object):
         boot_type="perc",
         quiet=False,
         oldnames=False,
+        seed=None,
     ):
         """
         Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
@@ -1615,6 +1642,7 @@ class Lmer(object):
             quiet (bool): (logical) suppress messages about computationally intensive profiling?
             oldnames: (logical) use old-style names for variance-covariance parameters, e.g. ".sig01", rather than newer
              (more informative) names such as "sd_(Intercept)|Subject"?
+            seed (int): seed to be passed to bootMer for repeatability.
 
         Returns:
             pd.DataFrame: confidence intervals for the parameters of interest
@@ -1665,6 +1693,7 @@ class Lmer(object):
             + method
             + """'"""
             + ((""",zeta=""" + str(zeta)) if zeta is not None else """""")
+            + ((""",seed=""" + str(seed)) if seed is not None else """""")
             + """,nsim="""
             + str(nsim)
             + """,boot.type='"""

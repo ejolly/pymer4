@@ -25,7 +25,7 @@ Pymer4
 .. image:: https://zenodo.org/badge/90598701.svg
     :target: https://zenodo.org/record/1523205
 
-.. image:: https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue
+.. image:: https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue
 
 .. raw:: html
 

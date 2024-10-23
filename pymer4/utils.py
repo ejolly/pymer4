@@ -408,7 +408,7 @@ def _logregress(x, y, all_stats=True):
     # Design matrix already has intercept. We want no regularization and the newton
     # solver to match as closely with R
 
-    model = LogisticRegression(penalty="none", solver="newton-cg", fit_intercept=False)
+    model = LogisticRegression(penalty=None, solver="newton-cg", fit_intercept=False)
     _ = model.fit(x, y)
     b = model.coef_
     fits = model.decision_function(x)
