@@ -21,7 +21,11 @@ from tqdm import TqdmWarning
 
 class Lmer(object):
     """
-    Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
+    Model class to hold a bayesian multi-level model fit via bambi and numpyro (by default). This class is designed to be used in a similar way to R's lme4 package. It is a wrapper around Bambi's model object and provides additional functionality for summarizing and interpreting model results.
+
+    The underlying bambi model object can always be accessed at `model.model_obj` for additional functionality, while the `model.inference_obj` is an arviz InferenceData object fully compatible with arviz's plotting and summarization functions.
+
+    By default priors are automatically determined to be "weakly informative" based on the data as implemented in bambi and rstanarm. See [here](https://mc-stan.org/rstanarm/articles/priors.html#default-weakly-informative-prior-distributions-1) for more.
 
     Args:
         formula (str): Complete lmer-style model formula
@@ -501,13 +505,25 @@ class Lmer(object):
 
         # Suppress "sampling message"
         with with_no_logging():
-            priors = self.model_obj.prior_predictive()
+            priors = self.model_obj.prior_predictive(
+                var_names=self.terms["common_terms"] + self.terms["group_terms"]
+            )
 
         rename_map, sort_order = self._rename_map_priors()
         self.coef_prior = az.summary(
             priors,
             kind="stats",
             var_names=self.terms["common_terms"],
+            group="prior",
+            hdi_prob=0.95,
+            stat_focus=self.prior_summary_statistic,
+        ).rename(columns=rename_map)[sort_order]
+
+        self.ranef_prior = az.summary(
+            priors,
+            kind="stats",
+            var_names=self.terms["group_terms"],
+            group="prior",
             hdi_prob=0.95,
             stat_focus=self.prior_summary_statistic,
         ).rename(columns=rename_map)[sort_order]

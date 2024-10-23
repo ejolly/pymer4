@@ -5,6 +5,8 @@
 build/*
 docs/_build/
 docs/modules/
+docs/dev_files
+docs/bayesian_tutorial.ipynb
 .cache/*
 .imdone/*
 dist/*
