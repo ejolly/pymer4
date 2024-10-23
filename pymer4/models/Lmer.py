@@ -730,9 +730,14 @@ class Lmer(object):
         ran_vars.columns = ["Name", "Var", "Std"]
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
-        ran_vars = ran_vars.applymap(
-            lambda x: np.nan if x == robjects.NA_Character else x
-        )
+        if callable(getattr(ran_vars, 'map', None)): # account for pd 2.1 change
+            ran_vars = ran_vars.map(
+                lambda x: np.nan if x == robjects.NA_Character else x
+            )
+        else:
+            ran_vars = ran_vars.applymap(
+                lambda x: np.nan if x == robjects.NA_Character else x
+            )
         ran_vars.replace(np.nan, "", inplace=True)
 
         ran_corrs = df.query("var2 not in @varcor_NAs").drop("vcov", axis=1)
@@ -741,9 +746,15 @@ class Lmer(object):
             ran_corrs.drop("grp", axis=1, inplace=True)
             ran_corrs.columns = ["IV1", "IV2", "Corr"]
             ran_corrs.index.name = None
-            ran_corrs = ran_corrs.applymap(
-                lambda x: np.nan if x == robjects.NA_Character else x
-            )
+            
+            if callable(getattr(ran_corrs, 'map', None)):
+                ran_corrs = ran_corrs.map(
+                    lambda x: np.nan if x == robjects.NA_Character else x
+                )
+            else:
+                ran_corrs = ran_corrs.applymap(
+                    lambda x: np.nan if x == robjects.NA_Character else x
+                )
             ran_corrs.replace(np.nan, "", inplace=True)
         else:
             ran_corrs = None
