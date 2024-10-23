@@ -1,0 +1,23 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.insertSpaces": true,
+  },
+  "ruff.lineLength": 90,
+  "ruff.nativeServer": true,
+  "ruff.importStrategy": "fromEnvironment",
+  "ruff.lint.ignore": [
+    "W292",
+    "E402",
+    "E501",
+    "E731",
+    "E741",
+  ],
+  "python.testing.pytestArgs": [
+    "pymer4"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+}

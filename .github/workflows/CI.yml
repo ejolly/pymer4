@@ -52,8 +52,8 @@ jobs:
       - name: Run Tests
         run: |
           poetry run python --version
-          poetry run black --check --verbose .
-          poetry run pytest --cov=pymer4
+          ruff check --ignore=W292,E402,E501,E731,E741 pymer4
+          pytest
 
       # 5a. Build docs (only for 3.8 which handles deployment)
       # Will also run on PRs which serves as another layer of testing

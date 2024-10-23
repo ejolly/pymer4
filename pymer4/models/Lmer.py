@@ -12,8 +12,7 @@ import bambi as bmb
 import arviz as az
 from contextlib import redirect_stdout, nullcontext
 import os
-from pymer4.utils import _select_az_params, _sig_stars, _sig_stars_bf, with_no_logging
-from pymer4.stats import compare_models_elpd_t_test
+from pymer4.utils import _sig_stars, _sig_stars_bf, with_no_logging
 from scipy.stats import t as t_dist
 import warnings
 from tqdm import TqdmWarning
@@ -58,7 +57,6 @@ class Lmer(object):
     def __init__(
         self, formula, data, family="gaussian", summarize_prior_with="mean", **kwargs
     ):
-
         # TODO: Add docstring info about families and link functions
         # Initialize attributes
         self.fitted = False  # whether model has been fit
@@ -77,7 +75,7 @@ class Lmer(object):
         self.diagnostics = dict()  # store diagnostics
         self._draws = 1000  # default number of draws
         self._tune = 1000  # default number of tuning steps
-        self.backend = "nuts_numpyrio"  # inference backend used
+        self.backend = "numpyro_nuts"  # inference backend used
 
         # NOTE: We need to convert binomial to bernoulli for bambi
         family = "bernoulli" if family == "binomial" else family
@@ -91,7 +89,9 @@ class Lmer(object):
         self.formula = self.model_obj.formula.main
 
         # Get bambi's internal design matrix object
-        fm_design_matrix = self.model_obj.response_component.design
+        # 'mu' by default by changes based on distribution used
+        dist_key = list(self.model_obj.distributional_components.keys())[0]
+        fm_design_matrix = self.model_obj.distributional_components[dist_key].design
 
         # Store DV, IVs, and random effects
         self.terms = dict(
@@ -330,7 +330,6 @@ class Lmer(object):
 
         bfs = []
         for term in self.terms["common_terms"]:
-
             # Get the prior and posterior distributions for the term
             posterior = az.data.extract(
                 self.inference_obj, var_names=term, group="posterior"
@@ -363,6 +362,12 @@ class Lmer(object):
         self.coef_posterior["Sig_BF_10"] = list(map(_sig_stars_bf, bfs))
 
     def _infer_model_comparison_bf(self, save_nested_models=False):
+        """
+        Computes Bayes Factors via nested model comparison by refitting sub-models.
+        BF is the ratio between full model and nested models using difference in expected log pointwise predictive density, via efficient leave-one-out cross-validation.
+
+        See arviz.compare() for more details.
+        """
 
         # Always reset previous saved nested models to avoid confusion
         self.nested_model_inference_obj = dict()
@@ -379,7 +384,6 @@ class Lmer(object):
         out = dict()
 
         for term, formula in nested_models.items():
-
             # Estimate nested model
             model_obj = self._static_bambi_build(self.data, formula, self.family)
             inference_obj = self._static_bambi_fit(
@@ -459,9 +463,7 @@ class Lmer(object):
             raise ValueError(f"Group variable {group_var} not found in model")
 
         lb_col = "2.5_hdi" if self.posterior_summary_statistic == "mean" else "2.5_eti"
-        ub_col = (
-            "97.5_hdi" if self.posterior_summary_statistic == "mean" else "97.5_eti"
-        )
+        ub_col = "97.5_hdi" if self.posterior_summary_statistic == "mean" else "97.5_eti"
 
         fixef = dict()
         new_index = None
@@ -501,7 +503,7 @@ class Lmer(object):
         return pd.DataFrame(fixef, index=new_index)
 
     def _summarize_priors(self):
-        """Adds a .prior_coef attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
+        """Adds a .coef_prior and .ranef_prior attribute to the model object that contains summary statistics of the prior predictive distribution of the model parameters. This is useful for understanding the prior distribution of the model parameters."""
 
         # Suppress "sampling message"
         with with_no_logging():
@@ -529,6 +531,7 @@ class Lmer(object):
         ).rename(columns=rename_map)[sort_order]
 
     def _summarize_posteriors(self):
+        """Adds a .coef_posterior, .fixef, .ranef, and .ranef_var the model object that contains summary statistics of the posteriors."""
 
         rename_map, sort_order = self._rename_map_posteriors()
 
@@ -598,7 +601,7 @@ class Lmer(object):
             self.fixef = fixef
         except Exception:
             warnings.warn(
-                f"Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually combine `model.coef` and `model.ranef` if you want `model.fixef`. You can try to use the internal function `model._calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item'). However, this may fail again and you need to resort to manual labour :(",
+                "Hmm, couldn't automatically summarize cluster-level fixed-effects...\nDon't worry this has nothing to do with model fitting, just automatic summarization!\nSince the `model.fixef` attribute won't be available, you should manually combine `model.coef` and `model.ranef` if you want `model.fixef`. You can try to use the internal function `model._calc_fixef(group_var)` method and set `group_var` to the name of cluster variable you want fixed-effects for (e.g. 'subject' or 'item'). However, this may fail again and you need to resort to manual labour :(",
             )
 
         # Alias attributes for backwards compatibility
@@ -637,7 +640,6 @@ class Lmer(object):
         self.data["residuals"] = self.residuals.copy()
 
     def _summarize_diagnostics(self, stat_focus="mean"):
-
         self.diagnostics["common_terms"] = az.summary(
             self.inference_obj,
             kind="diagnostics",
@@ -701,14 +703,12 @@ class Lmer(object):
         )
 
     def _pprint_summary(self):
-
         print(f"Linear mixed model fit by: {self.backend}\n")
 
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\n".format(self.family))
         print(
-            "Number of observations: %s\t Groups: %s\n"
-            % (self.data.shape[0], self.grps)
+            "Number of observations: %s\t Groups: %s\n" % (self.data.shape[0], self.grps)
         )
         print(f"Posterior sampling: {self.backend}\n")
         print(f"Posterior summary statistic: {self.posterior_summary_statistic}\n")
@@ -723,7 +723,6 @@ class Lmer(object):
             return self.coef.round(3)
 
     def _utils_empty_previous_summaries(self):
-
         self.coef_posterior = self.coef = self.coefs = None
         self.fixef = self.fixefs = None
         self.ranef = self.ranefs = None
@@ -737,8 +736,8 @@ class Lmer(object):
         self.posterior_summary_statistic = None
 
     def _utils_make_rfx_matrices(self):
-
         # Get bambi's internal design matrix object
+        # TODO: update to bambi 0.14.0 syntax - see init
         fm_design_matrix = self.model_obj.response_component.design
 
         # We need to slice the combined rfx numpy array bambi gives us
@@ -755,7 +754,6 @@ class Lmer(object):
             )
 
     def _utils_build_summary(self):
-
         # Create summary tables for population, fixed, and random parameters
         self._summarize_posteriors()
 
@@ -780,7 +778,7 @@ class Lmer(object):
         summary=True,
         draws=1000,
         tune=1000,
-        inference_method="nuts_numpyro",
+        inference_method="numpyro_nuts",
         summarize_posterior_with="mean",
         perform_model_comparison=False,
         save_nested_models=False,
@@ -810,6 +808,16 @@ class Lmer(object):
         self._tune = tune
         self.backend = inference_method
         self.fitted = True
+
+        # Normalize chains kwarg to num_chains for non mcmc backends
+        if self.backend != "mcmc":
+            kwargs["num_chains"] = (
+                os.cpu_count()
+                if kwargs.get("chains", None) is None
+                else kwargs.get("chains")
+            )
+            kwargs["num_draws"] = self._draws
+            kwargs["num_samples"] = self._draws
 
         # Perform inference
         self.inference_obj = self._static_bambi_fit(
@@ -993,7 +1001,6 @@ class Lmer(object):
     def plot_summary(
         self, kind="trace", dist="posterior", params="default", ci=95, **kwargs
     ):
-
         if not self.fitted:
             raise RuntimeError("Model must be fitted to plot summary!")
 
@@ -1003,9 +1010,7 @@ class Lmer(object):
         # Trace plots for inspecting sampler
         if kind == "trace":
             if dist != "posterior":
-                raise ValueError(
-                    f"{kind} plots are only supported with dist='posterior'"
-                )
+                raise ValueError(f"{kind} plots are only supported with dist='posterior'")
             if "combined" not in kwargs:
                 kwargs.update({"combined": False})
             _ = kwargs.pop("hdi_prob", None)
@@ -1015,9 +1020,7 @@ class Lmer(object):
         # Summary plots for model terms and HDIs/CIs
         elif kind in ["summary", "forest", "ridge"]:
             if dist != "posterior":
-                raise ValueError(
-                    f"{kind} plots are only supported with dist='posterior'"
-                )
+                raise ValueError(f"{kind} plots are only supported with dist='posterior'")
             if "combined" not in kwargs:
                 kwargs.update({"combined": True})
             var_names, filter_vars = self._get_terms_for_plotting(params)
@@ -1033,7 +1036,6 @@ class Lmer(object):
         # Prior distribution plots
         # Different plotting call cause it's through bambi
         elif kind in ["prior_dist", "prior", "priors"]:
-
             # By default plot all priors
             params = None if params == "default" else params
             var_names, _ = self._get_terms_for_plotting(params)

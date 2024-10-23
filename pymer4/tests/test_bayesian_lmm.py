@@ -2,11 +2,12 @@ import pandas as pd
 import arviz as az
 import pytest
 from pymer4 import Lmer
+import os
 
 
 @pytest.mark.usefixtures("sleepstudy", "sampledata")
 class Test_Basic_Usage:
-
+    MAX_CHAINS = os.cpu_count()
     EXPECTED_PRIOR_MEAN_SUMMARY_COLS = ["Estimate", "SD", "2.5_hdi", "97.5_hdi"]
     EXPECTED_PRIOR_MEDIAN_SUMMARY_COLS = ["Estimate", "MAD", "2.5_eti", "97.5_eti"]
     EXPECTED_MODEL_COMPARISON_COLS = [
@@ -53,7 +54,6 @@ class Test_Basic_Usage:
     ]
 
     def test_init(self, sleepstudy):
-
         sleep_model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
 
         # We always make a copy of the data
@@ -111,8 +111,7 @@ class Test_Basic_Usage:
 
         # Fixed effects diagnostics
         assert (
-            sleep_model.diagnostics["common_terms"].shape[0]
-            == sleep_model.coef.shape[0]
+            sleep_model.diagnostics["common_terms"].shape[0] == sleep_model.coef.shape[0]
         )
         # Random effects diagnostics; remember we have 2 random effects terms (intercept and slope)
         assert (
@@ -208,10 +207,10 @@ class Test_Basic_Usage:
         # Finally lets test tweaking how inference is done
         # Default is to use 4 chains and 1000 draws per chain
         assert sleep_model.inference_obj.posterior.sizes == {
-            "chain": 4,
+            "chain": self.MAX_CHAINS,
             "draw": 1000,
             "Subject__factor_dim": 18,
-            "Reaction_obs": 180,
+            "__obs__": 180,
         }
 
         # We can change this by passing chains and draws to .fit()
@@ -222,24 +221,20 @@ class Test_Basic_Usage:
             "chain": 2,
             "draw": 500,
             "Subject__factor_dim": 18,
-            "Reaction_obs": 180,
+            "__obs__": 180,
         }
 
         # Change inference method to pymc's mcmc sampler, which is a bit slower
         # Reduce chains and draws just for testing speed
         sleep_model.fit(chains=2, draws=100, inference_method="mcmc", summary=False)
-        assert (
-            sleep_model.inference_obj.sample_stats.attrs["inference_library"] == "pymc"
-        )
+        assert sleep_model.inference_obj.sample_stats.attrs["inference_library"] == "pymc"
 
     def test_model_comparison(self, sleepstudy):
-
         sleep_model = Lmer("Reaction ~ Days + (Days | Subject)", data=sleepstudy)
         sleep_model.fit(perform_model_comparison=True)
         assert isinstance(sleep_model.nested_model_comparison, pd.DataFrame)
         assert (
-            sleep_model.nested_model_comparison.shape[0]
-            == sleep_model.coef.shape[0] - 1
+            sleep_model.nested_model_comparison.shape[0] == sleep_model.coef.shape[0] - 1
         )
         assert (
             sleep_model.nested_model_comparison.columns.to_list()

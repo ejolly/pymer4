@@ -1,6 +1,6 @@
 -r requirements.txt
 ipykernel>=6.16
-black
+ruff==0.6.6
 pytest
 sphinx
 sphinx-gallery
