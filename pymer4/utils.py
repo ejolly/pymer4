@@ -1,4 +1,5 @@
 """Utility functions"""
+
 __all__ = [
     "get_resource_path",
     "result_to_table",
@@ -307,7 +308,6 @@ def _robust_estimator(vals, X, robust_estimator="hc1", n_lags=1, cluster=None):
 
         # Now loop over additional lags
         for j in range(1, n_lags + 1):
-
             V = np.diag(vals[j:] * vals[:-j])
             meat_1 = np.dot(np.dot(X[j:].T, V), X[:-j])
             meat_2 = np.dot(np.dot(X[:-j].T, V), X[j:])
@@ -382,7 +382,6 @@ def _ols(x, y, robust, n_lags, cluster, all_stats=True, resid_only=False, weight
     b = np.dot(np.linalg.pinv(X), Y)
 
     if all_stats:
-
         res = Y - np.dot(X, b)
 
         if robust:
@@ -514,9 +513,7 @@ def _chunk_boot_ols_coefs(dat, formula, weights, seed):
     # Random sample with replacement from all data
     dat = dat.sample(frac=1, replace=True, random_state=seed)
     y, x = dmatrices(formula, dat, 1, return_type="dataframe")
-    b = _ols(
-        x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights
-    )
+    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights)
     return list(b)
 
 
@@ -631,8 +628,16 @@ def _get_params(model):
 
 def _lrt(tup):
     """Likelihood ratio test between 2 models. Used by stats.lrt"""
+    from .models import Lmer  # loal import to avoid circular dep
+
     d = np.abs(2 * (tup[0].logLike - tup[1].logLike))
-    return chi2.sf(d, np.abs(tup[0].coefs.shape[0] - tup[1].coefs.shape[0]))
+    n_params_mod1 = (
+        _get_params(tup[0]) if isinstance(tup[0], Lmer) else tup[0].coefs.shape[0]
+    )
+    n_params_mod2 = (
+        _get_params(tup[1]) if isinstance(tup[1], Lmer) else tup[1].coefs.shape[0]
+    )
+    return chi2.sf(d, np.abs(n_params_mod1 - n_params_mod2))
 
 
 def _welch_ingredients(x):

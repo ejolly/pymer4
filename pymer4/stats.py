@@ -142,9 +142,7 @@ def cohens_d(
             if equal_var:
                 pooled_sd = np.sqrt(np.mean([s1, s2]))
             else:
-                pooled_sd = np.sqrt(
-                    (((ss1 - 1) * s1 + ((ss2 - 1) * s2))) / (ss1 + ss2 - 2)
-                )
+                pooled_sd = np.sqrt(((ss1 - 1) * s1 + ((ss2 - 1) * s2)) / (ss1 + ss2 - 2))
 
             numerator = m1 - m2 - value
             eff = numerator / pooled_sd
@@ -538,7 +536,6 @@ def welch_dof(x, y):
     """
 
     if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
-
         x_numerator, x_denominator = _welch_ingredients(x)
         y_numerator, y_denominator = _welch_ingredients(y)
 
@@ -549,17 +546,14 @@ def welch_dof(x, y):
 
 def lrt(models, refit=True):
     """
-        Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
-    #     Possible additions:
-    #     1) Generalize function to perform LRT, or vuong test
-    #     2) Offer nested and non-nested vuong test, as well as AIC/BIC correction
-    #     3) Given a single model expand out to all separate term tests
-       Args:
-           models (list): a list of two Lmer models to be compared
-           refit (bool): should REML models be refitted as ML before comparison (defaults to True)
+     Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
 
-       Returns:
-           df (pandas.DataFrame): dataframe of the anova results
+    Args:
+        models (list): a list of two Lmer models to be compared
+        refit (bool): should REML models be refitted as ML before comparison (defaults to True)
+
+    Returns:
+        df (pandas.DataFrame): dataframe of the anova results
 
     """
     models_list = copy.deepcopy(models)
