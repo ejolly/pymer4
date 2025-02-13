@@ -1,9 +1,10 @@
-__all__ = ["save_model", "load_model"]
+__all__ = ["save_model", "load_model", "load_dataset"]
 
+import polars as pl
 import os
-from .models import Lmer
 from rpy2.robjects.packages import importr
 from joblib import dump, load
+from importlib import resources
 
 base = importr("base")
 
@@ -29,10 +30,10 @@ def save_model(model, filepath, **kwargs):
     # Save the python object
     dump(model, filepath, **kwargs)
     assert os.path.exists(filepath)
+
     # Now deal with model object in R if needed
-    if model.model_obj is not None:
-        base.saveRDS(model.model_obj, rds_file)
-        assert os.path.exists(rds_file)
+    base.saveRDS(model.r_model, rds_file)
+    assert os.path.exists(rds_file)
 
 
 def load_model(filepath):
@@ -54,6 +55,32 @@ def load_model(filepath):
     model = load(filepath)
 
     # Now deal with model object in R if needed
-    if isinstance(model, Lmer):
-        model.model_obj = base.readRDS(rds_file)
+    model.r_model = base.readRDS(rds_file)
     return model
+
+
+def load_dataset(name):
+    """Loads csv file included with package as a polars DataFrame"""
+
+    valid_names = [
+        "gammas",
+        "mtcars",
+        "sample_data",
+        "sleep",
+        "sleepmissing",
+        "titanic",
+        "titanic_train",
+        "titanic_test",
+        "poker",
+        "chickweight",
+        "credit",
+        "credit-mini",
+        "advertising",
+        "penguins",
+    ]
+
+    if name not in valid_names:
+        raise ValueError(f"Dataset name must be one of: {valid_names}")
+
+    fpath = resources.files("pymer4").joinpath(f"resources/{name}.csv")
+    return pl.read_csv(fpath)

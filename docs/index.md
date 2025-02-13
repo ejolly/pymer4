@@ -2,6 +2,10 @@
 
 [![image](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml) [![image](https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Build.yml) [![image](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/version.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/platforms.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://pepy.tech/badge/pymer4)](https://pepy.tech/project/pymer4) [![image](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862) [![image](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205) ![image](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue) [![image](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ejolly/pymer4/issues)
 
+:::{admonition} `pymer4`
+:class: tip
+A simple Python replacement for R's `lm()`, `glm()`, `lmer()` and `glmer()`
+:::
 
 `pymer4` is a statistics library for estimating various regression models, multi-level models, and generalized-linear-mixed models in Python. Jealous of R's lovely model syntax by prefer to work in the scientific Python ecoysystem? This package has got you covered! `pymer4` provides a clean interface that hides the back-and-forth code required when moving between R and Python. This is accomplished using [rpy2](https://rpy2.github.io/doc/latest/html/index.html/) to interface between langauges.
 
@@ -51,8 +55,3 @@ If you use `pymer4` in your own work, please cite:
 Jolly, (2018). Pymer4: Connecting R and Python for Linear Mixed
 Modeling. *Journal of Open Source Software*, 3(31), 862,
 <https://doi.org/10.21105/joss.00862>
-
-## Contributing
-
-Contributions are *always welcome*!  
-If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues) and check out the [contribution guidelines](https://eshinjolly.com/pymer4/contributing.html).

@@ -1,0 +1,92 @@
+name: Pixi Run Tests
+on:
+  push:
+    branches:
+      - refactor
+  workflow_dispatch:
+    inputs:
+      upload_anaconda:
+        description: 'Upload build to anaconda?'
+        required: false
+        default: 'skip'
+        type: choice
+        options:
+          - 'skip'
+          - 'pre-release'
+          - 'main'
+
+jobs:
+  pixi-test-and-docs:
+
+    runs-on: ubuntu-latest
+    env:
+      ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.42.1
+          cache: false
+
+      - name: Pixi Check Errors & Formatting
+        run: | 
+         pixi run lint
+
+      - name: Pixi Run Tests & Build Docs
+        run: | 
+         pixi run tests
+         pixi run docs-build
+
+      # - name: Deploy Docs
+      #   uses: peaceiris/actions-gh-pages@v4
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: ./site
+
+      - name: Pixi Build Conda & Pip Packages
+        run: |
+          pixi run build-pip
+          pixi run build
+
+      - name: Upload Test PyPi?
+        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
+        uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
+          attestations: false
+          skip-existing: true
+
+      - name: Upload Real PyPi?
+        if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
+        uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+
+      # Run this from within the pixi env by shelling in
+      # because passing ANACONDA_TOKEN to pixi run upload-*
+      # tasks wasn't working
+      - name: Upload to Anaconda Pre-release?
+        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
+        shell: pixi run bash -e {0}
+        run: |
+          upload_file=$(pixi run build-output)
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
+
+      - name: Upload to Anaconda Main?
+        if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
+        shell: pixi run bash -e {0}
+        run: |
+          upload_file=$(pixi run build-output)
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
+
+
+
+
