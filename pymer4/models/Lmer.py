@@ -5,7 +5,6 @@ Pymer4 Lmer Class
 Main class to wrap R's lme4 library
 """
 
-
 from copy import copy
 from rpy2.robjects.packages import importr
 import rpy2.robjects as robjects
@@ -38,7 +37,6 @@ consolewrite_print_backup = callbacks.consolewrite_print
 
 
 class Lmer(object):
-
     """
     Model class to hold data outputted from fitting lmer in R and converting to Python object. This class stores as much information as it can about a merMod object computed using lmer and lmerTest in R. Most attributes will not be computed until the fit method is called.
 
@@ -71,7 +69,6 @@ class Lmer(object):
     """
 
     def __init__(self, formula, data, family="gaussian"):
-
         self.family = family
         implemented_fams = [
             "gaussian",
@@ -381,9 +378,7 @@ class Lmer(object):
 
         if old_optimizer:
             if control:
-                raise ValueError(
-                    "Must specify EITHER control OR old_optimizer not both"
-                )
+                raise ValueError("Must specify EITHER control OR old_optimizer not both")
             else:
                 control = "optimizer='bobyqa'"
         if factors:
@@ -515,7 +510,6 @@ class Lmer(object):
         # Coefficients, and inference statistics
         if num_IV != 0:
             if self.family in ["gaussian", "gamma", "inverse_gaussian", "poisson"]:
-
                 rstring = (
                     """
                     function(model){
@@ -592,7 +586,6 @@ class Lmer(object):
                         df = df[["Estimate", "2.5_ci", "97.5_ci", "SE", "T-stat"]]
 
             elif self.family == "binomial":
-
                 rstring = (
                     """
                     function(model){
@@ -1030,8 +1023,7 @@ class Lmer(object):
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
         print(
-            "Number of observations: %s\t Groups: %s\n"
-            % (self.data.shape[0], self.grps)
+            "Number of observations: %s\t Groups: %s\n" % (self.data.shape[0], self.grps)
         )
         print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
         print("Random effects:\n")
@@ -1312,9 +1304,7 @@ class Lmer(object):
         confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:
-            confs = confs.rename(
-                columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"}
-            )
+            confs = confs.rename(columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"})
         elif "lower.CL" in confs.columns:
             confs = confs.rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         else:
@@ -1539,7 +1529,6 @@ class Lmer(object):
 
         # Now generate random effects predictions
         for _, row in ran_dat.iterrows():
-
             ranef_desired = row["(Intercept)"] + row[param] * x_vals
             # ranef_other = np.dot(other_vals_means, row.loc[other_vals])
             pred = ranef_desired  # + ranef_other
@@ -1593,7 +1582,6 @@ class Lmer(object):
         """
         Compute confidence intervals on the parameters of a Lmer object (this is a wrapper for confint.merMod in lme4).
         Args:
-            self (Lmer): the Lmer object for which confidence intervals should be computed
             parm (list of str): parameter names for which intervals are sought. Specified by an integer vector of positions
              (leave blank to compute ci for all parameters)
             level (float):  confidence level <1, typically above 0.90

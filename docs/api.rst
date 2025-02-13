@@ -1,12 +1,23 @@
 API Reference
 =============
 
-:class:`pymer4.models.Lmer`: Lmer
----------------------------------
-Model class for estimating :code:`lme4` multi-level models in python
+:class:`pymer4.models.Lmer`
+---------------------------
+Model class for estimating linear mixed-effects models using :code:`lme4`. Primary methods include:
+
+- :code:`.anova()` `type-3 omnibus F-tests with optional reorthogonalization of contrasts <#pymer4.models.Lmer.anova>`_
+- :code:`.confint()`: `profile, Wald or bootstrapped confidence intervals <#pymer4.models.Lmer.confint>`_ (wrapper around :code:`confint.merMod` in R)
+- :code:`.fit()`: fits a linear mixed-effects model
+- :code:`.plot()`: plot estimates from fitted model
+- :code:`.plot_summary()`: forestplot of estimates and confidence intervals
+- :code:`.post_hoc()`: performs post-hoc pairwise comparisons
+- :code:`.predict()`: predicts new data using fitted model
+- :code:`.simulate()`: simulates new data using fitted model
+- :code:`.summary()`: summary of fitted model
 
 .. autoclass:: pymer4.models.Lmer
-    :members:
+    :members: 
+    :member-order: alphabetical
 
 :class:`pymer4.models.Lm`: Lm
 -----------------------------

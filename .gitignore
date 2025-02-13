@@ -26,3 +26,4 @@ conda_noarch/build/*
 environment.yml
 *.pickle
 *.joblib
+docs_bak
