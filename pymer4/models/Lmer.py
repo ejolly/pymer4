@@ -366,7 +366,7 @@ class Lmer(object):
             raise ValueError(
                 "You specified both summary and summarize, please prefer summarize"
             )
-        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summarize", False)
         summarize = kwargs.pop("summary", summarize)
         # Save params for future calls
         self._permute = permute
@@ -911,7 +911,7 @@ class Lmer(object):
         simulate_func = robjects.r(rstring)
         sims = simulate_func(self.model_obj)
         out = R2pandas(sims)
-        return out
+        return out.squeeze()
 
     def predict(
         self,
