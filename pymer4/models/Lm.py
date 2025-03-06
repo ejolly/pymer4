@@ -39,7 +39,9 @@ class Lm(object):
         formula (str): model formula
         data (pd.DataFrame): model copy of input data
         design_matrix (pd.DataFrame): model design matrix determined by patsy
+        ssr (float): model sum of squared residuals
         AIC (float): model akaike information criterion
+        BIC (float): model bayesian information criterion
         logLike (float): model Log-likelihood
         family (string): model family
         warnings (list): warnings output from Python
@@ -61,6 +63,7 @@ class Lm(object):
         self.fitted = False
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
+        
         self.AIC = None
         self.BIC = None
         self.logLike = None
@@ -535,8 +538,8 @@ class Lm(object):
         )
         # self.rsquared_adj = np.nan
         half_obs = len(residuals) / 2.0
-        ssr = np.dot(residuals, residuals.T)
-        self.logLike = (-np.log(ssr) * half_obs) - (
+        self.ssr = np.dot(residuals, residuals.T)
+        self.logLike = (-np.log(self.ssr) * half_obs) - (
             (1 + np.log(np.pi / half_obs)) * half_obs
         )
         self.AIC = 2 * x.shape[1] - 2 * self.logLike

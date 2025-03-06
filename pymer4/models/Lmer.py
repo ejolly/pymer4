@@ -844,7 +844,7 @@ class Lmer(object):
             }
         """
         resid_func = robjects.r(rstring)
-        self.residuals = np.array(resid_func(self.model_obj))
+        self.residuals = R2numpy(resid_func(self.model_obj))
         try:
             self.data["residuals"] = copy(self.residuals)
         except ValueError as _:  # NOQA
@@ -860,7 +860,7 @@ class Lmer(object):
             }
         """
         fit_func = robjects.r(rstring)
-        self.fits = fit_func(self.model_obj)
+        self.fits = R2numpy(fit_func(self.model_obj))
         try:
             self.data["fits"] = copy(self.fits)
         except ValueError as _:  # NOQA

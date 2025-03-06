@@ -9,6 +9,7 @@ __all__ = [
     "welch_dof",
     "vif",
     "correct_pvals",
+    "lrt"
 ]
 
 import numpy as np
@@ -546,21 +547,19 @@ def welch_dof(x, y):
         raise TypeError("Both x and y must be 1d numpy arrays")
 
 
-def lrt(models, refit=True):
+def lrt(*models, refit=True):
     """
      Compute a likelihood ratio test between two Lmer models. This produces identical results to R's anova() function when comparing models. Will automatically determine the the model order based on comparing all models to the one that has the fewest parameters.
 
     Args:
-        models (list): a list of two Lmer models to be compared
+        models (*args): two or more Lmer models to be compared
         refit (bool): should REML models be refitted as ML before comparison (defaults to True)
 
     Returns:
         df (pandas.DataFrame): dataframe of the anova results
 
     """
-    models_list = copy.deepcopy(models)
-    if not isinstance(models_list, list):
-        models_list = [models_list]
+    models_list = list(copy.deepcopy(models))
     if len(models_list) < 2:
         raise ValueError("Must have 2 models to perform comparison")
     if not all(list(map(lambda m: isinstance(m, Lmer), models_list))):
