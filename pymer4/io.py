@@ -2,8 +2,9 @@ __all__ = ["save_model", "load_model"]
 
 import os
 from .models import Lmer
-from rpy2.robjects.packages import importr
+from rpy2.robjects.packages import importr, data
 from joblib import dump, load
+from .bridge import R2pandas
 
 base = importr("base")
 
@@ -57,3 +58,20 @@ def load_model(filepath):
     if isinstance(model, Lmer):
         model.model_obj = base.readRDS(rds_file)
     return model
+
+
+def load_dataset(name):
+    """
+    Load a dataset from the pymer4 package.
+    """
+
+    supported_datasets = ["sleepstudy"]
+    if name not in supported_datasets:
+        raise ValueError(
+            f"Dataset {name} not found. Supported datasets are: {supported_datasets}"
+        )
+
+    if name == "sleepstudy":
+        rFrame = data(importr("lme4")).fetch("sleepstudy")["sleepstudy"]
+
+    return R2pandas(rFrame)

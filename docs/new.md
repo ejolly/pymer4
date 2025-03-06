@@ -5,6 +5,33 @@ settled down since 0.5.0. This page includes the most notable updates
 between versions but github is the best place to checkout more details
 and [releases](https://github.com/ejolly/pymer4/releases/).
 
+## 0.8.3
+### Changes
+- `Lmer.summary()` no longer prints output by default. Use `summarize/summary=True` or call the `.summary()` method to get the output
+- `stats.lrt()` now takes models as multiple comma separated arguments rather than a list
+- `Lm` models now store `.ssr` and `BIC` attributes
+
+### Compatibility Updates
+- The minimum supported Python version is now 3.10
+- Minimum library Python library versions have been updated to include
+    - Pandas >= 2.2.0
+    - Numpy >= 2.0
+    - Rpy2 >= 3.5.11
+    - Seaborn >= 0.13.0
+    - Scikit-learn >= 1.4
+    - Patsy >= 1.0.1
+    - Joblib >= 1.4.2
+
+### Fixes
+- [#134](https://github.com/ejolly/pymer4/issues/134)
+- [#139](https://github.com/ejolly/pymer4/pull/139)
+- `Lmer.fits` are now properly converted to a numpy array
+
+## 0.8.2
+
+### Fixes
+- Issue in `LogisticRegression` API name change
+
 ## 0.8.1
 
 ### Compatibility Updates
