@@ -513,7 +513,9 @@ def _chunk_boot_ols_coefs(dat, formula, weights, seed):
     # Random sample with replacement from all data
     dat = dat.sample(frac=1, replace=True, random_state=seed)
     y, x = dmatrices(formula, dat, 1, return_type="dataframe")
-    b = _ols(x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights)
+    b = _ols(
+        x, y, robust=None, n_lags=1, cluster=None, all_stats=False, weights=weights
+    )
     return list(b)
 
 

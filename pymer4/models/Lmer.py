@@ -730,7 +730,7 @@ class Lmer(object):
         ran_vars.columns = ["Name", "Var", "Std"]
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
-        if callable(getattr(ran_vars, 'map', None)): # account for pd 2.1 change
+        if callable(getattr(ran_vars, "map", None)):  # account for pd 2.1 change
             ran_vars = ran_vars.map(
                 lambda x: np.nan if x == robjects.NA_Character else x
             )
@@ -746,8 +746,8 @@ class Lmer(object):
             ran_corrs.drop("grp", axis=1, inplace=True)
             ran_corrs.columns = ["IV1", "IV2", "Corr"]
             ran_corrs.index.name = None
-            
-            if callable(getattr(ran_corrs, 'map', None)):
+
+            if callable(getattr(ran_corrs, "map", None)):
                 ran_corrs = ran_corrs.map(
                     lambda x: np.nan if x == robjects.NA_Character else x
                 )

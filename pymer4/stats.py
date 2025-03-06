@@ -142,7 +142,9 @@ def cohens_d(
             if equal_var:
                 pooled_sd = np.sqrt(np.mean([s1, s2]))
             else:
-                pooled_sd = np.sqrt(((ss1 - 1) * s1 + ((ss2 - 1) * s2)) / (ss1 + ss2 - 2))
+                pooled_sd = np.sqrt(
+                    ((ss1 - 1) * s1 + ((ss2 - 1) * s2)) / (ss1 + ss2 - 2)
+                )
 
             numerator = m1 - m2 - value
             eff = numerator / pooled_sd
