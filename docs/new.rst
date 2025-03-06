@@ -4,18 +4,26 @@ Historically :code:`pymer4` versioning was a bit all over the place but has sett
 
 0.8.3
 -----
+- **Changes:**
+  - :code:`Lmer.summary()` no longer prints output by default. Use :code:`summarize/summary=True` or call the :code:`.summary()` method to get the output
+  - :code:`stats.lrt()` now takes models as multiple comma separated arguments rather than a list
+  - :code:`Lm` models now store :code:`.ssr` and :code:`BIC` attributes
+
 - **Compatibility Updates:**
-  - Pandas >= 2.2.0
-  - Numpy >= 2.2.0
-  - Rpy2 >= 3.5.1
-  - Seaborn >= 0.13.0
-  - Scikit-learn >= 1.6
-  - Patsy >= 1.0.1
-  - Joblib >= 1.4.2
+  - This version no longer supports Python 3.8-3.9
+  - Minimum library Python library versions include
+    - Pandas >= 2.2.0
+    - Numpy >= 2.0
+    - Rpy2 >= 3.5.11
+    - Seaborn >= 0.13.0
+    - Scikit-learn >= 1.4
+    - Patsy >= 1.0.1
+    - Joblib >= 1.4.2
 
 - **Fixes:**
   - `#134 <https://github.com/ejolly/pymer4/issues/134>`_
   - Handles pandas :code:`applymap -> map` warning
+  - :code:`Lmer.fits` are now properly converted to a numpy array
 
 0.8.2
 -----
