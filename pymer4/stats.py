@@ -9,7 +9,7 @@ __all__ = [
     "welch_dof",
     "vif",
     "correct_pvals",
-    "lrt"
+    "lrt",
 ]
 
 import numpy as np

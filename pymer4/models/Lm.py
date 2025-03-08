@@ -63,7 +63,7 @@ class Lm(object):
         self.fitted = False
         self.formula = formula.replace(" ", "")
         self.data = copy(data)
-        
+
         self.AIC = None
         self.BIC = None
         self.logLike = None
