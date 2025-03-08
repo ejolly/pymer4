@@ -84,15 +84,15 @@ def test_lrt(df):
     # Can only compare Lmer models
     lm_model = Lm2("DV ~ IV3 + IV2", group="Group", data=df)
     with pytest.raises(TypeError):
-        lrt([model, lm_model])
+        lrt(model, lm_model)
 
     # lrt test with REML (i.e. WITHOUT refitting the models)
-    lrt_reml = lrt([model, model_sub, model_sub2], refit=False)
+    lrt_reml = lrt(model, model_sub, model_sub2, refit=False)
     # the order in which we give the models should not affect the output
-    lrt_reml_scrambled = lrt([model_sub, model, model_sub2], refit=False)
+    lrt_reml_scrambled = lrt(model_sub, model, model_sub2, refit=False)
     assert lrt_reml.equals(lrt_reml_scrambled) is True
     # now do an lrt with ML (i.e. refittiing the models)
-    lrt_ml = lrt([model, model_sub, model_sub2], refit=True)
+    lrt_ml = lrt(model, model_sub, model_sub2, refit=True)
     # refitting with ML does change the output compared to REML
     assert lrt_reml.equals(lrt_ml) is False
 
