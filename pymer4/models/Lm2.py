@@ -18,7 +18,6 @@ from ..utils import _sig_stars, _permute_sign, _ols_group, _corr_group, _perm_fi
 
 
 class Lm2(object):
-
     """
     Model class to perform two-stage OLS regression. Practically, this class fits a separate Lm() model to each cluster/group in the data and performs inference on the coefficients of each model (i.e. 1-sample t-test per coefficient). The results from this second level regression are reported. This is an alternative to using Lmer, as it implicitly allows intercept and slopes to vary by group, however with no prior/smoothing/regularization on the random effects. See https://bit.ly/2SwHhQU and Gelman (2005). This approach maybe less preferable to Lmer if the number of observations per group are few, but the number of groups is large, in which case the 1st-level estimates are much noisier and are not smoothed/regularized as in Lmer. It maybe preferable when a "maximal" rfx Lmer model is not estimable. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specific columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
 
@@ -48,7 +47,6 @@ class Lm2(object):
     """
 
     def __init__(self, formula, data, group, family="gaussian"):
-
         self.family = family
         # implemented_fams = ['gaussian','binomial']
         if self.family != "gaussian":
@@ -131,7 +129,7 @@ class Lm2(object):
             raise ValueError(
                 "You specified both summary and summarize, please prefer summarize"
             )
-        summarize = kwargs.pop("summarize", True)
+        summarize = kwargs.pop("summarize", False)
         summarize = kwargs.pop("summary", summarize)
 
         if robust:
@@ -277,9 +275,7 @@ class Lm2(object):
             if conf_int != "boot":
                 self.coefs = self.coefs.drop(columns=["DF", "P-val"])
             if to_corrs:
-                self.coefs["Num_perm"] = [np.nan] + [permute] * (
-                    self.coefs.shape[0] - 1
-                )
+                self.coefs["Num_perm"] = [np.nan] + [permute] * (self.coefs.shape[0] - 1)
                 self.coefs["Sig"] = [np.nan] + sig
                 self.coefs["Perm-P-val"] = [np.nan] + perm_ps
             else:
