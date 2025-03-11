@@ -275,7 +275,9 @@ class Lm2(object):
             if conf_int != "boot":
                 self.coefs = self.coefs.drop(columns=["DF", "P-val"])
             if to_corrs:
-                self.coefs["Num_perm"] = [np.nan] + [permute] * (self.coefs.shape[0] - 1)
+                self.coefs["Num_perm"] = [np.nan] + [permute] * (
+                    self.coefs.shape[0] - 1
+                )
                 self.coefs["Sig"] = [np.nan] + sig
                 self.coefs["Perm-P-val"] = [np.nan] + perm_ps
             else:
