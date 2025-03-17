@@ -4,6 +4,16 @@ on:
     branches:
       - refactor
   workflow_dispatch:
+    inputs:
+      upload_anaconda:
+        description: 'Upload build to anaconda?'
+        required: false
+        default: 'skip'
+        type: choice
+        options:
+          - 'skip'
+          - 'pre-release'
+          - 'main'
 
 jobs:
   ci:
@@ -13,7 +23,6 @@ jobs:
       matrix:
         py_ver: ['3.10', 3.11, 3.12]
         os: [ubuntu-latest]
-        # os: [ubuntu-latest, macos-latest]
     
     steps:
       - name: Checkout repository
@@ -36,11 +45,20 @@ jobs:
           conda install conda-build anaconda-client
           conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
 
-      - name: Upload to Anaconda
-        if: ${{ matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest'}}
+      - name: Upload to Anaconda Pre-release?
+        if: ${{ ( matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest' && github.event_name != 'release') || inputs.upload_anaconda == 'pre-release' }}
         shell: bash -el {0}
         env:
             ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: | 
           upload_file=$(conda-build ./conda --output)
           anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
+
+      - name: Upload to Anaconda Main?
+        if: ${{ ( matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest' && github.event_name == 'release') || inputs.upload_anaconda == 'main' }}
+        shell: bash -el {0}
+        env:
+            ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: | 
+          upload_file=$(conda-build ./conda --output)
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"

@@ -9,6 +9,7 @@ parts:
     - file: installation
     - file: features
     - file: new
+    - file: development
     - file: contributing
     - file: api
   - caption: Tutorials
