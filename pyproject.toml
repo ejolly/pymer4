@@ -67,7 +67,7 @@ build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
-upload-pre = { cmd = "anaconda -t \"$token\" upload \"$file\" -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
+upload-pre = { cmd = "anaconda -t $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
