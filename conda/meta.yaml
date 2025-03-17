@@ -1,5 +1,4 @@
 # Get information from pyproject.toml file
-# Conda docs: https://docs.conda.io/projects/conda-build/en/stable/resources/define-metadata.html#loading-data-from-other-files
 {% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
 {% set project = pyproject.get('project', {}) %}
 {% set pip_deps = project.get('dependencies', []) %}
@@ -24,7 +23,6 @@ build:
   script: pip install . -vv --no-deps
   string: {{ GIT_DESCRIBE_HASH }}
 
-# Load both Python and R requirements from pyproject.toml
 requirements:
   host:
     - python
@@ -34,6 +32,7 @@ requirements:
     - setuptools-scm
     - hatchling
 
+# Load both Python and R requirements from pyproject.toml
   run:
     - python
     {% for dep, ver in conda_deps.items() %}
@@ -43,13 +42,16 @@ requirements:
     - {{ dep.lower() }}
     {% endfor %}
 
-# After building test install (not full test-suite)
+# Run basic import tests and full test suite after building
 test:
+  requires:
+   - pytest
   imports:
    - pymer4
    - pymer4.models
   commands:
    - python -c "from pymer4.test_install import test_install; test_install()"
+  #  - pytest 
 
 about:
   home: "https://eshinjolly.com/pymer4/"

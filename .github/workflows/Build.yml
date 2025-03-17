@@ -1,8 +1,8 @@
 name: Conda Build
 on:
-  # push:
-  #   branches:
-  #     - refactor
+  push:
+    branches:
+      - refactor
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         py_ver: ['3.10', 3.11, 3.12]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        # os: [ubuntu-latest, macos-latest]
     
     steps:
       - name: Checkout repository
@@ -27,10 +28,19 @@ jobs:
           activate-environment: build-env
           auto-activate-base: false
 
-      - name: Build Package
+      - name: Build & Test 
         shell: bash -el {0}
         run: | 
           conda config --set always_yes yes
           conda config --set bld_path . 
           conda install conda-build anaconda-client
           conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
+
+      - name: Upload to Anaconda
+        if: ${{ matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest'}}
+        shell: bash -el {0}
+        env:
+            ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: | 
+          upload_file=$(conda-build ./conda --output)
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"

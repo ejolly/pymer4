@@ -59,7 +59,7 @@ conda-build = ">=25.1.2,<26"
 
 [tool.pixi.feature.dev.tasks]
 test-install = "python -c 'from pymer4.test_install import test_install; test_install()'"
-tests = "pytest"
+tests = "pytest pymer4/tests/"
 docs-build = "jupyter-book build docs/"
 docs-clean = "jupyter-book clean docs/"
 docs-preview = "open docs/_build/html/index.html"
@@ -67,6 +67,7 @@ build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
+# build-up = "anaconda -t $ANACONDA_TOKEN upload $(pixi run build-output) -l 'pre-release'"
 
 
 [tool.pixi.environments]
