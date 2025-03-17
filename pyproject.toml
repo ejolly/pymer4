@@ -1,7 +1,8 @@
 [project]
 name = "pymer4"
 requires-python = ">=3.10"
-version = "0.9.0"
+# version = "0.9.0"
+dynamic = ["version"]
 authors = [
     {name = "Eshin Jolly", email = "eshin.jolly@gmail.com"},
 ]
@@ -24,8 +25,17 @@ dependencies = ["pandas>=2.2.0", "numpy>=2.0", "seaborn>=0.13.0", "patsy>=1.0.1"
 Homepage = "http://eshinjolly.com/pymer4/"
 
 [build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["setuptools>=61.0.0", "setuptools-scm", "hatchling"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["pymer4/tests"]
+
+[tool.setuptools]
+package-data = {"pymer4" = ["resources/*"]}
+
+[tool.setuptools.dynamic]
+version = {attr = "pymer4.version.__version__"} 
 
 [tool.pixi.project]
 channels = ["conda-forge"]

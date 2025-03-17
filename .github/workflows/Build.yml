@@ -32,16 +32,5 @@ jobs:
         run: | 
           conda config --set always_yes yes
           conda config --set bld_path . 
-          conda install conda-build conda-verify anaconda-client
+          conda install conda-build anaconda-client
           conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
-
-      # - name: Build and Upload Conda Package
-      #   uses: uibcdf/action-build-and-upload-conda-packages@v1.4.0
-      #   with:
-      #     meta_yaml_dir: ./conda
-      #     python-version: ${{ matrix.py_ver }}
-      #     user: ejolly
-      #     label: 'pre-release'
-      #     token: ${{ secrets.ANACONDA_TOKEN }}
-      #     overwrite: true
-      #     upload: false

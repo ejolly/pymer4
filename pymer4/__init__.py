@@ -1,7 +1,5 @@
-__all__ = ["models", "utils", "simulate", "stats", "io", "__version__"]
-
 from .models import Lmer, Lm, Lm2
-from .simulate import *
+from .simulate import easy_multivariate_normal, simulate_lm, simulate_lmm
 
 from .utils import *
 from .io import *
