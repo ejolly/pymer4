@@ -30,4 +30,5 @@ docs_bak
 
 # pixi environments
 .pixi
+pixi.lock
 *.egg-info

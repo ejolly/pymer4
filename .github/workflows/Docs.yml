@@ -5,7 +5,6 @@ on:
       - refactor
   workflow_dispatch:
 
-# Currently only works on the platforms in tool.pixi.project.platforms
 jobs:
   ci:
     runs-on: ubuntu-latest
