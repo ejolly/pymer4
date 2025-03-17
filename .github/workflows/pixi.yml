@@ -18,22 +18,20 @@ on:
 jobs:
   pixi-test-and-docs:
     runs-on: ubuntu-latest
+    env:
+      ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Pixi & Build Docs
         uses: prefix-dev/setup-pixi@v0.8.3
-        env:
-          token: ${{ secrets.ANACONDA_TOKEN }}
         with:
           pixi-version: v0.42.1
       - run: | 
           pixi run build
-          file=$(pixi run build-output) pixi run upload-pre
-        #  echo $CONDAFILE
-        #  echo $ANACONDA_TOKEN
-        #  pixi run upload-pre 
+          upload_file=$(pixi run build-output)
+          echo $upload_file
         #  pixi run tests
         #  pixi run docs-build
         #  touch docs/_build/html/.nojekyll
@@ -45,6 +43,33 @@ jobs:
       #   with:
       #     target_branch: gh-pages
       #     build_dir: docs/_build/html
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: 3.11
+          channels: conda-forge,defaults
+          channel-priority: strict
+          activate-environment: build-env
+          auto-activate-base: false
+
+      - name: Upload to Anaconda Pre-release?
+        # if: ${{ ( matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest' && github.event_name != 'release') || inputs.upload_anaconda == 'pre-release' }}
+        shell: bash -el {0}
+        run: | 
+          conda install anaconda-client
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
+
+  #     - name: Upload to Anaconda Main?
+  #       if: ${{ ( matrix.py_ver == '3.11' && matrix.os == 'ubuntu-latest' && github.event_name == 'release') || inputs.upload_anaconda == 'main' }}
+  #       shell: bash -el {0}
+  #       env:
+  #           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+  #       run: | 
+  #         upload_file=$(conda-build ./conda --output)
+  #         anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
+
+
 
   # conda-build:
   #   runs-on: ${{ matrix.os }}
