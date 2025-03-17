@@ -12,6 +12,16 @@ Due to the challenging compatibilitiy issues ensuing from `pymer4`'s cross-langu
 
 Pixi works much more like `npm` or `bun` from Javascript than traditional Anaconda environments: all environments and are *co-located* with you package and described by your `pyproject.toml` file. Using a single command `pixi install` you can have a fully-configured development environment for `pymer4` on your own computer that's **totally isolated** from any existing python packages and environments you have. 
 
+| Pixi Command | Conda Equivalent | Description |
+|--------------|------------------|-------------|
+| `pixi install` | `conda create -n env_name` + `conda install ...` | Creates a new environment and installs all dependencies |
+| `pixi shell` | `conda activate env_name` | Activates the project environment |
+| `pixi run task_name` | `conda run -n env_name command` | Runs a command in the project environment |
+| `pixi add package_name` | `conda install package_name` | Adds a new package to the environment |
+| `pixi remove package_name` | `conda remove package_name` | Removes a package from the environment |
+
+
+
 ### Setup
 
 It's very easy to install Pixi as it has no other dependencies. To get started:  

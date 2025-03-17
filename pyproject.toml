@@ -68,8 +68,7 @@ build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
 # demo = {cmd = "echo $NAME $AGE", env = { NAME = 'eshin', AGE='31'}}
-upload-pre = { cmd = "anaconda -t $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
-# upload-pre = "anaconda -t $1  $(pixi run build-output) -l 'pre-release'"
+upload-pre = { cmd = "anaconda --token $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
 
 
 [tool.pixi.environments]
