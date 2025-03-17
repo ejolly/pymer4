@@ -1,57 +1,54 @@
-{% set name = "pymer4" %}
-{% set data = load_setup_py_data() %}
+# Get information from pyproject.toml file
+# Conda docs: https://docs.conda.io/projects/conda-build/en/stable/resources/define-metadata.html#loading-data-from-other-files
+{% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
+{% set project = pyproject.get('project', {}) %}
+{% set project_deps = project.get('dependencies', []) %}
+{% set r_deps = pyproject.get('tools', {}).get('rconfig', {}).get('dependencies', []) %}
+{% set version_match = load_file_regex(
+  load_file="../pymer4/version.py",
+  from_recipe_dir=True,
+  regex_pattern='__version__ = "([0-9.]+)"') %}
+{% set version = version_match[1] %}
 
 package:
-  name: "{{ name|lower }}"
-  version: "{{ data.get('version') }}"
+  name: {{ project.get('name') }}
+  version: {{ version }}
 
 source:
-    git_url: ../  # to enable GIT_X_Y env vars
-    path_url: ../ # so conda build will grab source to read version
+    git_url: ../
+    path_url: ../
 
 build:
-    script: pip install . -vv --no-deps
-    string: py{{environ.get("CONDA_PY", "XX")}}{{environ.get("GIT_DESCRIBE_HASH", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
+  noarch: python
+  script: pip install . -vv --no-deps
+  string: {{ GIT_DESCRIBE_HASH }}
 
+# Load both Python and R requirements from pyproject.toml
 requirements:
-
   host:
     - python {{ python }}
     - pip
-    - numpy >=1.20
-
   run:
     - python {{ python }}
-    - r-lmerTest
-    - r-emmeans
-    - r-broom
-    - r-broom.mixed
-    - pandas >=1.1.0
-    - numpy >=1.20
-    - rpy2 >=3.5.3
-    - seaborn
-    - matplotlib
-    - patsy
-    - joblib
-    - scipy
-    - scikit-learn
+    {% for dep in r_deps %}
+    - {{ dep }}
+    {% endfor %}
+    {% for dep in project_deps %}
+    - {{ dep }}
+    {% endfor %}
 
+# After building test install (not full test-suite)
 test:
   imports:
    - pymer4
-   - pymer4.models
-  requires:
-   - pytest
-   - black
+  commands:
+   - python -c "from pymer4.test_install import test_install; test_install()"
 
 about:
   home: "https://eshinjolly.com/pymer4/"
   license: MIT
   license_family: MIT
-  license_file:
   summary: "pymer4: all the convenience of lme4 in python"
-  doc_url:
-  dev_url:
 
 extra:
   recipe-maintainers:

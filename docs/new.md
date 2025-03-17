@@ -7,7 +7,7 @@ and [releases](https://github.com/ejolly/pymer4/releases/).
 
 ## 0.8.3
 ### Changes
-- `Lmer.summary()` no longer prints output by default. Use `summarize/summary=True` or call the `.summary()` method to get the output
+- `.summary()` no longer prints output by default. Use `summarize/summary=True` or call the `.summary()` method to get the output
 - `stats.lrt()` now takes models as multiple comma separated arguments rather than a list
 - `Lm` models now store `.ssr` and `BIC` attributes
 
@@ -26,6 +26,12 @@ and [releases](https://github.com/ejolly/pymer4/releases/).
 - [#134](https://github.com/ejolly/pymer4/issues/134)
 - [#139](https://github.com/ejolly/pymer4/pull/139)
 - `Lmer.fits` are now properly converted to a numpy array
+
+### House-keeping
+- Switched documentation over to jupyter book
+- Switched `setup.py` and `requirements.txt/requirements-dev.txt` to `pyproject.toml`
+- Dropped `black` in favor of `ruff`
+- Exclusively create `noarch` builds for conda
 
 ## 0.8.2
 
