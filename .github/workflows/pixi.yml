@@ -30,7 +30,9 @@ jobs:
           pixi-version: v0.42.1
       - run: | 
          pixi run build
-         pixi run upload-pre $ANACONDA_TOKEN
+         CONDAFILE=$(pixi run build-output)
+         TOKEN=$ANACONDA_TOKEN
+         pixi run upload-pre 
         #  pixi run tests
         #  pixi run docs-build
         #  touch docs/_build/html/.nojekyll
