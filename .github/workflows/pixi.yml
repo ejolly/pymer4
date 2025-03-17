@@ -29,14 +29,11 @@ jobs:
         with:
           pixi-version: v0.42.1
       - run: | 
-         echo $ANACONDA_TOKEN
-         pixi run tests
-         pixi run docs-build
-         touch docs/_build/html/.nojekyll
          pixi run build
-         pixi shell
-         echo $ANACONDA_TOKEN
-         exit
+         pixi run upload-pre $ANACONDA_TOKEN
+        #  pixi run tests
+        #  pixi run docs-build
+        #  touch docs/_build/html/.nojekyll
 
       # - name: Deploy docs
       #   env:

@@ -38,7 +38,7 @@ version = {attr = "pymer4.version.__version__"}
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 
 [tool.pixi.pypi-dependencies]
 pymer4 = { path = ".", editable = true }
@@ -66,7 +66,7 @@ build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
-# build-up = "anaconda -t $ANACONDA_TOKEN upload $(pixi run build-output) -l 'pre-release'"
+upload-pre = "anaconda -t $1 upload $(pixi run build-output) -l 'pre-release'"
 
 
 [tool.pixi.environments]
