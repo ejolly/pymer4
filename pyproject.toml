@@ -67,7 +67,7 @@ build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
-upload-pre = { cmd = "anaconda -t $TOKEN upload $CONDAFILE -l 'pre-release'", env = { TOKEN = 'token', CONDAFILE = 'condafile'}}
+upload-pre = { cmd = "anaconda -t $ANACONDA_TOKEN upload $CONDAFILE -l 'pre-release'", env = { ANACONDA_TOKEN = 'token', CONDAFILE = 'condafile'}}
 # upload-pre = "anaconda -t $1  $(pixi run build-output) -l 'pre-release'"
 
 

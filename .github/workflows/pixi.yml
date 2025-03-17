@@ -31,7 +31,8 @@ jobs:
       - run: | 
          pixi run build
          CONDAFILE=$(pixi run build-output)
-         TOKEN=$ANACONDA_TOKEN
+         echo $CONDAFILE
+         echo $ANACONDA_TOKEN
          pixi run upload-pre 
         #  pixi run tests
         #  pixi run docs-build
