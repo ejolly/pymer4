@@ -30,7 +30,7 @@ jobs:
           pixi-version: v0.42.1
       - run: | 
           pixi run build
-          file=$(pixi run build-output) token=$ANACONDA_TOKEN pixi run upload-pre
+          file=$(pixi run build-output) token="$ANACONDA_TOKEN" pixi run upload-pre
         #  echo $CONDAFILE
         #  echo $ANACONDA_TOKEN
         #  pixi run upload-pre 
