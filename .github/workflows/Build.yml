@@ -1,8 +1,8 @@
 name: Conda Build
 on:
-  push:
-    branches:
-      - refactor
+  # push:
+  #   branches:
+  #     - refactor
   workflow_dispatch:
     inputs:
       upload_anaconda:

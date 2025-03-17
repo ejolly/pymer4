@@ -44,12 +44,10 @@ requirements:
 
 # Run basic import tests and full test suite after building
 test:
-  requires:
-   - pytest
   imports:
    - pymer4
   commands:
-   - pytest 
+   - python -c "from pymer4.test_install import test_install; test_install()"
 
 about:
   home: "https://eshinjolly.com/pymer4/"

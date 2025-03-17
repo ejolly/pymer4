@@ -1,8 +1,8 @@
-name: Pixi Build Docs
+name: Pixi Run Tests
 on:
-  # push:
-  #   branches:
-  #     - refactor
+  push:
+    branches:
+      - refactor
   workflow_dispatch:
 
 jobs:
@@ -14,11 +14,17 @@ jobs:
 
       - name: Setup Pixi & Build Docs
         uses: prefix-dev/setup-pixi@v0.8.3
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         with:
           pixi-version: v0.42.1
       - run: | 
+         pix run tests
          pixi run docs-build
          touch docs/_build/html/.nojekyll
+         pixi run build
+         pixi shell
+         echo $ANACONDA_TOKEN
 
       # - name: Deploy docs
       #   env:
