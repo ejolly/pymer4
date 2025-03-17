@@ -31,12 +31,20 @@ jobs:
       - run: | 
          pixi run build
          CONDAFILE=$(pixi run build-output)
-         echo $CONDAFILE
-         echo $ANACONDA_TOKEN
-         pixi run upload-pre 
+        #  echo $CONDAFILE
+        #  echo $ANACONDA_TOKEN
+        #  pixi run upload-pre 
         #  pixi run tests
         #  pixi run docs-build
         #  touch docs/_build/html/.nojekyll
+
+      - name: Debug over SSH
+        uses: lhotari/action-upterm@v1
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        if: ${{ failure() }}
+        with:
+          wait-timeout-minutes: 2
 
       # - name: Deploy docs
       #   env:
