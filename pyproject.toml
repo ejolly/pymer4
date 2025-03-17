@@ -1,17 +1,13 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "pymer4"
-dynamic = ["version"]
+requires-python = ">=3.10"
+version = "0.9.0"
 authors = [
-    {name = "Eshin Jolly", email = "eshin.jolly.GR@dartmouth.edu"},
+    {name = "Eshin Jolly", email = "eshin.jolly@gmail.com"},
 ]
 description = "pymer4: all the convenience of lme4 in python"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -22,44 +18,47 @@ classifiers = [
 ]
 keywords = ["statistics", "multi-level-modeling", "regression", "analysis"]
 
-# Python dependencies
-dependencies = [
-    "pandas>=2.2.0",
-    "numpy>=2.0",
-    "rpy2>=3.5.11",
-    "seaborn>=0.13.0",
-    "patsy>=1.0.1",
-    "joblib>=1.4.2",
-    "scipy>=1.13.0",
-    "scikit-learn>=1.4",
-]
-
-# Development dependencies
-[project.optional-dependencies]
-dev = [
-    "ruff==0.11.0",
-    "pytest",
-    "jupyter-book",
-]
-
-# R dependencies
-[tool.rconfig]
-dependencies = [
-    "r-lmerTest",
-    "r-emmeans",
-    "r-broom",
-    "r-broom.mixed"
-]
+dependencies = ["pandas>=2.2.0", "numpy>=2.0", "seaborn>=0.13.0", "patsy>=1.0.1", "joblib>=1.4.2", "scipy>=1.13.0", "scikit-learn>=1.4"]
 
 [project.urls]
 Homepage = "http://eshinjolly.com/pymer4/"
 
-[tool.setuptools]
-packages = ["pymer4"]
-package-data = {"pymer4" = ["resources/*"]}
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
 
-[tool.setuptools.exclude-package-data]
-pymer4 = ["tests/*"]
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
 
-[tool.setuptools.dynamic]
-version = {attr = "pymer4.version.__version__"} 
+[tool.pixi.pypi-dependencies]
+pymer4 = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+r-lmertest = ">=3.1_3,<4"
+r-emmeans = ">=1.10.7,<2"
+rpy2 = ">=3.5.11,<4"
+
+[tool.pixi.feature.dev.dependencies]
+ruff = "==0.11.0"
+pytest = "*"
+jupyter-book = "*"
+conda-build = ">=25.1.2,<26"
+
+[tool.pixi.feature.dev.tasks]
+test-install = "python -c 'from pymer4.test_install import test_install; test_install()'"
+tests = "pytest"
+docs-build = "jupyter-book build docs/"
+docs-clean = "jupyter-book clean docs/"
+docs-preview = "open docs/_build/html/index.html"
+build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
+build-check = "conda-build ./conda --check"
+build-output = "conda-build ./conda --output"
+build-clean = "conda-build ./conda purge-all"
+
+
+[tool.pixi.environments]
+default = { features = ["dev"], solve-group = "default" }
+# dev = { features = ["dev"], solve-group = "default" }

@@ -27,3 +27,7 @@ environment.yml
 *.pickle
 *.joblib
 docs_bak
+
+# pixi environments
+.pixi
+*.egg-info

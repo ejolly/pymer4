@@ -2,16 +2,13 @@
 # Conda docs: https://docs.conda.io/projects/conda-build/en/stable/resources/define-metadata.html#loading-data-from-other-files
 {% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
 {% set project = pyproject.get('project', {}) %}
-{% set project_deps = project.get('dependencies', []) %}
-{% set r_deps = pyproject.get('tools', {}).get('rconfig', {}).get('dependencies', []) %}
-{% set version_match = load_file_regex(
-  load_file="../pymer4/version.py",
-  from_recipe_dir=True,
-  regex_pattern='__version__ = "([0-9.]+)"') %}
-{% set version = version_match[1] %}
+{% set pip_deps = project.get('dependencies', []) %}
+{% set conda_deps = pyproject.get('tool', {}).get('pixi', {}).get('dependencies', []) %}
+{% set name = project.get('name')%}
+{% set version = project.get('version')%}
 
 package:
-  name: {{ project.get('name') }}
+  name: {{ name }}
   version: {{ version }}
 
 source:
@@ -26,14 +23,16 @@ build:
 # Load both Python and R requirements from pyproject.toml
 requirements:
   host:
-    - python {{ python }}
+    - python
     - pip
+    - numpy >=1.20
+
   run:
-    - python {{ python }}
-    {% for dep in r_deps %}
+    - python
+    {% for dep in conda_deps %}
     - {{ dep }}
     {% endfor %}
-    {% for dep in project_deps %}
+    {% for dep in pip_deps %}
     - {{ dep }}
     {% endfor %}
 
@@ -41,11 +40,9 @@ requirements:
 test:
   imports:
    - pymer4
-  requires: 
-   - pytest
+   - pymer4.models
   commands:
    - python -c "from pymer4.test_install import test_install; test_install()"
-   - pytest
 
 about:
   home: "https://eshinjolly.com/pymer4/"
