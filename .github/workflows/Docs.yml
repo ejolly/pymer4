@@ -1,4 +1,4 @@
-name: Pixi Build
+name: Pixi Build Docs
 on:
   push:
     branches:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
+  pixi-docs-build:
     runs-on: macos-latest
     steps:
       - name: Checkout repository

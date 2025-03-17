@@ -2,7 +2,7 @@
 
 Starting from version `0.9.0`, development was overhauled in several noteable ways to aid maintability. This page describes the latest tools we use and you can use them to contribute to `pymer4` on Github.
 
-## Organized around `pyproject.toml` & `meta.yaml`
+##`pyproject.toml` & `meta.yaml`
 
 `pymer4` uses a single `pyproject.toml` file instead of the traditional `setup.py` + `requirements.txt` + `requirements-dev.txt` setup. This file acts as a **single source of truth** for build both Pypi compatible packages *and* conda packages. Conda packages are built using the `.conda/meta.yaml` file which read from the `pyproject.toml` file for meta-data and dependencies.
 
@@ -32,13 +32,19 @@ When you ran `pixi install` Pixi created an isolated environment with all the de
 
 Pixi also allows us to define handy commands (like a `Makefile`) that it calls *tasks*. You can see all the ones we've setup using `pixi task list` and run one with `pixi run *cmd*`. We've configured several to make it super easy to run tests, build documentation, and build the conda package itself. Running a task will automatically run it in environment for the project without you having to activate or deactivate anything. You can try them out for yourself as you're working with the code base. 
 
+## Documenation
+
+All documentation is built using [jupyter book](https://jupyterbook.org/en/stable/intro.html). Using `pixi run docs-build` and `pixi run docs-preview` will build the docs for you.
+
+Aside from the `api.md` file which uses special directives to automatically extract function and method docstrings, new documentation can be easily added by create new markdown files or jupyter notebooks
+
 ## Github Actions
 
-### Documentation
+### Building Documentation
 
 All of `pymer4`'s testing and documentation is executed and built automatically using Github Actions. The workflow called `Docs.yml` uses Pixi to setup an environment, build the documentation, and deploy it using the github pages branch of the repository. You can emulate this locally using `pixi run build-docs`
 
-### Installable `conda` package
+### Testing & Installable `conda` package
 
 Unfortuantely, until `pixi build` comes out of beta development there are some limitations that force us to use `conda-build`:
 - Pixi restricts building to `tool.pixi.project.platforms` specified in the `pyproject.toml` file, but then tries to create all those environments when developing locally on a single machine

@@ -16,7 +16,7 @@ on:
           - 'main'
 
 jobs:
-  ci:
+  conda-build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

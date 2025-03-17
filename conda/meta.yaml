@@ -48,10 +48,8 @@ test:
    - pytest
   imports:
    - pymer4
-   - pymer4.models
   commands:
-   - python -c "from pymer4.test_install import test_install; test_install()"
-  #  - pytest 
+   - pytest 
 
 about:
   home: "https://eshinjolly.com/pymer4/"

@@ -1,61 +1,47 @@
 # Installation
 
-:::: note
-::: title
-Note
-:::
+```{note}
+`pymer4 >= 0.9.0` is only available for installation using `conda`  Installation using `pip` is not possible due to the cross-language design (R <-> Python)
+```
 
-`pymer4` since version 0.6.0 is only compatible with Python 3. Versions
-0.5.0 and lower will work with Python 2, but will not contain any new
-features.
-::::
+## Latest stable release
 
-# Using Anaconda (recommended)
+This is the recommended installation option.
 
-## For the latest stable release (recommended)
+If you have an existing `conda` environment you can install `pymer4` into it using:
 
-`pymer4` has some dependecies that can only be resolved using
-[conda-forge](https://conda-forge.org/) (e.g. recent versions of
-`R, lme4, rpy2` etc). For this reason I recommend preferring
-`conda-forge` for all packages in the environment you use for `pymer4`.
-If you prefer to use the defaults Anaconda channel you can switch the
-order of the channel priorities in any of the commands below, i.e.
-`-c conda-forge -c defaults` to `-c defaults -c conda-forge`.
+```bash
+conda install -c ejolly -c conda-forge pymer4
+```
 
-### Creating and installing into a new environment
+Otherwise you can make a brand new environment called `pymer4` (which will also install a few other scientific Python libraries like `numpy` and `seaborn`) using:
 
-> ``` bash
-> conda create --name pymer4 -c ejolly -c conda-forge -c defaults pymer4
-> conda activate pymer4 
-> ```
+```bash
+conda create --n pymer4 -c ejolly -c conda-forge pymer4
+```
 
-### Installing into an existing environment
+## Latest development release
 
-> ``` bash
-> conda install -c ejolly -c conda-forge -c defaults pymer4
-> ```
+This is release is synchronized to the latest state of the `main` branch on Github. It may contain upcoming fixes, but undiscovered bugs as well.
 
-:::: note
-::: title
-Note
-:::
+```bash
+conda install -c ejolly/label/pre-release -c conda-forge pymer4
+```
 
+```{info}
 Both commands above pull dependencies from conda-forge *first* rather
-than the default Anaconda channel. It\'s good practice to maintain this
+than the default Anaconda channel. It's good practice to maintain this
 channel priority if you add additional packages to your environment. So
-be mindful of adding a `-c
-conda-forge` flag if you install any additional packages into your
-environment. You can avoid this if you deliberately reversed the order
-of channels when installing `pymer4` as noted above.
-::::
+be mindful of adding a `-c conda-forge` flag if you install any additional packages into your environment.
+```
 
-## For the latest development release
+## Making sure the install worked
 
-Simply use either command above and substitute `ejolly` for
-`ejolly/label/pre-release`, i.e.
+You can test the installation by running the following command in a
+terminal
 
 > ``` bash
-> conda install -c ejolly/label/pre-release -c conda-forge -c defaults pymer4
+> python -c "from pymer4.test_install import test_install; test_install()"
 > ```
 
 ## Speed Ups on Intel CPUs
@@ -78,91 +64,32 @@ install this explicitly the following command will work:
 > conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=openblas*"
 > ```
 
-# Using pip
-
-:::: warning
-::: title
-Warning
-:::
-
-It\'s strongly advised to use the conda install method above because of
-how notoriously finicky it can be to install `rpy2` on various
-platforms. I recommend only following the directions below if you\'re
-comfortable with `pip` and the command line or prefer not to use
-Anaconda.
-::::
-
-## Prerequisites
-
-`pymer4` requires a working R installation along with three R packages:
-`lme4`, `lmerTest`, and `emmeans`. Follow either option below to make
-sure these are installed.
-
-### 1. If you already have R/RStudio installed
-
-Make sure you also have the 3 required R packages which can be installed
-from within R/RStudio using:
-
-> ``` R
-> install.packages(c('lme4','lmerTest','emmeans'))
-> ```
-
-### 2. If you don\'t have R/RStudio installed
-
-The [Anaconda Python
-distribution](https://www.anaconda.com/distribution/) can also install
-and maintain R and R-packages for you. To install R and the the required
-packages through Anaconda:
-
-> ``` bash
-> conda install -c conda-forge r r-base r-lmertest r-emmeans rpy2
-> ```
-
-## For the latest stable release
-
-After either option you can pip install `pymer4`
-
-> ``` bash
-> pip install pymer4
-> ```
-
-## For the latest development release
-
-Install via github:
-
-> ``` bash
-> pip install git+https://github.com/ejolly/pymer4.git
-> ```
-
-# Making sure the install worked
-
-You can test the installation by running the following command in a
-terminal
-
-> ``` bash
-> python -c "from pymer4.test_install import test_install; test_install()"
-> ```
-
-# Installation Issues
+## Installation Issues
 
 If you have installed via `pip` it\'s recommended you try the `conda`
 method described above prior to raising an issue on github. Otherwise
 the following solutions may help.
 
-## Missing R packages
+### Kernel Crashes in Jupyter Notebooks/Lab
 
-If you follow step 2 in the prerequisites above (i.e. let Anaconda
-install R for you), some users have reported that the `conda install`
-command above sometimes doesn\'t install everything you need; for
-example the
-[matrix](https://cran.r-project.org/web/packages/Matrix/index.html)
-package. You can fix this by either installing any missing packages from
-within R directly by first launching R at a terminal using `R`, then
-adding the package with `install.packages("Matrix")` or by using
-Anaconda and prepending `r-` infront of the *lowercase* name of the
-package: `conda install -c conda-forge r-matrix`.
+Sometimes using `pymer4` interactively can cause the Python kernel to
+crash. This is more likely to happen if you have multiple interactive
+sessions running simulatenously. One way around this is to put this at
+the top of your notebook/code:
 
-## Compiler Issues on macOS
+> ``` python
+> import os
+> os.environ['KMP_DUPLICATE_LIB_OK']='True'
+> ```
+
+Or set the following environment variable prior to launching your
+interactive sessions:
+
+> ``` bash
+> export KMP_DUPLICATE_LIB_OK=TRUE
+> ```
+
+### Compiler Issues on macOS
 
 Some of the more cryptic error messages you might encounter on macOS are
 due to compiler issues that give `rpy2` (a package dependency of
@@ -215,22 +142,3 @@ that:
     `conda install -c conda-forge rpy2` if you don\'t.
 
 10. Now you should be able to `pip install pymer4` :)
-
-# Kernel Crashes in Jupyter Notebooks/Lab
-
-Sometimes using `pymer4` interactively can cause the Python kernel to
-crash. This is more likely to happen if you have multiple interactive
-sessions running simulatenously. One way around this is to put this at
-the top of your notebook/code:
-
-> ``` python
-> import os
-> os.environ['KMP_DUPLICATE_LIB_OK']='True'
-> ```
-
-Or set the following environment variable prior to launching your
-interactive sessions:
-
-> ``` bash
-> export KMP_DUPLICATE_LIB_OK=TRUE
-> ```

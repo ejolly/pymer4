@@ -26,7 +26,7 @@ For an example of what\'s possible check out the tutorials or [this blog
 post](https://eshinjolly.com/2019/02/18/rep_measures/) comparing
 different modeling strategies for clustered/repeated-measures data.
 
-# Publications
+## Publications
 
 `pymer4` has been used to analyze data is several publications including
 but not limited to:
@@ -45,7 +45,7 @@ but not limited to:
     & Chang, L. J. (2019). Socially transmitted placebo effects. *Nature
     Human Behaviour*, 3(12), 1295-1305.
 
-# Citing
+## Citing
 
 If you use `pymer4` in your own work, please cite:
 
