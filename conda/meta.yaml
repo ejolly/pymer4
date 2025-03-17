@@ -41,8 +41,11 @@ requirements:
 test:
   imports:
    - pymer4
+ requires: 
+   - pytest
   commands:
    - python -c "from pymer4.test_install import test_install; test_install()"
+   - pytest
 
 about:
   home: "https://eshinjolly.com/pymer4/"
