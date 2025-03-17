@@ -55,6 +55,7 @@ ruff = "==0.11.0"
 pytest = "*"
 jupyter-book = "*"
 conda-build = ">=25.1.2,<26"
+anaconda-client = ">=1.13.0,<2"
 
 [tool.pixi.feature.dev.tasks]
 test-install = "python -c 'from pymer4.test_install import test_install; test_install()'"
