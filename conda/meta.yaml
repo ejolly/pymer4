@@ -16,7 +16,7 @@ package:
 
 source:
     git_url: ../
-    path_url: ../
+    path: ../
 
 build:
   noarch: python
@@ -41,7 +41,7 @@ requirements:
 test:
   imports:
    - pymer4
- requires: 
+  requires: 
    - pytest
   commands:
    - python -c "from pymer4.test_install import test_install; test_install()"
