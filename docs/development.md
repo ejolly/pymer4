@@ -1,5 +1,12 @@
 # Development
 
+- noarch build
+- pixi for management
+  - rapid build for testing
+  - tasks based workflow
+  - building coming soon, but `conda-build` works for now
+- [GA workflow](https://github.com/prefix-dev/setup-pixi/tree/v0.8.3/)
+
 Starting from version `0.9.0`, development was overhauled in several noteable ways to aid maintability. This page describes the latest tools we use and you can use them to contribute to `pymer4` on Github.
 
 ##`pyproject.toml` & `meta.yaml`
@@ -12,14 +19,15 @@ Due to the challenging compatibilitiy issues ensuing from `pymer4`'s cross-langu
 
 Pixi works much more like `npm` or `bun` from Javascript than traditional Anaconda environments: all environments and are *co-located* with you package and described by your `pyproject.toml` file. Using a single command `pixi install` you can have a fully-configured development environment for `pymer4` on your own computer that's **totally isolated** from any existing python packages and environments you have. 
 
-| Pixi Command | Conda Equivalent | Description |
+| Pixi Command | Conda/Pip Equivalent | Description |
 |--------------|------------------|-------------|
 | `pixi install` | `conda create -n env_name` + `conda install ...` | Creates a new environment and installs all dependencies |
-| `pixi shell` | `conda activate env_name` | Activates the project environment |
+| `pixi add package_name` | `conda install package_name` | Adds a `conda-forge` package to the environment |
+| `pixi add --pypi package_name` | `pip install package_name` | Adds a `pip` package to the environment |
+| `pixi remove --pypi package_name` | `pip uninstall package_name` | Removes a `pip` package from the environment |
+| `pixi remove package_name` | `conda remove package_name` | Removes a `conda-forge` package from the environment |
 | `pixi run task_name` | `conda run -n env_name command` | Runs a command in the project environment |
-| `pixi add package_name` | `conda install package_name` | Adds a new package to the environment |
-| `pixi remove package_name` | `conda remove package_name` | Removes a package from the environment |
-
+| `pixi shell` | `conda activate env_name` | Activates the project environment |
 
 
 ### Setup

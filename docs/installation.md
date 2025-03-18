@@ -40,9 +40,9 @@ be mindful of adding a `-c conda-forge` flag if you install any additional packa
 You can test the installation by running the following command in a
 terminal
 
-> ``` bash
-> python -c "from pymer4.test_install import test_install; test_install()"
-> ```
+``` bash
+python -c "from pymer4.test_install import test_install; test_install()"
+```
 
 ## Speed Ups on Intel CPUs
 
@@ -60,9 +60,9 @@ This isn\'t recommended for other CPUs (e.g. AMD) as MKL will actually
 default when installing `pymer4` from conda-forge. If you want to
 install this explicitly the following command will work:
 
-> ``` bash
-> conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=openblas*"
-> ```
+``` bash
+conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=openblas*"
+```
 
 ## Installation Issues
 
@@ -77,17 +77,17 @@ crash. This is more likely to happen if you have multiple interactive
 sessions running simulatenously. One way around this is to put this at
 the top of your notebook/code:
 
-> ``` python
-> import os
-> os.environ['KMP_DUPLICATE_LIB_OK']='True'
-> ```
+``` python
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+```
 
 Or set the following environment variable prior to launching your
 interactive sessions:
 
-> ``` bash
-> export KMP_DUPLICATE_LIB_OK=TRUE
-> ```
+``` bash
+export KMP_DUPLICATE_LIB_OK=TRUE
+```
 
 ### Compiler Issues on macOS
 
@@ -117,10 +117,10 @@ that:
 
 7.  Enable the new compiler for use:
 
-    > ``` bash
-    > export CC="$(find `brew info gcc | grep usr | sed 's/(.*//' | awk '{printf $1"/bin"}'` -name 'x86*gcc-?')"
-    > export CFLAGS="-W"
-    > ```
+    ``` bash
+    export CC="$(find `brew info gcc | grep usr | sed 's/(.*//' | awk '{printf $1"/bin"}'` -name 'x86*gcc-?')"
+    export CFLAGS="-W"
+    ```
 
 8.  If the above results in any error output (it should return nothing)
     you might need to manually find out where the new compiler is
@@ -132,10 +132,10 @@ that:
     In that case, just use the latest version. Copy the *full path* to
     that file and run the following:
 
-    > ``` bash
-    > export CC= pathYouCopiedInQuotes
-    > export CFLAGS="-W"
-    > ```
+    ``` bash
+    export CC= pathYouCopiedInQuotes
+    export CFLAGS="-W"
+    ```
 
 9.  Finally install `rpy2` using the new compiler you just installed:
     `pip install rpy2` if you have R/RStudio or

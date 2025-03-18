@@ -1,11 +1,9 @@
 # What's New
 
-Historically `pymer4` versioning was a bit all over the place but has
-settled down since 0.5.0. This page includes the most notable updates
-between versions but github is the best place to checkout more details
-and [releases](https://github.com/ejolly/pymer4/releases/).
+## 0.9.0
+### Noteworthy
+As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect regular `conda-forge` releases as well. `pip` will continue to contain previous versions, but new versions will no longer be made there
 
-## 0.8.3
 ### Changes
 - `.summary()` no longer prints output by default. Use `summarize/summary=True` or call the `.summary()` method to get the output
 - `stats.lrt()` now takes models as multiple comma separated arguments rather than a list
@@ -28,10 +26,11 @@ and [releases](https://github.com/ejolly/pymer4/releases/).
 - `Lmer.fits` are now properly converted to a numpy array
 
 ### House-keeping
-- Switched documentation over to jupyter book
 - Switched `setup.py` and `requirements.txt/requirements-dev.txt` to `pyproject.toml`
-- Dropped `black` in favor of `ruff`
+- Switch over to Pixi for development-tooling and Github Actions
+- Switched documentation over to jupyterbook
 - Exclusively create `noarch` builds for conda
+- Dropped `black` in favor of `ruff`
 
 ## 0.8.2
 
