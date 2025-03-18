@@ -1,6 +1,6 @@
 # Development
 
-- noarch build
+- `conda` only noarch build
 - pixi for management
   - rapid build for testing
   - tasks based workflow
@@ -9,8 +9,6 @@
 - [Tutorial](https://pixi.sh/latest/tutorials/python/)
 - [`pyproject.toml`](https://pixi.sh/latest/reference/pixi_manifest/)
   - [initial setup](https://pixi.sh/latest/advanced/pyproject_toml/#python-dependency)
-
-Starting from version `0.9.0`, development was overhauled in several noteable ways to aid maintability. This page describes the latest tools we use and you can use them to contribute to `pymer4` on Github.
 
 ##`pyproject.toml` & `meta.yaml`
 
