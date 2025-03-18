@@ -27,15 +27,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pixi Run Tests & Build Docs
+      - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: v0.42.1
-      - run: | 
+
+      - name: Pixi Run Tests & Build Docs
+        run: | 
          pixi run docs-build
          touch docs/_build/html/.nojekyll
-        
-      - name: Pixi Build & Upload Conda Package
+
+      - name: Pixi Build Conda Package
+        run: |
+          pixi run build
+
+      - name: Pixi Upload Conda Package
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
