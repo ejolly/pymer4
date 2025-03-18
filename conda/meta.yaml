@@ -1,6 +1,7 @@
 # Get information from pyproject.toml file
 {% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
 {% set project = pyproject.get('project', {}) %}
+{% set min_python = project.get('requires-python') %}
 {% set pip_deps = project.get('dependencies', []) %}
 {% set conda_deps = pyproject.get('tool', {}).get('pixi', {}).get('dependencies', []) %}
 {% set name = project.get('name')%}
@@ -34,7 +35,7 @@ requirements:
 
 # Load both Python and R requirements from pyproject.toml
   run:
-    - python
+    - python {{ min_python }}
     {% for dep, ver in conda_deps.items() %}
     - {{ dep }} {{ ver }}
     {% endfor %}
