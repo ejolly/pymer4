@@ -39,9 +39,7 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
-          echo $upload_file
-          which anaconda
-          env
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
 
 
       # - name: Upload Docs HTML
