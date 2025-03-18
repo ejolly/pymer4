@@ -41,12 +41,22 @@ jobs:
         run: |
           pixi run build
 
-      - name: Pixi Upload Conda Package
+      # Run this from within the pixi env by shelling in
+      # because passing ANACONDA_TOKEN to pixi run upload-*
+      # tasks wasn't working
+      - name: Pixi Upload to Anaconda Pre-release?
+        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
           anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
 
+      - name: Pixi Upload to Anaconda Main?
+        if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
+        shell: pixi run bash -e {0}
+        run: |
+          upload_file=$(pixi run build-output)
+          anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
 
       # - name: Upload Docs HTML
       #   uses: actions/upload-pages-artifact@v3
@@ -74,18 +84,5 @@ jobs:
       #     conda install conda-build anaconda-client
       #     conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
 
-      # - name: Upload to Anaconda Pre-release?
-      #   if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
-      #   shell: bash -el {0}
-      #   run: | 
-      #     upload_file=$(conda-build ./conda --output)
-      #     anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
-
-      # - name: Upload to Anaconda Main?
-      #   if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
-      #   shell: bash -el {0}
-      #   run: | 
-      #     upload_file=$(conda-build ./conda --output)
-      #     anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
 
 

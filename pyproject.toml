@@ -71,6 +71,7 @@ build-clean = "conda-build ./conda purge-all"
 # You need to set the env variables $token and $file before running this command
 # in a single line, e.g. token=1234567890 file=path/to/build/file pixi run upload-pre
 upload-pre = { cmd = "anaconda -t $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
+upload-main = { cmd = "anaconda -t $token upload $file -l 'main'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
