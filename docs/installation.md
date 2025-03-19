@@ -1,12 +1,17 @@
 # Installation
 
-```{note}
-`pymer4 >= 0.9.0` is only available for installation using `conda`  Installation using `pip` is not possible due to the cross-language design (R <-> Python)
-```
+!!! warning "Note"
 
-## Latest stable release
+    Due to the cross-language nature of `pymer4`, installing via `pip` is **not supported**.  
+    You **must** install `pymer4` using `conda` or `pixi` as outlined below
 
-This is the recommended installation option.
+## Install using `conda` (recommended)
+
+!!! note "Note"
+
+    It's important to take note of `-c conda-forge` in the the `conda` commands below. This ensures that additional dependencies for `pymer4` are installed via the `conda-forge` channel which contains the relevant R packages, rather than Anaconda `defaults` which does not.
+
+If you don't already have Anaconda/Miniconda setup, follow first follow the instructions [here](https://www.anaconda.com/docs/getting-started/miniconda/install)
 
 If you have an existing `conda` environment you can install `pymer4` into it using:
 
@@ -14,13 +19,13 @@ If you have an existing `conda` environment you can install `pymer4` into it usi
 conda install -c ejolly -c conda-forge pymer4
 ```
 
-Otherwise you can make a brand new environment called `pymer4` (which will also install a few other scientific Python libraries like `numpy` and `seaborn`) using:
+Otherwise you can create a new environment, which will also install a few other scientific Python libraries like `numpy` and `seaborn`; in the example below we name the new environment `pymer4`:
 
 ```bash
 conda create --n pymer4 -c ejolly -c conda-forge pymer4
 ```
 
-## Latest development release
+## Install development version
 
 This is release is synchronized to the latest state of the `main` branch on Github. It may contain upcoming fixes, but undiscovered bugs as well.
 
@@ -28,12 +33,11 @@ This is release is synchronized to the latest state of the `main` branch on Gith
 conda install -c ejolly/label/pre-release -c conda-forge pymer4
 ```
 
-```{info}
-Both commands above pull dependencies from conda-forge *first* rather
-than the default Anaconda channel. It's good practice to maintain this
-channel priority if you add additional packages to your environment. So
-be mindful of adding a `-c conda-forge` flag if you install any additional packages into your environment.
-```
+
+## Install using `pixi`
+
+Alternatively, you can use Pixi which is a more modern environment manager for Python that supports both `conda` and `pip` packages. `pymer4` uses [Pixi for package development and testing](./development.md).
+
 
 ## Making sure the install worked
 
@@ -44,31 +48,9 @@ terminal
 python -c "from pymer4.test_install import test_install; test_install()"
 ```
 
-## Speed Ups on Intel CPUs
-
-If you are installing on an Intel CPU, you can additionally request the
-highly optimized Intel Math Kernel Library (MKL) which uses optimized
-math libraries for Basic Linear Algebra Subprograms (BLAS) computations
-and can provide substantial speed ups for `pymer4` as well as`numpy`.
-
-> ``` bash
-> conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=mkl*"
-> ```
-
-This isn\'t recommended for other CPUs (e.g. AMD) as MKL will actually
-*slow down* computations. Instead you can request OpenBLAS, which is the
-default when installing `pymer4` from conda-forge. If you want to
-install this explicitly the following command will work:
-
-``` bash
-conda install -c ejolly -c conda-forge -c defaults pymer4 "blas=*=openblas*"
-```
-
 ## Installation Issues
 
-If you have installed via `pip` it\'s recommended you try the `conda`
-method described above prior to raising an issue on github. Otherwise
-the following solutions may help.
+If you accidentally installed using `pip` you will have an unsupported version that is highly unlikely to work. Please install using one of the alternative methods above. Otherwise, the following solutions may help.
 
 ### Kernel Crashes in Jupyter Notebooks/Lab
 
@@ -89,7 +71,7 @@ interactive sessions:
 export KMP_DUPLICATE_LIB_OK=TRUE
 ```
 
-### Compiler Issues on macOS
+### Compiler Issues on intel macOS
 
 Some of the more cryptic error messages you might encounter on macOS are
 due to compiler issues that give `rpy2` (a package dependency of

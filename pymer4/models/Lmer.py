@@ -1,7 +1,4 @@
 """
-Pymer4 Lmer Class
-=================
-
 Main class to wrap R's lme4 library
 """
 
@@ -724,9 +721,7 @@ class Lmer(object):
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
         if callable(getattr(ran_vars, "map", None)):  # account for pd 2.1 change
-            ran_vars = ran_vars.map(
-                lambda x: np.nan if x == robjects.NA_Character else x
-            )
+            ran_vars = ran_vars.map(lambda x: np.nan if x == robjects.NA_Character else x)
         else:
             ran_vars = ran_vars.applymap(
                 lambda x: np.nan if x == robjects.NA_Character else x

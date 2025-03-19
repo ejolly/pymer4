@@ -1,7 +1,4 @@
 """
-Pymer4 Lm2 Class
-================
-
 Main class for two-stage regression models
 """
 

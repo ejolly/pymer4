@@ -53,21 +53,22 @@ rpy2 = ">=3.5.11,<4"
 [tool.pixi.feature.dev.dependencies]
 ruff = "==0.11.0"
 pytest = "*"
-jupyter-book = "*"
 conda-build = ">=25.1.2,<26"
 anaconda-client = ">=1.13.0,<2"
 
 [tool.pixi.feature.dev.tasks]
 test-install = "python -c 'from pymer4.test_install import test_install; test_install()'"
 tests = "pytest pymer4/tests/"
-docs-build = "jupyter-book build docs/"
-docs-clean = "jupyter-book clean docs/"
-docs-preview = "open docs/_build/html/index.html"
+tests-failed = "pytest pymer4/tests/ --lf"
+docs-build = "mkdocs build"
+docs = "mkdocs serve"
+
 # Because Pixi build is still in beta, these comands can be used to emulate what GAs are doing locally
 build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
 build-clean = "conda-build ./conda purge-all"
+
 # You need to set the env variables $token and $file before running this command
 # in a single line, e.g. token=1234567890 file=path/to/build/file pixi run upload-pre
 upload-pre = { cmd = "anaconda -t $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
@@ -75,3 +76,6 @@ upload-main = { cmd = "anaconda -t $token upload $file -l 'main'", env = { token
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
+
+[dependency-groups]
+dev = [ "mkdocs>=1.6.1,<2", "mkdocs-material>=9.6.9,<10", "mkdocstrings-python>=1.16.6,<2", "mkdocs-jupyter>=0.25.1,<0.26"]

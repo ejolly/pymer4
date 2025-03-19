@@ -1,7 +1,4 @@
 """
-Pymer4 Lm Class
-===============
-
 Main class for linear regression models
 """
 

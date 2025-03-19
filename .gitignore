@@ -31,3 +31,5 @@ docs_bak
 # pixi environments
 .pixi
 *.egg-info
+# mkdocs site
+site

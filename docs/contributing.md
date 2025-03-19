@@ -1,4 +1,4 @@
-# Contributing
+# How to Contribute
 
 Maintaining this package is tricky because of its inter-language
 operability. In particular this requires keeping up with API changes to

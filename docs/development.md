@@ -1,24 +1,34 @@
-# Development
+# Development & Contributing
 
-- `conda` only noarch build
-- pixi for management
-  - rapid build for testing
-  - tasks based workflow
-  - building coming soon, but `conda-build` works for now
-- [GA workflow](https://github.com/prefix-dev/setup-pixi/tree/v0.8.3/)
-- [Tutorial](https://pixi.sh/latest/tutorials/python/)
-- [`pyproject.toml`](https://pixi.sh/latest/reference/pixi_manifest/)
-  - [initial setup](https://pixi.sh/latest/advanced/pyproject_toml/#python-dependency)
+Since version `0.9.0` `pymer4` uses [Pixi](https://prefix.dev/blog/pixi_for_scientists) to simplify package management, development, and testing.  
+Use the Development Quickstart below for the TL;DR on contributing to `pymer4`.  
+Otherwise, checkout the rest of this page to read more about how `pymer4` is configure with Pixi 
 
-##`pyproject.toml` & `meta.yaml`
+## Development Quickstart
 
-`pymer4` uses a single `pyproject.toml` file instead of the traditional `setup.py` + `requirements.txt` + `requirements-dev.txt` setup. This file acts as a **single source of truth** for build both Pypi compatible packages *and* conda packages. Conda packages are built using the `.conda/meta.yaml` file which read from the `pyproject.toml` file for meta-data and dependencies.
+Installing Pixi is very easy as it has no dependencies and doesn't affect any other Python versions or tools you may already use (e.g. Anaconda). Just copy the following command into your terminal:  
 
-## Pixi
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+```
 
-Due to the challenging compatibilitiy issues ensuing from `pymer4`'s cross-language and cross-library design (e.g. R packages like `lme4` are *only* available via `conda` not `pip`), we've decided to go with [`pixi`](https://pixi.sh/latest/) for development and collaboration. Pixi is a tool that makes it much easier to work with *mixed* `conda` and `pip` packages and environments, while building upon standard eco-system tooling like a `pyproject.toml` file.
+Then clone the repository and run `pixi install` which will configure and create an isolated development environment for you. Once you're setup you can use any of the Pixi tasks we've configured to run tests, build docs, etc or use the Pixi cheatsheet to add/remove dependencies:
 
-Pixi works much more like `npm` or `bun` from Javascript than traditional Anaconda environments: all environments and are *co-located* with you package and described by your `pyproject.toml` file. Using a single command `pixi install` you can have a fully-configured development environment for `pymer4` on your own computer that's **totally isolated** from any existing python packages and environments you have. 
+### Helpful development commands (Pixi tasks)
+
+| Pixi Command |  Description |
+|--------------|------------------|
+| `pixi run test-install` | Runs the `test_install()` function |
+| `pixi run tests` | Runs the full test-suite with `pytest` |
+| `pixi run docs` | Preview docs with live-reloading in the browser |
+| `pixi run docs-build` | Builds the documentation using `mkdocs build` and outputs it to `site/` |
+| `pixi run build` | Uses `conda-build` to make the package and verify it installs |
+| `pixi run build-output` | Gets the location of the built conda package (used by GA during upload) |
+| `pixi run build-clean` | Remove previously built package |
+| `pixi run upload-pre` | Uploads built package to `pre-release` label; requires `$token` and `$file` environment variables to be set | 
+| `pixi run main` | Uploads built package to `main` label; requires `$token` and `$file` environment variables to be set | 
+
+### Pixi Cheatsheet
 
 | Pixi Command | Conda/Pip Equivalent | Description |
 |--------------|------------------|-------------|
@@ -30,51 +40,69 @@ Pixi works much more like `npm` or `bun` from Javascript than traditional Anacon
 | `pixi run task_name` | `conda run -n env_name command` | Runs a command in the project environment |
 | `pixi shell` | `conda activate env_name` | Activates the project environment |
 
+## Overview
 
-### Setup
+`pymer4` uses a single [`pyproject.toml`](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/) file to configure package setup and requirements instead of the traditional `setup.py` & `requirements.txt` approach. This file also contains additional instructions that specify `setuptools` as the build system as well as additional instructions for Pixi (see below) to manage environments, tasks, and additional development dependencies. While this is sufficient for building a traditional `pip`-installable Python package, `pymer4` also needs a properly configured and working R installation with particular libraries pre-installed. To accomplish this, `pymer4` is distributed as a `conda` package that's built from `conda/meta.yaml`. This file is created by reading meta-data and requirements from `pyproject.toml`.  
 
-It's very easy to install Pixi as it has no other dependencies. To get started:  
+### Dependencies & Configuration
 
-```bash
-curl -fsSL https://pixi.sh/install.sh | bash
+Currently, `pymer4` uses `pyproject.toml` to specify:
+- `pip` dependencies in `project.dependencies`
+- `conda-forge` dependencies in `tool.pixi.dependencies`
+- optional development only dependences (`conda-forge`) in `tool.pixi.featre.dev.dependencies`
+- the `default` environment and make sure it includes optional dependencies
+- various Pixi tasks in `tool.pixi.feature.dev.tasks`
+
+```{note}
+*We hope to replace the last step above with `pixi build` when it [comes out of beta](https://pixi.sh/latest/build/getting_started/) and integrates with `rattler-build`, a replacement for `conda-build`*
 ```
 
-Then clone the repository and run `pixi install`
+### Automatic Testing and Deployment
 
-You might notice a new hidden `.pixi` directory in which any environments and packages are installed. All the instructions for how to set that up *including* `pymer4`'s dependencies are listed in the `pyproject.toml` file.
+Automated package testing and deployment are handled by a single `pixi.yml` Github Actions (GA) workflow that does the following:
+- Setup up Pixi
+- Configure an environment and install runtime & development depenencies
+- Runs tests using `pixi run tests`
+- Build and deploys docs using `pixi run docs-build`
+- Build and deploys the package to the `pre-release` or `main` labels on the `ejolly` channel at Anaconda.org using `conda-build` and `anaconda-client`
 
-### Environment
+A few other notes about automation & deployment
+- Conda packages are exclusively `noarch` builds that should run be cross-compatible for macOS & Linux as long as the minimum required Python version is met (Windows not officially supported)
+- The configured GA workflow automatically runs on any commits/PRs against the `main` branch as well as on a weekly schedule every Sunday
+- Built packages are available on the `ejolly` channel on [Anaconda.org](https://anaconda.org/ejolly/pymer4) under one of the 2 following *labels*
+- `main`: built from official Github Release only
+- `pre-release`: built from every new commit to the `main` branch on github
 
-When you ran `pixi install` Pixi created an isolated environment with all the dependencies listed in `pyproject.toml`. You can activate this environment conda-style using `pix shell` after which commands like `jupyter-book` or `pytest` will become available in your terminal. This is similar to using `conda activate *my_environment*`
+```{note}
+*We hope to have `pymer4` available on the `conda-forge` channel instead of `ejolly` soon!*
+```
+
+### Documenation
+
+- [mkdocs](https://github.com/danielfrg/mkdocs-jupyter)
+
+All documentation is built using [jupyter book](https://jupyterbook.org/en/stable/intro.html). This is handled automatically on Github Actions or you can use the Pixi tasks noted above to build the docs locally: `pixi run docs-build` and `pixi run docs-preview`
+
+Aside from the `api.md` file which uses special directives to automatically extract function and method docstrings, new documentation can be easily added by create new markdown files or jupyter notebooks and adding them to `_toc.yml`
+
+## Pixi
+
+[Pixi](https://prefix.dev/blog/pixi_for_scientists) is a modern, extremely fast project-management tool that excels at handling Python environments with mixed dependecies from `conda` and `pip`, while building upon Python standards. In other words using Pixi, **the `pyproject.tml` acts as a single source of truth for *all* of pymer4's dependencies**, including both Python and R packages.
+
+Pixi manages projects in a style similar to popuar Javascript tools like `npm` rather than traditional Anaconda environments and is powered by extremely fast tooling like Rust, `uv` for `pip` packages, and `mamba` for `conda` packages. Using `pixi install`, Pixi creates 1 or more environments in a hidden `.pixi` folder that are *automatically* used for running a variety of [tasks](https://pixi.sh/latest/features/advanced_tasks/), short commands that can be executed with `pixi run taskName` similar to a `Makefile`. These environments are **completeley isolated** just like traditional `conda` environments, but you don't need to manage or switch to them; Pixi handles all that for you based on the configuration in `pyproject.toml` 
 
 ### Tasks
 
 Pixi also allows us to define handy commands (like a `Makefile`) that it calls *tasks*. You can see all the ones we've setup using `pixi task list` and run one with `pixi run *cmd*`. We've configured several to make it super easy to run tests, build documentation, and build the conda package itself. Running a task will automatically run it in environment for the project without you having to activate or deactivate anything. You can try them out for yourself as you're working with the code base. 
 
-## Documenation
+### Traditional environment activation
+When you ran `pixi install` Pixi created an isolated environment with all the dependencies listed in `pyproject.toml`. You can activate this environment conda-style using `pix shell` after which commands like `jupyter-book` or `pytest` will become available in your terminal. This is similar to using `conda activate *my_environment*`
 
-All documentation is built using [jupyter book](https://jupyterbook.org/en/stable/intro.html). Using `pixi run docs-build` and `pixi run docs-preview` will build the docs for you.
+### Pixi Resources
+- [Official Github Action Workflow](https://github.com/prefix-dev/setup-pixi/tree/v0.8.3/)
+- [Python Tutorial](https://pixi.sh/latest/tutorials/python/)
+- [Initial `pyproject.toml` setup](https://pixi.sh/latest/advanced/pyproject_toml/#python-dependency)
+- [`pyproject.toml` reference](https://pixi.sh/latest/reference/pixi_manifest/)
 
-Aside from the `api.md` file which uses special directives to automatically extract function and method docstrings, new documentation can be easily added by create new markdown files or jupyter notebooks
 
-## Github Actions
-
-### Building Documentation
-
-All of `pymer4`'s testing and documentation is executed and built automatically using Github Actions. The workflow called `Docs.yml` uses Pixi to setup an environment, build the documentation, and deploy it using the github pages branch of the repository. You can emulate this locally using `pixi run build-docs`
-
-### Testing & Installable `conda` package
-
-Unfortuantely, until `pixi build` comes out of beta development there are some limitations that force us to use `conda-build`:
-- Pixi restricts building to `tool.pixi.project.platforms` specified in the `pyproject.toml` file, but then tries to create all those environments when developing locally on a single machine
-- `rattler-build` is under activate development and not full integrated with Pixi yet
-
-Our `Build.yml` uses the specifications in `.conda/meta.yaml` to tell `conda-build` how to build `pymer4`. This `.yaml` file sources all its information about requirements *from* the `pyproject.toml` file. This file also performs several post-build operations:
-
-- sets up a test environment and installs the build
-- checks for module importability
-- runs `pymer4`'s install test function
-- runs `pymer4`'s full testing suite using `pytest`
-
-All of this is handled when `conda-build` executes `.conda/meta.yaml` and doesn't need additional configuration. You can emulate this locally using `pixi run build`
 
