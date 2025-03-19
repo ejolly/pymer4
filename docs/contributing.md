@@ -1,5 +1,40 @@
 # How to Contribute
 
+We've tried to simplify development as much as possible to encourage contributions from anyone with experience in Python and/or R. Following the directions on this page to get going quickly. Check-out the [development page](./development.md) for more context and details
+
+## Quick start
+
+1. Install `pixi`
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+```
+
+2. Clone the repository and setup a development environment
+
+```bash
+git clone https://github.com/YOURFORK/pymer4.git
+cd pymer4
+pixi install
+```
+
+3. Make code/documentation changes with tests and test them
+
+```bash
+pixi run tests
+```
+
+4. Push your changes to Github and open a pull request!
+
+## Development Tools
+
+- `pixi` for project and environment management
+- `pyproject.toml` for specifying, pip, conda, runtime, and development dependencies as well as Pixi tasks
+- `conda/meta.yaml` reads from `pyproject.toml` to specify conda build instructions
+- `mkdocs` for documentation
+- `pytest` for testing
+- `VSCode` for development
+
 ## Code Guidelines
 
 - TODO - note `ruff`

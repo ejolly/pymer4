@@ -375,7 +375,9 @@ class Lmer(object):
 
         if old_optimizer:
             if control:
-                raise ValueError("Must specify EITHER control OR old_optimizer not both")
+                raise ValueError(
+                    "Must specify EITHER control OR old_optimizer not both"
+                )
             else:
                 control = "optimizer='bobyqa'"
         if factors:
@@ -721,7 +723,9 @@ class Lmer(object):
         ran_vars.index.name = None
         ran_vars.replace("NA", "", inplace=True)
         if callable(getattr(ran_vars, "map", None)):  # account for pd 2.1 change
-            ran_vars = ran_vars.map(lambda x: np.nan if x == robjects.NA_Character else x)
+            ran_vars = ran_vars.map(
+                lambda x: np.nan if x == robjects.NA_Character else x
+            )
         else:
             ran_vars = ran_vars.applymap(
                 lambda x: np.nan if x == robjects.NA_Character else x
@@ -1018,7 +1022,8 @@ class Lmer(object):
         print("Formula: {}\n".format(self.formula))
         print("Family: {}\t Inference: {}\n".format(self.family, self.sig_type))
         print(
-            "Number of observations: %s\t Groups: %s\n" % (self.data.shape[0], self.grps)
+            "Number of observations: %s\t Groups: %s\n"
+            % (self.data.shape[0], self.grps)
         )
         print("Log-likelihood: %.3f \t AIC: %.3f\n" % (self.logLike, self.AIC))
         print("Random effects:\n")
@@ -1299,7 +1304,9 @@ class Lmer(object):
         confs = confs.iloc[:, -2:]
         # Deal with changing column names again
         if "asymp.LCL" in confs.columns:
-            confs = confs.rename(columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"})
+            confs = confs.rename(
+                columns={"asymp.LCL": "2.5_ci", "asymp.UCL": "97.5_ci"}
+            )
         elif "lower.CL" in confs.columns:
             confs = confs.rename(columns={"lower.CL": "2.5_ci", "upper.CL": "97.5_ci"})
         else:

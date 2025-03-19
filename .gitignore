@@ -14,7 +14,6 @@ dist/*
 **/__pycache__
 dev/
 .coverage
-.vscode/settings.json
 *.key
 pytest.ini
 env/*
@@ -33,3 +32,4 @@ docs_bak
 *.egg-info
 # mkdocs site
 site
+.ruff_cache

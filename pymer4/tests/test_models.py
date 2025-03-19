@@ -281,7 +281,9 @@ def test_contrasts(gammas):
 def test_post_hoc(df):
     np.random.seed(1)
     model = Lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df, family="gaussian")
-    model.fit(factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False)
+    model.fit(
+        factors={"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]}, summarize=False
+    )
 
     marginal, contrasts = model.post_hoc(marginal_vars="IV3", p_adjust="dunnet")
 

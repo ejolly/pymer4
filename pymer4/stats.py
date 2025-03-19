@@ -517,7 +517,7 @@ def tost_equivalence(
         ax.text(
             0,
             1,
-            f"Equivalence bounds: [{lower}  {upper}]\nMean diff: {np.round(m,3)} [{np.round(lb,3)}  {np.round(ub,3)}]",
+            f"Equivalence bounds: [{lower}  {upper}]\nMean diff: {np.round(m, 3)} [{np.round(lb, 3)}  {np.round(ub, 3)}]",
             horizontalalignment="center",
             fontsize=14,
         )

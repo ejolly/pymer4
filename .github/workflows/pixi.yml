@@ -32,6 +32,10 @@ jobs:
         with:
           pixi-version: v0.42.1
 
+      - name: Pixi Check Errors & Formatting
+        run: | 
+         pixi run lint
+
       - name: Pixi Run Tests & Build Docs
         run: | 
          pixi run tests

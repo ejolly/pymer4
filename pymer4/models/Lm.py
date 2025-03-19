@@ -22,7 +22,6 @@ from ..utils import (
 
 
 class Lm(object):
-
     """
     Model class to perform OLS regression. Formula specification works just like in R based on columns of a dataframe. Formulae are parsed by patsy which makes it easy to utilize specifiy columns as factors. This is **different** from Lmer. See patsy for more information on the different use cases.
 
@@ -52,7 +51,6 @@ class Lm(object):
     """
 
     def __init__(self, formula, data, family="gaussian"):
-
         self.family = family
         implemented_fams = ["gaussian", "binomial"]
         if self.family not in implemented_fams:
@@ -425,7 +423,6 @@ class Lm(object):
             p, df, sig = self._calc_ols_pvals(df, t)
 
             if conf_int == "boot":
-
                 # Parallelize bootstrap computation for CIs
                 par_for = Parallel(n_jobs=n_jobs, backend="multiprocessing")
 
@@ -512,7 +509,6 @@ class Lm(object):
             return self.summary()
 
     def _calc_fit_statistics(self, x, y, residuals):
-
         if self.family != "gaussian":
             raise TypeError(
                 "Currently only gaussian models can calculate fit statistics"

@@ -36,6 +36,9 @@ package-data = {"pymer4" = ["resources/*"]}
 [tool.setuptools.dynamic]
 version = {attr = "pymer4.version.__version__"} 
 
+[tool.ruff.lint]
+ignore = ["W292","E501", "E731", "E741",]
+
 [tool.pixi.project]
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "linux-64"]
@@ -57,9 +60,13 @@ conda-build = ">=25.1.2,<26"
 anaconda-client = ">=1.13.0,<2"
 
 [tool.pixi.feature.dev.tasks]
+lint = "ruff check"
+lint-fix = "ruff check --fix && ruff format"
+
 test-install = "python -c 'from pymer4.test_install import test_install; test_install()'"
 tests = "pytest pymer4/tests/"
 tests-failed = "pytest pymer4/tests/ --lf"
+
 docs-build = "mkdocs build"
 docs = "mkdocs serve"
 

@@ -1,7 +1,6 @@
-from pymer4.utils import get_resource_path, result_to_table
+from pymer4.utils import result_to_table
 import pandas as pd
 from pymer4.models import Lm
-import os
 
 
 def test_result_to_table(df):

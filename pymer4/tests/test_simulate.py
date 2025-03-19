@@ -4,7 +4,6 @@ from pymer4.simulate import simulate_lm, simulate_lmm
 
 
 def test_simulate_lm():
-
     # Simulate some data
     num_obs = 500
     num_coef = 3
@@ -38,7 +37,6 @@ def test_simulate_lm():
 
 
 def test_simulate_lmm():
-
     # Simulate some data
     num_obs = 50
     num_coef = 3

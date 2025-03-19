@@ -57,9 +57,9 @@ def simulate_lm(
                 "Missing one coefficient value. Did you provide a value for the intercept term?"
             )
         else:
-            assert (
-                len(coef_vals) == num_coef + 1
-            ), "Number of coefficient values should be num_coef + 1 (for intercept)"
+            assert len(coef_vals) == num_coef + 1, (
+                "Number of coefficient values should be num_coef + 1 (for intercept)"
+            )
 
         b = coef_vals
     else:
@@ -69,9 +69,9 @@ def simulate_lm(
         assert len(mus) == len(b) - 1, "mus must match number of num_coef"
     if isinstance(sigmas, list) or isinstance(sigmas, np.ndarray):
         assert len(sigmas) == len(b) - 1, "sigmas must match number of num_coef"
-    assert (
-        isinstance(noise_params, tuple) and len(noise_params) == 2
-    ), "noise_params should be a tuple of (mean,std)"
+    assert isinstance(noise_params, tuple) and len(noise_params) == 2, (
+        "noise_params should be a tuple of (mean,std)"
+    )
 
     # Generate random design matrix
     if corrs is not None:
@@ -155,9 +155,9 @@ def simulate_lmm(
     else:
         b = np.random.rand(num_coef + 1)
 
-    assert (
-        isinstance(noise_params, tuple) and len(noise_params) == 2
-    ), "noise_params should be a tuple of (mean,std)"
+    assert isinstance(noise_params, tuple) and len(noise_params) == 2, (
+        "noise_params should be a tuple of (mean,std)"
+    )
     assert (
         isinstance(grp_sigmas, int)
         or isinstance(grp_sigmas, list)
@@ -166,9 +166,9 @@ def simulate_lmm(
     if not isinstance(grp_sigmas, list):
         grp_sigmas = [grp_sigmas] * (num_coef + 1)
     else:
-        assert len(grp_sigmas) == len(
-            b
-        ), "The length of a list of grp_sigmas must match the num_coef plus intercept!"
+        assert len(grp_sigmas) == len(b), (
+            "The length of a list of grp_sigmas must match the num_coef plus intercept!"
+        )
 
     if isinstance(mus, list) or isinstance(mus, np.ndarray):
         assert len(mus) == len(b) - 1, "mus must match number of num_coef"
@@ -262,9 +262,9 @@ def easy_multivariate_normal(
             and np.allclose(np.diagonal(corrs), np.ones_like(np.diagonal(corrs)))
         ), "Correlation matrix must be square symmetric"
     elif (isinstance(corrs, np.ndarray) and corrs.ndim == 1) or isinstance(corrs, list):
-        assert (
-            len(corrs) == (num_features * (num_features - 1)) / 2
-        ), "(num_features * (num_features - 1) / 2) correlation values are required for a flattened array or list"
+        assert len(corrs) == (num_features * (num_features - 1)) / 2, (
+            "(num_features * (num_features - 1) / 2) correlation values are required for a flattened array or list"
+        )
         corrs = squareform(corrs)
         np.fill_diagonal(corrs, 1.0)
     elif isinstance(corrs, float):

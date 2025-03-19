@@ -2,8 +2,6 @@ from pymer4.bridge import pandas2R, R2pandas, numpy2R, R2numpy, con2R
 from rpy2 import robjects as ro
 import numpy as np
 import pandas as pd
-from pymer4.utils import get_resource_path
-import os
 
 
 def test_pandas(df):
