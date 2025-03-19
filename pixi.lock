@@ -5069,7 +5069,7 @@ packages:
 - pypi: .
   name: pymer4
   version: 0.9.0
-  sha256: 72c10b6f6132972fc2cbd5149736c5e5ef92cfe8760f51827569b303d21e9d10
+  sha256: d8b42dbd7ec823a871e8341b1316e46c316e6c064f4491522c15071690710d89
   requires_dist:
   - pandas>=2.2.0
   - numpy>=2.0
