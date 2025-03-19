@@ -60,6 +60,8 @@ jobs:
           password: ${{ secrets.TEST_PYPI_TOKEN }}
           verbose: true
           repository-url: https://test.pypi.org/legacy/
+          attestations: false
+          skip-existing: true
 
       - name: Upload Real PyPi?
         if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
