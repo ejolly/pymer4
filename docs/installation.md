@@ -33,12 +33,6 @@ This is release is synchronized to the latest state of the `main` branch on Gith
 conda install -c ejolly/label/pre-release -c conda-forge pymer4
 ```
 
-
-## Install using `pixi`
-
-Alternatively, you can use Pixi which is a more modern environment manager for Python that supports both `conda` and `pip` packages. `pymer4` uses [Pixi for package development and testing](./development.md).
-
-
 ## Making sure the install worked
 
 You can test the installation by running the following command in a
