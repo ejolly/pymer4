@@ -8,7 +8,7 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  conda-build:
+  test-install:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

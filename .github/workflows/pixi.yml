@@ -43,21 +43,37 @@ jobs:
       #     github_token: ${{ secrets.GITHUB_TOKEN }}
       #     publish_dir: ./site
 
-      - name: Pixi Build Conda Package
+      - name: Pixi Build Conda & Pip Packages
         run: |
+          pixi run build-pip
           pixi run build
+
+      - name: Upload Test PyPi?
+        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
+        uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Upload Real PyPi?
+        if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
+        uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
 
       # Run this from within the pixi env by shelling in
       # because passing ANACONDA_TOKEN to pixi run upload-*
       # tasks wasn't working
-      - name: Pixi Upload to Anaconda Pre-release?
+      - name: Upload to Anaconda Pre-release?
         if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
           anaconda -t $ANACONDA_TOKEN upload $upload_file -l "pre-release"
 
-      - name: Pixi Upload to Anaconda Main?
+      - name: Upload to Anaconda Main?
         if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
         shell: pixi run bash -e {0}
         run: |

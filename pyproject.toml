@@ -64,6 +64,7 @@ docs-build = "mkdocs build"
 docs = "mkdocs serve"
 
 # Because Pixi build is still in beta, these comands can be used to emulate what GAs are doing locally
+build-pip = "python -m build --sdist --wheel --outdir dist/"
 build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
 build-output = "conda-build ./conda --output"
@@ -78,4 +79,4 @@ upload-main = { cmd = "anaconda -t $token upload $file -l 'main'", env = { token
 default = { features = ["dev"], solve-group = "default" }
 
 [dependency-groups]
-dev = [ "mkdocs>=1.6.1,<2", "mkdocs-material>=9.6.9,<10", "mkdocstrings-python>=1.16.6,<2", "mkdocs-jupyter>=0.25.1,<0.26"]
+dev = [ "mkdocs>=1.6.1,<2", "mkdocs-material>=9.6.9,<10", "mkdocstrings-python>=1.16.6,<2", "mkdocs-jupyter>=0.25.1,<0.26", "build>=1.2.2.post1,<2"]
