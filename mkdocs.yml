@@ -1,0 +1,92 @@
+site_name: Pymer4
+site_description: "pymer4: all the convenience of lme4 in python"
+site_url: "https://eshinjolly.com/pymer4"
+repo_url: "https://github.com/ejolly/pymer4"
+repo_name: "ejolly/pymer4"
+copyright: Copyright &copy; 2017-2025, Eshin Jolly
+extra:
+  generator: false
+
+theme:
+  icon:
+    logo: material/chart-bar
+  name: material
+  font: false
+  features:
+    - content.code.copy
+    - content.code.select
+    - navigation.footer
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    # Move right-sidebar into left
+    # - toc.integrate
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      accent: purple
+      primary: purple
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      accent: deep purple
+      primary: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+plugins:
+  - search
+
+  - mkdocs-jupyter:
+      execute: false
+      include_source: True
+
+  - mkdocstrings:
+      handlers:
+        python:
+          show_source: true
+          show_if_no_docstring: false
+      watch:
+        - docs
+
+nav:
+  - Getting Started:
+    - Overview: index.md
+    - Installation: installation.md
+  - Tutorials:
+    - tutorials/01_basic_usage.ipynb
+    - tutorials/02_categorical.ipynb
+    - tutorials/03_posthoc.ipynb
+    - tutorials/04_simulating_data.ipynb
+    - tutorials/05_misc_stats.ipynb
+  - API Reference:
+    - pymer4.bridge: api/bridge.md
+    - pymer4.models: api/models.md
+    - pymer4.simulate: api/simulate.md
+    - pymer4.stats: api/stats.md
+    - pymer4.io: api/io.md
+    - pymer4.utils: api/utils.md
+  - What's New: new.md
+  - Contributing:
+    - How to Contribute: contributing.md
+    - Development Guide: development.md

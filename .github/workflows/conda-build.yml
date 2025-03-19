@@ -1,0 +1,44 @@
+# Alternative workflow file to build using conda
+name: Conda Build
+on:
+  workflow_dispatch:
+    inputs:
+      upload_anaconda:
+        description: 'Upload build to anaconda?'
+        required: false
+        default: 'skip'
+        type: choice
+        options:
+          - 'skip'
+          - 'pre-release'
+          - 'main'
+
+jobs:
+  conda-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        py_ver: ['3.10', 3.11, 3.12]
+        os: [ubuntu-latest]
+    env:
+      ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        python-version: 3.11
+        channels: conda-forge,defaults
+        channel-priority: strict
+        activate-environment: build-env
+        auto-activate-base: false
+
+    - name: Build
+      shell: bash -el {0}
+      run: | 
+        conda config --set always_yes yes
+        conda config --set bld_path . 
+        conda install conda-build anaconda-client
+        conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
