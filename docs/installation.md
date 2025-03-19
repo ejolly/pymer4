@@ -1,9 +1,11 @@
 # Installation
 
-!!! warning "Note"
-
+!!! warning "**Do NOT install** using `pip`"
     Due to the cross-language nature of `pymer4`, installing via `pip` is **not supported**.  
-    You **must** install `pymer4` using `conda` or `pixi` as outlined below
+    You **must** install `pymer4` using `conda` as outlined below
+
+!!! Info "Windows Users"
+    Unfortunately, Windows it **not officially support** as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there.
 
 ## Install using `conda` (recommended)
 
