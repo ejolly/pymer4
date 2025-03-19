@@ -68,7 +68,7 @@ tests = "pytest pymer4/tests/"
 tests-failed = "pytest pymer4/tests/ --lf"
 
 docs-build = "mkdocs build"
-docs = "mkdocs serve"
+docs-serve = "mkdocs serve"
 
 # Because Pixi build is still in beta, these comands can be used to emulate what GAs are doing locally
 build-pip = "python -m build --sdist --wheel --outdir dist/"

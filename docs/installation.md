@@ -7,13 +7,15 @@
 !!! Info "Windows Users"
     Unfortunately, Windows it **not officially support** as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there.
 
-## Install using `conda` (recommended)
+## Install using `conda` 
 
 !!! note "Note"
 
     It's important to take note of `-c conda-forge` in the the `conda` commands below. This ensures that additional dependencies for `pymer4` are installed via the `conda-forge` channel which contains the relevant R packages, rather than Anaconda `defaults` which does not.
 
 If you don't already have Anaconda/Miniconda setup, follow first follow the instructions [here](https://www.anaconda.com/docs/getting-started/miniconda/install)
+
+### Stable version (recommended)
 
 If you have an existing `conda` environment you can install `pymer4` into it using:
 
@@ -27,7 +29,7 @@ Otherwise you can create a new environment, which will also install a few other 
 conda create --n pymer4 -c ejolly -c conda-forge pymer4
 ```
 
-## Install development version
+### Development version
 
 This is release is synchronized to the latest state of the `main` branch on Github. It may contain upcoming fixes, but undiscovered bugs as well.
 
@@ -35,13 +37,35 @@ This is release is synchronized to the latest state of the `main` branch on Gith
 conda install -c ejolly/label/pre-release -c conda-forge pymer4
 ```
 
-## Making sure the install worked
+### Making sure the install worked
 
 You can test the installation by running the following command in a
 terminal
 
 ``` bash
 python -c "from pymer4.test_install import test_install; test_install()"
+```
+
+## Install on Google Collab
+
+If you are having trouble or don't want to install `pymer4` locally, you can use it in a Google Colab notebook by running the following code in the top of a new cell. This will cause your notebook kernel to appear to "crash" and restart - *this is expected*
+
+```bash
+!pip install -q condacolab
+import condacolab
+condacolab.install()
+```
+
+Then in another cell install `pymer4` using the stable or development versions
+
+```bash
+# Stable version
+!mamba install pymer4 -c ejolly -c conda-forge
+```
+
+```bash
+# Or development version
+!mamba install pymer4 -c ejolly/label/pre-release -c conda-forge
 ```
 
 ## Installation Issues

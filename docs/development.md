@@ -58,7 +58,7 @@ The following tasks have already been configured in `pyproject.toml` and can be 
 | `pixi run tests` | Runs the full test-suite with `pytest` |
 | `pixi run lint` | Runs `ruff` to check for errors and formatting issues |
 | `pixi run lint-fix` | Runs `ruff` fix errors and formatting issues, rewriting files |
-| `pixi run docs` | Preview docs with live-reloading in the browser |
+| `pixi run docs-serve` | Preview docs with live-reloading in the browser |
 | `pixi run docs-build` | Builds the documentation using `mkdocs build` and outputs it to `site/` |
 | `pixi run build-pip` | Uses `pyhon -m build` to make a `pip` package |
 | `pixi run build` | Uses `conda-build` to make the package and verify it installs |
