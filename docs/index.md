@@ -1,6 +1,6 @@
 # Pymer4
 
-[![image](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml) [![image](https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Build.yml) [![image](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/version.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/platforms.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://pepy.tech/badge/pymer4)](https://pepy.tech/project/pymer4) [![image](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862) [![image](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205) ![image](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue) [![image](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ejolly/pymer4/issues)
+[![image](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Tests.yml) [![image](https://github.com/ejolly/pymer4/actions/workflows/Build.yml/badge.svg)](https://github.com/ejolly/pymer4/actions/workflows/Build.yml) [![image](https://badge.fury.io/py/pymer4.svg)](https://badge.fury.io/py/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/version.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://anaconda.org/ejolly/pymer4/badges/platforms.svg)](https://anaconda.org/ejolly/pymer4) [![image](https://pepy.tech/badge/pymer4)](https://pepy.tech/project/pymer4) [![image](http://joss.theoj.org/papers/10.21105/joss.00862/status.svg)](https://doi.org/10.21105/joss.00862) [![image](https://zenodo.org/badge/90598701.svg)](https://zenodo.org/record/1523205) ![image](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue) [![image](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/ejolly/pymer4/issues)
 
 `pymer4` is a statistics library for estimating various regression and
 multi-level models in Python. Love
@@ -22,7 +22,7 @@ some bells, such as robust standard errors, and two-stage regression
 **TL;DR** This package is your new *simple* Pythonic drop-in replacement
 for `lm()` or `glmer()` in R.
 
-For an example of what\'s possible check out the tutorials or [this blog
+For an example of what's possible check out the tutorials or [this blog
 post](https://eshinjolly.com/2019/02/18/rep_measures/) comparing
 different modeling strategies for clustered/repeated-measures data.
 
@@ -79,16 +79,16 @@ additional features:
 -   Easy generation of new data from a fitted model
 -   Optional permuted p-value computation via within cluster permutation
     testing (experimental)
--   **note** that `Lmer`\'s usage of `coef`, `fixef`, and `ranef`
+-   **note** that `Lmer`'s usage of `coef`, `fixef`, and `ranef`
     differs a bit from R:
--   `coef` = `summary(model)` in R, i.e. \"top level\" estimates, i.e.
+-   `coef` = `summary(model)` in R, i.e. "top level" estimates, i.e.
     the summary output of the model that can be used to make predictions
     on new datasets and on which inference (i.e. p-values) are computed
--   `fixef` = `coef(model)` in R, i.e. \"group/cluster\" level *fixed
+-   `fixef` = `coef(model)` in R, i.e. "group/cluster" level *fixed
     effects,* conceptually similar to coefficients obtained from running
     a seperate `Lm` (`lm` in R) for each group/cluster
--   `ranef` = `ranef(model)` in R, i.e. \"group/cluster\" level *random
-    effects,* deviance of each cluster with respect to \"top level\"
+-   `ranef` = `ranef(model)` in R, i.e. "group/cluster" level *random
+    effects,* deviance of each cluster with respect to "top level"
     estimates
 
 ### Additional Features

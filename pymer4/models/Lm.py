@@ -95,7 +95,7 @@ class Lm(object):
             else:
                 dv = self.formula.split("~")[0]
                 weight_groups = self.data.groupby(weights)
-                weight_vals = 1 / weight_groups[dv].transform(np.var, ddof=1)
+                weight_vals = 1 / weight_groups[dv].transform("var", ddof=1)
         else:
             weight_vals = weights
             weight_groups = None

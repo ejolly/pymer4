@@ -2,16 +2,14 @@
 
 !!! warning "**Do NOT install** using `pip`"
     Due to the cross-language nature of `pymer4`, installing via `pip` is **not supported**.  
-    You **must** install `pymer4` using `conda` as outlined below
+    You **must** install `pymer4` using `conda` as outlined below or use [Google Colab](#using-google-collab)
 
 !!! Info "Windows Users"
-    Unfortunately, Windows it **not officially support** as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there.
+    Unfortunately, Windows it **not officially support** as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there.  
 
-## Install using `conda` 
+    Alternatively you can try to follow [this guide](https://joonro.github.io/blog/posts/install-rpy2-windows-10/) to setup an R installation with the `rpy2` Python library.
 
-!!! note "Note"
-
-    It's important to take note of `-c conda-forge` in the the `conda` commands below. This ensures that additional dependencies for `pymer4` are installed via the `conda-forge` channel which contains the relevant R packages, rather than Anaconda `defaults` which does not.
+## Install via `conda`
 
 If you don't already have Anaconda/Miniconda setup, follow first follow the instructions [here](https://www.anaconda.com/docs/getting-started/miniconda/install)
 
@@ -29,6 +27,10 @@ Otherwise you can create a new environment, which will also install a few other 
 conda create --n pymer4 -c ejolly -c conda-forge pymer4
 ```
 
+!!! note "Note"
+
+    The `-c conda-forge` in the the `conda` commands above ensures that additional dependencies for `pymer4` are installed via the `conda-forge` channel which contains the relevant R packages, rather than Anaconda `defaults` which does not.
+
 ### Development version
 
 This is release is synchronized to the latest state of the `main` branch on Github. It may contain upcoming fixes, but undiscovered bugs as well.
@@ -39,36 +41,52 @@ conda install -c ejolly/label/pre-release -c conda-forge pymer4
 
 ### Making sure the install worked
 
-You can test the installation by running the following command in a
-terminal
+You can test the installation by running the following command in a terminal within the environment you installed `pymer4`
 
 ``` bash
 python -c "from pymer4.test_install import test_install; test_install()"
 ```
 
-## Install on Google Collab
+## Using Google Collab
 
-If you are having trouble or don't want to install `pymer4` locally, you can use it in a Google Colab notebook by running the following code in the top of a new cell. This will cause your notebook kernel to appear to "crash" and restart - *this is expected*
+If you are having trouble or don't want to install `pymer4` locally, you can use it in a Google Colab notebook by following the directions below. Or you can just copy the [Example Notebook](https://colab.research.google.com/drive/19D15LAid9GgqSm9kU_TXy9ERUM7mBvnN?usp=sharing) that we've setup. 
+
+
+### Setting up `conda` on Collab 
+
+In the first cell of your note book add the following code and run it. This will cause your notebook kernel to appear to "crash" and restart - *this is expected*
 
 ```bash
 !pip install -q condacolab
 import condacolab
 condacolab.install()
 ```
+### Installing `pymer4`
 
-Then in another cell install `pymer4` using the stable or development versions
+Now you have the `mamba` command available that you can use to install `pymer4` using the stable or development versions:
 
 ```bash
 # Stable version
-!mamba install pymer4 -c ejolly -c conda-forge
+!mamba install -q pymer4 -c ejolly -c conda-forge
 ```
 
 ```bash
 # Or development version
-!mamba install pymer4 -c ejolly/label/pre-release -c conda-forge
+!mamba install -q pymer4 -c ejolly/label/pre-release -c conda-forge
 ```
 
-## Installation Issues
+### Making sure the install worked
+
+In another notebook cell you can quickly test the installation using:
+
+```python
+from pymer4.test_install import test_install
+test_install()
+```
+
+Then you should be all set!
+
+## Technical Issues
 
 If you accidentally installed using `pip` you will have an unsupported version that is highly unlikely to work. Please install using one of the alternative methods above. Otherwise, the following solutions may help.
 
