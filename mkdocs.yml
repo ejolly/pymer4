@@ -79,6 +79,23 @@ nav:
     - tutorials/03_posthoc.ipynb
     - tutorials/04_simulating_data.ipynb
     - tutorials/05_misc_stats.ipynb
+  - TidyStats (Experimental): 
+    - Overview: tidystats/overview.md
+    - Basic Usage: tidystats/basics.ipynb
+    - Adding more R libraries: tidystats/extending.ipynb
+    - Current R libraries & functions:
+      - base: tidystats/api/base.md
+      - broom & broom.mixed: tidystats/api/broom.md
+      - emmeans: tidystats/api/emmeans.md
+      - janitor: tidystats/api/janitor.md
+      - lmerTest: tidystats/api/lmerTest.md
+      - stats: tidystats/api/stats.md
+      - tidyverse: tidystats/api/tidyverse.md
+    - Additional API Modules:
+      - tidystats.bridge: tidystats/api/bridge.md
+      - tidystats.data: tidystats/api/data.md
+      # - tidystats.pipes: tidystats/api/pipes.md
+
   - API Reference:
     - pymer4.bridge: api/bridge.md
     - pymer4.models: api/models.md
