@@ -2,8 +2,8 @@
 # Datasets
 from ._data import *
 
-# Piping functionality
-# from .pipes import *
+# # Piping functionality
+# from .pipes._pipes import *
 
 # R <-> Python helpers
 from ._bridge import *

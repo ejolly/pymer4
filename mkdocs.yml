@@ -60,6 +60,7 @@ plugins:
   - mkdocs-jupyter:
       execute: false
       include_source: True
+      ignore: ['dev*.ipynb']
 
   - mkdocstrings:
       handlers:
@@ -82,6 +83,7 @@ nav:
   - TidyStats (Experimental): 
     - Overview: tidystats/overview.md
     - Basic Usage: tidystats/basics.ipynb
+    - Pipe-style Usage: tidystats/pipes.ipynb
     - Adding more R libraries: tidystats/extending.ipynb
     - Current R libraries & functions:
       - base: tidystats/api/base.md
@@ -94,7 +96,6 @@ nav:
     - Additional API Modules:
       - tidystats.bridge: tidystats/api/bridge.md
       - tidystats.data: tidystats/api/data.md
-      # - tidystats.pipes: tidystats/api/pipes.md
 
   - API Reference:
     - pymer4.bridge: api/bridge.md

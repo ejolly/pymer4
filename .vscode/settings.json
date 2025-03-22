@@ -5,9 +5,6 @@
         "editor.tabSize": 4,
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.fixAll.ruff": "explicit"
-        },
     },
     "ruff.nativeServer": "on",
     "ruff.importStrategy": "fromEnvironment",

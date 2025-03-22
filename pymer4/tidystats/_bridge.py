@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from rpy2.robjects.conversion import localconverter
 from rpy2.robjects import pandas2ri, numpy2ri
 import rpy2.robjects as ro
@@ -64,8 +63,11 @@ def R2polars(rdf):
     """Local conversion of R dataframe to polars as recommended by rpy2"""
     if not isinstance(rdf, pl.DataFrame):
         with localconverter(ro.default_converter + pandas2ri.converter):
-            data = ro.conversion.get_conversion().rpy2py(rdf)
-        return pl.DataFrame(data)
+            pandas_df = ro.conversion.get_conversion().rpy2py(rdf)
+            pandas_df = pandas_df.map(
+                lambda elem: np.nan if elem is ro.NA_Character else elem
+            )
+        return pl.from_pandas(pandas_df)
     return rdf
 
 

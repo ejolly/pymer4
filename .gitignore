@@ -33,3 +33,4 @@ docs_bak
 # mkdocs site
 site
 .ruff_cache
+dev*.ipynb
