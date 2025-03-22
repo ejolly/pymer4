@@ -6741,7 +6741,7 @@ packages:
 - pypi: .
   name: pymer4
   version: 0.9.0
-  sha256: ea264bfd67df5908b2f0d6246b685908c85cb3fe7d63362158f4d1e093e13dbc
+  sha256: cc48ef185bfd9ad634963c7cc4b50b5acd2abbb4040f25400ef2af6aa25888bd
   requires_dist:
   - pandas>=2.2.0
   - numpy>=2.0
@@ -6750,7 +6750,7 @@ packages:
   - joblib>=1.4.2
   - scipy>=1.13.0
   - scikit-learn>=1.4
-  - polars>=1.25.2,<2
+  - polars>=1.24.0,<2
   - toolz>=1.0.0,<2
   requires_python: '>=3.10'
   editable: true
