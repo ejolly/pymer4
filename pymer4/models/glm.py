@@ -1,7 +1,6 @@
 from .base import requires_fit
 from .lm import lm
 from polars import col
-import polars as pl
 from ..tidystats.stats import glm as glm_
 from ..tidystats.tables import summary_glm_table
 from ..tidystats.broom import augment

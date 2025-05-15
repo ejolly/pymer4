@@ -1,4 +1,4 @@
-__all__ = ['get_summary']
+__all__ = ["get_summary"]
 import rpy2.robjects as ro
 
 

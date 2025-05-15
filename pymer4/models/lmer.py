@@ -1,12 +1,11 @@
 from .base import enable_logging, requires_fit
 from .lm import lm as lm_
 from ..tidystats.broom import tidy
-from ..tidystats.lmerTest import ranef, lmer as lmer_, fixef
+from ..tidystats.lmerTest import ranef, lmer as lmer_
 from ..tidystats.multimodel import coef, confint, predict, simulate
 from ..tidystats.tables import summary_lmm_table
 from ..tidystats.stats import anova
 from ..tidystats.emmeans_lib import joint_tests
-from ..tidystats.easystats import get_fixed_params
 from polars import DataFrame
 from rpy2.robjects import NULL, NA_Real
 

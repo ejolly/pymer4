@@ -1,6 +1,6 @@
 from ..tidystats.broom import tidy, glance, augment
 from ..tidystats.stats import model_matrix, anova
-from ..tidystats.multimodel import coef, predict, simulate
+from ..tidystats.multimodel import predict, simulate
 from ..tidystats.emmeans_lib import emmeans, emtrends, joint_tests, ref_grid
 from ..tidystats.easystats import report as report_, get_fixed_params
 from ..tidystats.tables import anova_table

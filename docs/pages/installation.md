@@ -31,7 +31,7 @@ conda create --n pymer4 -c ejolly -c conda-forge pymer4
 You can test the installation by running the following command in a terminal within the environment you installed `pymer4`
 
 ```bash
-python -c "from pymer4.test_install import test_install; test_install()"
+python -c "from pymer4 import test_install; test_install()"
 ```
 
 :::{note}

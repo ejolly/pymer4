@@ -34,12 +34,4 @@ jobs:
       run: | 
         conda config --set always_yes yes
         conda install pymer4 -c ejolly/label/pre-release -c conda-forge
-        python -c "from pymer4.test_install import test_install; test_install()"
-
-    # - name: Build
-    #   shell: bash -el {0}
-    #   run: | 
-    #     conda config --set always_yes yes
-    #     conda config --set bld_path . 
-    #     conda install conda-build anaconda-client
-    #     conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify
+        python -c "from pymer4 import test_install; test_install()"

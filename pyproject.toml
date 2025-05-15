@@ -76,6 +76,7 @@ lint-fix = "ruff check --fix && ruff format"
 
 tests = "pytest pymer4/tests/"
 tests-failed = "pytest pymer4/tests/ --lf"
+test-install = "python -c 'from pymer4 import test_install; test_install()'"
 
 docs-build = "jupyter-book build docs/"
 docs-clean = "jupyter-book clean docs/"

@@ -51,9 +51,15 @@ def test_model_basics(credit):
     m.fit()
     scaled_params = m.params
     # Intercepts should change
-    assert scaled_params.select("Estimate")[0, 0] != unscaled_params.select("Estimate")[0, 0]
+    assert (
+        scaled_params.select("Estimate")[0, 0]
+        != unscaled_params.select("Estimate")[0, 0]
+    )
     # But slope wont
-    assert scaled_params.select("Estimate")[1, 0] == unscaled_params.select("Estimate")[1, 0]
+    assert (
+        scaled_params.select("Estimate")[1, 0]
+        == unscaled_params.select("Estimate")[1, 0]
+    )
 
     # And unscale it
     m.unset_transforms("Income")
@@ -61,7 +67,10 @@ def test_model_basics(credit):
     m.fit()
     new_params = m.params
     # Check the values are restored after unscaling
-    assert new_params.get_column("Estimate").to_list() == unscaled_params.get_column("Estimate").to_list()
+    assert (
+        new_params.get_column("Estimate").to_list()
+        == unscaled_params.get_column("Estimate").to_list()
+    )
 
     # Scale multiple columns
     m.set_transforms(["Income", "Limit"], transform="center")
@@ -239,7 +248,6 @@ def test_unbalanced_anova(poker):
 
 
 def test_categorical_emmeans(poker, sleep):
-
     # hand: [bad, good, neutral]
     # skill: [average, expert]
     m = lm("balance ~ hand*skill", data=poker)
@@ -252,7 +260,10 @@ def test_categorical_emmeans(poker, sleep):
 
     # Compare them to the actual cell means
     cell_means = (
-        poker.group_by(["hand", "skill"]).mean().drop("limit").sort(by=["hand", "skill"])
+        poker.group_by(["hand", "skill"])
+        .mean()
+        .drop("limit")
+        .sort(by=["hand", "skill"])
     )
     assert np.allclose(emms["emmean"].to_numpy(), cell_means["balance"].to_numpy())
 
@@ -389,7 +400,9 @@ def test_mixed_emmeans(credit):
     # however this will change the scale of the interaction and categorical parameters
     # contr.sum will do No: 1; Yes: -1 by default
     assert np.allclose(model.params.select("Estimate")[2, 0], no_minus_yes / 2)
-    assert np.allclose(model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2)
+    assert np.allclose(
+        model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2
+    )
 
     # We can set them manually to check
     # When we set them manually, we use *human-readable format*
@@ -398,7 +411,9 @@ def test_mixed_emmeans(credit):
     model.set_contrasts({"Student": [0.5, -0.5]})
     model.fit()
     assert np.allclose(model.params.select("Estimate")[2, 0], no_minus_yes / 2)
-    assert np.allclose(model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2)
+    assert np.allclose(
+        model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2
+    )
 
     # But we can just do this, which gives us the contrast we actually want
     model.set_contrasts({"Student": [1, -1]})

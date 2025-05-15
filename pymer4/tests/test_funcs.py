@@ -3,7 +3,7 @@ from polars import DataFrame
 from polars.datatypes import String, Enum
 from rpy2.robjects.vectors import FactorVector, StrVector
 import pymer4.tidystats as ts
-import pymer4.tidystats.config as config
+import pymer4.config as config
 from pymer4.models import lmer
 from rpy2.robjects.packages import importr
 
@@ -175,7 +175,6 @@ def test_glm_family(titanic):
 
 
 def test_easy_boot(sleep):
-
     model = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
     model.fit()
     boots = ts.bootstrap_model(model)

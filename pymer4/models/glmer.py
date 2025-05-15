@@ -1,6 +1,5 @@
 from .lmer import lmer
 from .base import requires_fit, enable_logging
-from ..tidystats.broom import tidy
 from ..tidystats.lmerTest import glmer as glmer_
 from ..tidystats.tables import summary_glmm_table
 from ..tidystats.multimodel import predict

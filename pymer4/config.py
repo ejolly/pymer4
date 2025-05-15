@@ -1,16 +1,18 @@
 from rpy2.situation import get_r_home
 from rpy2.robjects.packages import importr
+from .models import lm
+from .io import load_dataset
 
 installed_packages = importr("utils").installed_packages
 
-__all__ = ["Rhome", "check"]
+__all__ = ["Rhome", "check_rlibs", "check_modelfit", "test_install"]
 
 
 def Rhome():
     return get_r_home()
 
 
-def check():
+def check_rlibs():
     required = (
         "lmerTest",
         "emmeans",
@@ -30,3 +32,17 @@ def check():
         )
     else:
         print(f"All required R libraries found:\n{required}")
+
+
+def check_modelfit():
+    try:
+        lm("Reaction ~ Days", data=load_dataset("sleep")).fit()
+        print("Installation working successfully!")
+    except Exception as e:
+        print("Error! {}".format(e))
+
+
+def test_install():
+    Rhome()
+    check_rlibs()
+    check_modelfit()
