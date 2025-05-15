@@ -51,14 +51,14 @@ def test_model_basics(credit):
     m.fit()
     scaled_params = m.params
     # Intercepts should change
-    assert (
-        scaled_params.select("Estimate")[0, 0]
-        != unscaled_params.select("Estimate")[0, 0]
+    assert not np.allclose(
+        scaled_params.select("Estimate")[0, 0],
+        unscaled_params.select("Estimate")[0, 0],
     )
     # But slope wont
-    assert (
-        scaled_params.select("Estimate")[1, 0]
-        == unscaled_params.select("Estimate")[1, 0]
+    assert np.allclose(
+        scaled_params.select("Estimate")[1, 0],
+        unscaled_params.select("Estimate")[1, 0],
     )
 
     # And unscale it
