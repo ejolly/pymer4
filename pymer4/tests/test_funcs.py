@@ -3,7 +3,7 @@ from polars import DataFrame
 from polars.datatypes import String, Enum
 from rpy2.robjects.vectors import FactorVector, StrVector
 import pymer4.tidystats as ts
-import pymer4.config as config
+from pymer4.config import test_install
 from pymer4.models import lmer
 from rpy2.robjects.packages import importr
 
@@ -11,9 +11,7 @@ lib_stats = importr("stats")
 
 
 def test_config():
-    home = config.Rhome()
-    assert home
-    config.check()
+    test_install()
 
 
 def test_categorical_conversion(poker):

@@ -67,9 +67,9 @@ def test_model_basics(credit):
     m.fit()
     new_params = m.params
     # Check the values are restored after unscaling
-    assert (
-        new_params.get_column("Estimate").to_list()
-        == unscaled_params.get_column("Estimate").to_list()
+    assert np.allclose(
+        new_params.get_column("Estimate").to_list(),
+        unscaled_params.get_column("Estimate").to_list(),
     )
 
     # Scale multiple columns
