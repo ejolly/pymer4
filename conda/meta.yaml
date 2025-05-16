@@ -48,7 +48,7 @@ test:
   imports:
    - pymer4
   commands:
-   - python -c "from pymer4.test_install import test_install; test_install()"
+   - python -c "from pymer4 import test_install; test_install()"
 
 about:
   home: "https://eshinjolly.com/pymer4/"

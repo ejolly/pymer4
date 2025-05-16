@@ -7,6 +7,7 @@ parts:
     - file: pages/installation
     - file: pages/quickstart.ipynb
     - file: pages/new
+    - file: pages/migrating
     - file: pages/faqs
 
   - caption: Tutorials

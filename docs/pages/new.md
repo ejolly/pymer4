@@ -1,43 +1,39 @@
 # What's New
 
 ## 0.9.0
-This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and API breaking changes. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
+This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and API breaking changes. You can check out the [migration guide](./migrating.md) for more details. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
 
-As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect regular `conda-forge` releases as well. `pip` will continue to contain previous versions, but new versions will no longer be made available there
+As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect to move to the `conda-forge` channel soon.
 
-### New Features
-- new consistent API and fewer "invisible features"
-- all models have been renamed
-- overhauled docs and tutorials
-- much more testing
-- rely on "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`)
-- integration of additional R libaries with a path towards extensibility of new features
-- adoption of `polars` as dataframe "backend"
-- comptatibility with `sci-kit learn` 
-- ...
-
-### Planned features
-- support for `lmerControl` options
-- automatic convertion to `scikit-learn` compatible estimators via `.to_sklearn()`
-- simulation and power modules
-
-### Breaking/Deprecated Features and Modules
-- `Lm2` two-stage summary-statistics models
-- model permutation (`permute` kwarg to `.fit()` methods)
-- auxillary tests and statistics functions `pymer4.stats`
-
-### Encompassed Fixes
-- [#134](https://github.com/ejolly/pymer4/issues/134)
-- [#139](https://github.com/ejolly/pymer4/pull/139)
-- `Lmer.fits` are now properly converted to a numpy array
-
-### Development Changes
+### Summary of changes
+- New consistent API that supports `lm`, `glm`, `lmer` and `glmer` models
+- Full support for factors and marginal-estimates/comparisons for all model types
+- Overhauled docs and tutorials
+- Much more extensive testing
+- Replaced bespoke code with "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`)
+- Adoption of `polars` as dataframe "backend"
 - Switched `setup.py` and `requirements.txt/requirements-dev.txt` to `pyproject.toml`
 - Switche over to Pixi for development-tooling and Github Actions
 - Switched `sphinx` docs to `jupyterbook`
 - Dropped `black` in favor of `ruff`
 - Exclusively create `noarch` builds for conda
   - Currently implemented as a `pixi task` using `conda build`, with plans to switch to [`pixi build` when ready](https://pixi.sh/latest/build/python/)
+
+### Encompassed Fixes
+- [#61](https://github.com/ejolly/pymer4/issues/61)
+- [#71](https://github.com/ejolly/pymer4/issues/71)
+- [#99](https://github.com/ejolly/pymer4/issues/99)
+- [#102](https://github.com/ejolly/pymer4/issues/102)
+- [#124](https://github.com/ejolly/pymer4/issues/124)
+- [#130](https://github.com/ejolly/pymer4/issues/130)
+- [#132](https://github.com/ejolly/pymer4/issues/132)
+- [#134](https://github.com/ejolly/pymer4/issues/134)
+- [#139](https://github.com/ejolly/pymer4/pull/139)
+
+### Planned features
+- support for `lmerControl` options
+- automatic convertion to `scikit-learn` compatible estimators via `.to_sklearn()`
+- simulation and power modules
 
 ## 0.8.2
 

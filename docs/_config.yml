@@ -18,8 +18,7 @@ html:
   use_issues_button: true
   use_multitoc_numbering: false
   use_repository_button: true
-  announcement: "Welcome to the new pymer4 documentation! Version 0.9.X includes a totally new API and many new features, and is therefore not backwards compatible with previous versions!"
-
+  announcement: "Version 0.9.0 includes a totally new API and new features that are not backwards compatible with previous versions! Check out the <a style='color: #87CEEB;' href='pages/migrating.html'>migration guide</a> for more information."
 parse:
   myst_enable_extensions:
     - amsmath
