@@ -19,7 +19,16 @@ on:
 jobs:
   pixi-test-and-docs:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        pixienv: ['py310', 'py311', 'py312']
+        os: [ubuntu-latest, macos-latest]
+        experimenta: [false]
+        include:
+          - os: windows-latest
+            experimental: true
     env:
       ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,6 +40,7 @@ jobs:
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.8
         with:
+          environments: ${{ matrix.pixienv }}
           pixi-version: v0.45.0
           cache: true
 
