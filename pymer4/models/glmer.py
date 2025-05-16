@@ -31,7 +31,7 @@ class glmer(lmer):
         super().__init__(formula, data)
         self._r_func = glmer_
         self._summary_func = summary_glmm_table
-        self.family = family
+        self.family = family.capitalize() if family == "gamma" else family
         self.link = link
         self._type_predict = "response"
         self.result_fit_odds = None
