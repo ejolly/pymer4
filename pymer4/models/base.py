@@ -260,7 +260,8 @@ class model(object):
         and analysis.
         """
         if self.r_console:
-            print(f"R messages: \n{'\n'.join(self.r_console)}")
+            messages = "\n".join(self.r_console)
+            print(f"R messages: \n{messages}")
 
     def clear_logs(self):
         """Clear any captured messages and warnings from R.
