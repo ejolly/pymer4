@@ -19,16 +19,7 @@ on:
 jobs:
   pixi-test-and-docs:
 
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        pixienv: ['py310', 'py311', 'py312']
-        os: [ubuntu-latest, macos-latest]
-        experimenta: [false]
-        include:
-          - os: windows-latest
-            experimental: true
+    runs-on: ubuntu-latest
     env:
       ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -40,7 +31,6 @@ jobs:
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.8
         with:
-          environments: ${{ matrix.pixienv }}
           pixi-version: v0.45.0
           cache: true
 
@@ -103,3 +93,32 @@ jobs:
         run: |
           upload_file=$(pixi run build-output)
           anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
+
+  test-built-install:
+    needs: pixi-test-and-docs
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        py_ver: ['3.10', 3.11, 3.12]
+        os: [ubuntu-latest, macos-latest]
+    env:
+      ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        python-version: ${{ matrix.py_ver }}
+        channels: conda-forge,defaults
+        channel-priority: strict
+        activate-environment: build-env
+        auto-activate-base: false
+
+    - name: Test install
+      shell: bash -el {0}
+      run: | 
+        conda config --set always_yes yes
+        conda install pymer4 -c ejolly/label/pre-release -c conda-forge
+        python -c "from pymer4 import test_install; test_install()"

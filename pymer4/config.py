@@ -20,6 +20,7 @@ def check_rlibs():
         "broom",
         "broom.mixed",
         "arrow",
+        "report",
     )
     libs = [lib for lib in installed_packages() if isinstance(lib, str)]
     missing_libs = []

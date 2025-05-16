@@ -71,13 +71,6 @@ anaconda-client = ">=1.13.0,<2"
 jupyter-book = ">=1.0.4.post1,<2"
 altair = ">=5.5.0,<6"
 
-[tool.pixi.feature.py310.dependencies]
-python ="3.10.*"
-[tool.pixi.feature.py311.dependencies]
-python ="3.11.*"
-[tool.pixi.feature.py312.dependencies]
-python ="3.12.*"
-
 [tool.pixi.feature.dev.tasks]
 lint = "ruff check"
 lint-fix = "ruff check --fix && ruff format"
@@ -108,9 +101,6 @@ cmd ="pytest pymer4/tests -k '{{ test_name }}'"
 
 [tool.pixi.environments]
 default = { features = ["dev"], solve-group = "default" }
-py310 = { features = ["py310", "dev"] }
-py311 = { features = ["py311", "dev"] }
-py312 = { features = ["py312", "dev"] }
 
 [dependency-groups]
 dev = [ "build>=1.2.2.post1,<2", "sphinx-autodoc2>=0.5.0,<0.6", "sphinxcontrib-mermaid>=1.0.0,<2"]
