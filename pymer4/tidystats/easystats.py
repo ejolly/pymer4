@@ -128,7 +128,6 @@ def get_param_names(r_model):
 def model_params(
     r_model,
     effects="fixed",
-    ci_method="satterthwaite",
     exponentiate=False,
     bootstrap=False,
     **kwargs,
@@ -138,7 +137,6 @@ def model_params(
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
         effects (str, optional): Whether to include fixed or random effects. Defaults to "fixed".
-        ci_method (str, optional): Method for calculating confidence intervals. Defaults to "satterthwaite".
         exponentiate (bool, optional): Whether to exponentiate the parameters. Defaults to False.
     """
     if not isinstance(r_model, (RS4, ListVector)):
@@ -146,7 +144,6 @@ def model_params(
     return params.model_parameters(
         r_model,
         effects=effects,
-        ci_method=ci_method,
         exponentiate=exponentiate,
         bootstrap=bootstrap,
         **kwargs,

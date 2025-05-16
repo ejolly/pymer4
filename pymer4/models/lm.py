@@ -17,7 +17,7 @@ class lm(model):
 
     """
 
-    def __init__(self, formula, data):
+    def __init__(self, formula, data, **kwargs):
         """Initialize the linear model.
 
         Args:
@@ -30,13 +30,9 @@ class lm(model):
             nboot (int, optional): Number of bootstrap samples.
             conf_level (float, optional): Confidence level for intervals.
         """
-        super().__init__(formula, data)
+        super().__init__(formula, data, **kwargs)
         self._r_func = lm_
         self._summary_func = summary_lm_table
-        self.conf_method = None
-        self.ci_type = None
-        self.nboot = None
-        self.conf_level = None
 
     def _2_get_tidy_summary(self, **kwargs):
         """Process and format the model summary.

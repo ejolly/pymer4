@@ -1,8 +1,8 @@
 from .base import enable_logging, requires_fit
-from .lm import lm as lm_
+from .lm import lm
 from ..tidystats.broom import tidy
 from ..tidystats.lmerTest import ranef, lmer as lmer_
-from ..tidystats.multimodel import coef, confint, predict, simulate
+from ..tidystats.multimodel import coef, confint
 from ..tidystats.tables import summary_lmm_table
 from ..tidystats.stats import anova
 from ..tidystats.emmeans_lib import joint_tests
@@ -10,7 +10,7 @@ from polars import DataFrame
 from rpy2.robjects import NULL, NA_Real
 
 
-class lmer(lm_):
+class lmer(lm):
     """Linear mixed effects model estimated via ML/REML. Inherits from ``lm``.
 
     This class implements linear mixed effects models using Maximum Likelihood or
@@ -22,14 +22,14 @@ class lmer(lm_):
         data (DataFrame): Input data for the model
     """
 
-    def __init__(self, formula, data):
+    def __init__(self, formula, data, **kwargs):
         """Initialize the linear mixed effects model.
 
         Args:
             formula (str): R-style formula specifying the model, including random effects
             data (DataFrame): Input data for the model
         """
-        super().__init__(formula, data)
+        super().__init__(formula, data, **kwargs)
         self._r_func = lmer_
         self._summary_func = summary_lmm_table
         # In addition to params like lm models
@@ -246,7 +246,7 @@ class lmer(lm_):
             ndarray: Predicted values
         """
         re_form = NULL if use_rfx else NA_Real
-        return predict(self.r_model, data, re_form=re_form, **kwargs)
+        return super().predict(data, re_form=re_form, **kwargs)
 
     @requires_fit
     def simulate(self, nsim: int = 1, use_rfx=True, **kwargs):
@@ -263,4 +263,4 @@ class lmer(lm_):
                 and columns equal to nsim
         """
         re_form = NULL if use_rfx else NA_Real
-        return simulate(self.r_model, nsim, re_form=re_form, **kwargs)
+        return super().simulate(nsim, re_form=re_form, **kwargs)

@@ -1,11 +1,10 @@
 from .base import requires_fit
 from .lm import lm
-from polars import col
+from polars import col, DataFrame
 from ..tidystats.stats import glm as glm_
 from ..tidystats.tables import summary_glm_table
 from ..tidystats.broom import augment
 from ..tidystats.plutils import join_on_common_cols
-from ..tidystats.multimodel import predict
 from ..rfuncs import get_summary
 from ..expressions import logit2odds
 from rpy2.robjects.packages import importr
@@ -27,54 +26,12 @@ class glm(lm):
         link (str): Link function to use. Defaults to "default" which uses the canonical link for each family
     """
 
-    def __init__(self, formula, data, family="gaussian", link="default"):
-        super().__init__(formula, data)
+    def __init__(self, formula, data, family="gaussian", link="default", **kwargs):
+        super().__init__(formula, data, family=family, link=link, **kwargs)
         self._r_func = glm_
         self._summary_func = summary_glm_table
-        self.family = family
-        self.link = link
         self._type_predict = "response"
         self.result_fit_odds = None
-        self.result_fit_probs = None
-        self.result_bootci_odds = None
-        self.result_bootci_probs = None
-        self._configure_family_link()
-
-    def _configure_family_link(self):
-        """Configure the R family and link function objects for the model."""
-        family = getattr(lib_stats, self.family)
-        self._r_family_link = (
-            family() if self.link == "default" else family(link=self.link)
-        )
-        self._convert_logit2odds = self.family == "binomial" and self.link in [
-            "default",
-            "logit",
-        ]
-
-    def __repr__(self):
-        """Return string representation of the model.
-
-        Returns:
-            str: String representation including class name, fitted status, formula, family and link
-        """
-        out = "{}(fitted={}, formula={}, family={}, link={})".format(
-            self.__class__.__module__,
-            self.fitted,
-            self.formula,
-            self.family,
-            self.link,
-        )
-        return out
-
-    def _1_setup_R_model(self, **kwargs):
-        """Set up the R model with family and link function.
-
-        Args:
-            **kwargs: Additional keyword arguments passed to the R GLM function
-        """
-        self.r_model = self._r_func(
-            self.formula, self.data, family=self._r_family_link, **kwargs
-        )
 
     def _2_get_tidy_summary(self, **kwargs):
         """Gets summary of fixed effects and adds additional attributes with odds-scale estimates for binomial models with logit link."""
@@ -108,11 +65,7 @@ class glm(lm):
             type_predict (str): Type of prediction to compute ("response" or "link"). Defaults to "response"
         """
         # Add predictions but incorporate the link scale
-        self._type_predict = type_predict
-        self.data = join_on_common_cols(
-            self.data,
-            augment(self.r_model, type_predict=type_predict),
-        )
+        super()._5_get_augment_fits_resids(type_predict=type_predict)
 
     def fit(
         self,
@@ -142,7 +95,7 @@ class glm(lm):
             GT, optional: Model summary if ``summary=True``
         """
         # 1) Setup R model
-        self._1_setup_R_model(**kwargs)
+        super()._1_setup_R_model(**kwargs)
 
         # 2) Get tidy fixed effects summary table
         self._2_get_tidy_summary()
@@ -187,15 +140,15 @@ class glm(lm):
         print(get_summary(self.r_model))
 
     @requires_fit
-    def predict(self, *args, type_predict="response", **kwargs):
-        """Make predictions from the model.
+    def predict(self, data: DataFrame, type_predict="response", **kwargs):
+        """Make predictions from the model accounting for the link function.
 
         Args:
             data (DataFrame): Data to make predictions on
-            type_predict (str): Type of prediction to compute ("response" or "link"). Defaults to "response"
+            type_predict (str, optional): Type of prediction to compute ("response" or "link"). Defaults to "response"
             **kwargs: Additional keyword arguments passed to predict function
 
         Returns:
             ndarray: Predicted values
         """
-        return predict(self.r_model, *args, type=type_predict, **kwargs)
+        return super().predict(data, type=type_predict, **kwargs)

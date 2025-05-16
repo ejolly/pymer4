@@ -2,16 +2,19 @@ from ..tidystats.broom import tidy, glance, augment
 from ..tidystats.stats import model_matrix, anova
 from ..tidystats.multimodel import predict, simulate
 from ..tidystats.emmeans_lib import emmeans, emtrends, joint_tests, ref_grid
-from ..tidystats.easystats import report as report_, get_fixed_params
+from ..tidystats.easystats import report as report_, get_fixed_params, model_params
 from ..tidystats.tables import anova_table
 from ..tidystats.plutils import join_on_common_cols, make_factors, unmake_factors
 from ..tidystats.bridge import con2R
 from ..rfuncs import get_summary
 from polars import DataFrame, col
 from rpy2.rinterface_lib import callbacks
+from rpy2.robjects.packages import importr
 from ..expressions import center, scale, zscore, rank
 import numpy as np
 from functools import wraps
+
+lib_stats = importr("stats")
 
 
 def requires_fit(func):
@@ -92,7 +95,7 @@ class model(object):
         data (DataFrame): polars DataFrame
     """
 
-    def __init__(self, formula, data):
+    def __init__(self, formula, data, family=None, link="default", **kwargs):
         self._r_func: callable = lambda _: None
         self._r_contrasts = None
         self._summary_func: callable = lambda _: None
@@ -100,7 +103,8 @@ class model(object):
         self.factors = None
         self.transformed = None
         self.data = data
-        self.family = None  # Set by subclass; used in bootci
+        self.family = family.capitalize() if family == "gamma" else family
+        self.link = link
         self.result_fit = None
         self.result_fit_stats = None
         self.result_anova = None
@@ -115,11 +119,13 @@ class model(object):
         self.fit_stats = None
         self.fitted = False
         self.nboot = None
+        self.conf_method = None
+        self.ci_type = None
+        self.conf_level = None
         self.r_console = []
         callbacks.consolewrite_print = self._r_console_handler
         callbacks.consolewrite_warnerror = self._r_console_handler
-        # callbacks.consolewrite_print = self._r_print_handler
-        # callbacks.consolewrite_warnerror = self._r_warnerror_handler
+        self._configure_family_link()
 
     def _r_console_handler(self, msg):
         """Handle console messages from R.
@@ -155,26 +161,62 @@ class model(object):
         Returns:
             str: String representation including class name, fitted status, and formula
         """
-        out = "{}(fitted={}, formula={})".format(
-            self.__class__.__module__,
-            self.fitted,
-            self.formula,
-        )
+        if self.family is None:
+            out = "{}(fitted={}, formula={})".format(
+                self.__class__.__module__,
+                self.fitted,
+                self.formula,
+            )
+        else:
+            out = "{}(fitted={}, formula={}, family={}, link={})".format(
+                self.__class__.__module__,
+                self.fitted,
+                self.formula,
+                self.family,
+                self.link,
+            )
         return out
 
+    def _configure_family_link(self):
+        """Configure the R family and link function objects for the model."""
+
+        if self.family is not None:
+            family = getattr(lib_stats, self.family)
+            self._r_family_link = (
+                family() if self.link == "default" else family(link=self.link)
+            )
+
+        self._convert_logit2odds = self.family == "binomial" and self.link in [
+            "default",
+            "logit",
+        ]
+
     def _1_setup_R_model(self, **kwargs):
-        """Set up the R model with optional contrasts.
+        """Set up the R model with optional contrasts, family, and link.
 
         Args:
             **kwargs: Additional keyword arguments to pass to the R model function
         """
-        # Use contrasts if set
         if self.contrasts:
-            self.r_model = self._r_func(
-                self.formula, self.data, contrasts=self._r_contrasts, **kwargs
-            )
+            if self.family is None:
+                self.r_model = self._r_func(
+                    self.formula, self.data, contrasts=self._r_contrasts, **kwargs
+                )
+            else:
+                self.r_model = self._r_func(
+                    self.formula,
+                    self.data,
+                    contrasts=self._r_contrasts,
+                    family=self._r_family_link,
+                    **kwargs,
+                )
         else:
-            self.r_model = self._r_func(self.formula, self.data, **kwargs)
+            if self.family is None:
+                self.r_model = self._r_func(self.formula, self.data, **kwargs)
+            else:
+                self.r_model = self._r_func(
+                    self.formula, self.data, family=self._r_family_link, **kwargs
+                )
 
     def _2_get_tidy_summary(self, **kwargs):
         """Get a summary of fixed effects from the fitted model using broom's ``tidy`` function.
@@ -204,9 +246,9 @@ class model(object):
         """Get model fit statistics using broom's ``glance`` function."""
         self.result_fit_stats = glance(self.r_model)
 
-    def _5_get_augment_fits_resids(self):
+    def _5_get_augment_fits_resids(self, **kwargs):
         """Add model predictions and residuals to the data using broom's ``augment`` function to the data."""
-        self.data = join_on_common_cols(self.data, augment(self.r_model))
+        self.data = join_on_common_cols(self.data, augment(self.r_model, **kwargs))
 
     def _6_get_design_matrix(self):
         """Get the model design matrix with unique rows."""

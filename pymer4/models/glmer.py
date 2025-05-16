@@ -2,12 +2,12 @@ from .lmer import lmer
 from .base import requires_fit, enable_logging
 from ..tidystats.lmerTest import glmer as glmer_
 from ..tidystats.tables import summary_glmm_table
-from ..tidystats.multimodel import predict
 from ..rfuncs import get_summary
 from ..expressions import logit2odds, logit2prob
-from polars import col
+from polars import col, DataFrame
 import polars.selectors as cs
 from rpy2.robjects.packages import importr
+from rpy2.robjects import NULL, NA_Real
 
 lib_stats = importr("stats")
 
@@ -27,52 +27,12 @@ class glmer(lmer):
         link (str): Link function to use. Defaults to "default" which uses the canonical link for each family
     """
 
-    def __init__(self, formula, data, family="gaussian", link="default"):
-        super().__init__(formula, data)
+    def __init__(self, formula, data, family="gaussian", link="default", **kwargs):
+        super().__init__(formula, data, family=family, link=link, **kwargs)
         self._r_func = glmer_
         self._summary_func = summary_glmm_table
-        self.family = family.capitalize() if family == "gamma" else family
-        self.link = link
         self._type_predict = "response"
         self.result_fit_odds = None
-        self.result_fit_probs = None
-        self._configure_family_link()
-
-    def _configure_family_link(self):
-        """Configure the R family and link function objects for the model."""
-        family = getattr(lib_stats, self.family)
-        self._r_family_link = (
-            family() if self.link == "default" else family(link=self.link)
-        )
-        self._convert_logit2odds = self.family == "binomial" and self.link in [
-            "default",
-            "logit",
-        ]
-
-    def __repr__(self):
-        """Return string representation of the model.
-
-        Returns:
-            str: String representation including class name, fitted status, formula, family and link
-        """
-        out = "{}(fitted={}, formula={}, family={}, link={})".format(
-            self.__class__.__module__,
-            self.fitted,
-            self.formula,
-            self.family,
-            self.link,
-        )
-        return out
-
-    def _1_setup_R_model(self, **kwargs):
-        """Set up the R model with family and link function.
-
-        Args:
-            **kwargs: Additional keyword arguments passed to the R GLMM function
-        """
-        self.r_model = self._r_func(
-            self.formula, self.data, family=self._r_family_link, **kwargs
-        )
 
     def _2_get_tidy_summary(self, ddf_method="Satterthwaite", **kwargs):
         """Get summary of fixed effects and rename statistic column to z_stat for GLMMs.
@@ -164,7 +124,7 @@ class glmer(lmer):
             GT, optional: Model summary if ``summary=True``
         """
         # 1) Setup R model; overwrite like glm does for lm
-        self._1_setup_R_model(**kwargs)
+        super()._1_setup_R_model(**kwargs)
 
         # 2) Get tidy fixed effects summary table; overwrite like glm does for lm
         self._2_get_tidy_summary(ddf_method=ddf_method)
@@ -206,15 +166,16 @@ class glmer(lmer):
         print(get_summary(self.r_model))
 
     @requires_fit
-    def predict(self, *args, type_predict="response", **kwargs):
-        """Make predictions from the model.
+    def predict(self, data: DataFrame, use_rfx=True, type_predict="response", **kwargs):
+        """Make predictions using new data accounting for the link function.
 
         Args:
-            data (DataFrame): Data to make predictions on
-            type_predict (str): Type of prediction to compute ("response" or "link"). Defaults to "response"
-            **kwargs: Additional keyword arguments passed to predict function
+            data (DataFrame): Input data for predictions
+            use_rfx (bool, optional): Whether to include random effects in predictions. Defaults to True. Equivalent to ``re.form = NULL`` in R if True, ``re.form = NA`` if False
+            type_predict (str, optional): Type of prediction to compute ("response" or "link"). Defaults to "response"
+            **kwargs: Additional arguments passed to predict function
 
         Returns:
             ndarray: Predicted values
         """
-        return predict(self.r_model, *args, type=type_predict, **kwargs)
+        return super().predict(data, use_rfx=use_rfx, type=type_predict, **kwargs)
