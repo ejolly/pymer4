@@ -11,6 +11,7 @@ __all__ = [
     "model_icc",
     "get_fixed_params",
     "get_param_names",
+    "model_params",
 ]
 report_lib = importr("report")
 params = importr("parameters")
@@ -27,7 +28,9 @@ def report(model, **kwargs):
     return report_lib.report(model, **kwargs)
 
 
-def bootstrap_model(r_model, nboot=1000, parallel="snow", n_cpus=4, as_df=True):
+def bootstrap_model(
+    r_model, nboot=1000, parallel="snow", n_cpus=4, as_df=True, **kwargs
+):
     """Generate bootstrap samples for model coefficients. Supports parallelization
 
     Args:
@@ -40,7 +43,7 @@ def bootstrap_model(r_model, nboot=1000, parallel="snow", n_cpus=4, as_df=True):
     if not isinstance(r_model, (RS4, ListVector)):
         r_model = r_model.r_model
     out = params.bootstrap_model(
-        r_model, parallel=parallel, n_cpus=n_cpus, iterations=nboot
+        r_model, parallel=parallel, n_cpus=n_cpus, iterations=nboot, **kwargs
     )
     if as_df:
         return as_tibble(out)
@@ -119,3 +122,32 @@ def get_param_names(r_model):
     random_params = params_obj.rx2("random")
     random_params = to_dict(random_params) if random_params else None
     return fixed_params, random_params
+
+
+@ensure_py_output
+def model_params(
+    r_model,
+    effects="fixed",
+    ci_method="satterthwaite",
+    exponentiate=False,
+    bootstrap=False,
+    **kwargs,
+):
+    """Get model parameters using the implementation in [`easystats`](https://easystats.github.io/parameters/reference/model_parameters.html)
+
+    Args:
+        r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
+        effects (str, optional): Whether to include fixed or random effects. Defaults to "fixed".
+        ci_method (str, optional): Method for calculating confidence intervals. Defaults to "satterthwaite".
+        exponentiate (bool, optional): Whether to exponentiate the parameters. Defaults to False.
+    """
+    if not isinstance(r_model, (RS4, ListVector)):
+        r_model = r_model.r_model
+    return params.model_parameters(
+        r_model,
+        effects=effects,
+        ci_method=ci_method,
+        exponentiate=exponentiate,
+        bootstrap=bootstrap,
+        **kwargs,
+    )

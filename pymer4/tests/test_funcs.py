@@ -4,7 +4,7 @@ from polars.datatypes import String, Enum
 from rpy2.robjects.vectors import FactorVector, StrVector
 import pymer4.tidystats as ts
 from pymer4.config import test_install
-from pymer4.models import lmer
+from pymer4.models import lmer, lm, glm, glmer
 from rpy2.robjects.packages import importr
 
 lib_stats = importr("stats")
@@ -177,3 +177,26 @@ def test_easy_boot(sleep):
     model.fit()
     boots = ts.bootstrap_model(model)
     assert boots.shape == (1000, 2)
+
+
+def test_model_params(sleep):
+    ols = lm("Reaction ~ Days", data=sleep)
+    ols.fit()
+
+    lmm = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
+    lmm.fit()
+
+    mle = glm("Reaction ~ Days", data=sleep, family="gaussian")
+    mle.fit()
+
+    log_lmm = glmer(
+        "Reaction ~ Days + (Days | Subject)", data=sleep, family="gamma", link="log"
+    )
+    log_lmm.fit()
+
+    ols_params = ts.model_params(ols)
+    mle_params = ts.model_params(mle)
+    assert ols_params.shape == mle_params.shape
+    lmm_params = ts.model_params(lmm)
+    log_lmm_params = ts.model_params(log_lmm, ci_method="wald")
+    assert lmm_params.shape == log_lmm_params.shape
