@@ -4,7 +4,7 @@ parts:
   - caption: Pymer4
     maxdepth: 1
     chapters:
-    - file: pages/installation
+    # - file: pages/installation
     - file: pages/quickstart.ipynb
     - file: pages/new
     - file: pages/migrating

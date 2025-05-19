@@ -16,7 +16,7 @@ __all__ = ["lm", "glm", "lmer", "glmer", "compare"]
 
 
 def compare(*models, as_dataframe=False, test="F"):
-    """Compare 2 or models using an F-test or Likelihood-Ratio-Test
+    """Compare 2 or models using an F-test or Likelihood-Ratio-Test. Uses the `anova <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/anova>`_ function in R.
 
     Args:
         as_dataframe (bool, optional): Return a dataframe instead of a table. Defaults to False.

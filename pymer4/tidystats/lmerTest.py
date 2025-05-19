@@ -5,7 +5,7 @@ from rpy2.robjects import RS4, r
 from .bridge import R2polars, R2numpy
 import polars as pl
 
-__all__ = ["lmer", "glmer", "fixef", "ranef", "bootMer"]
+__all__ = ["lmer", "glmer", "fixef", "ranef", "bootMer", "is_singular"]
 
 lib_lmerTest = importr("lmerTest")
 lib_lmer = importr("lme4")
@@ -105,3 +105,13 @@ def bootMer(
         return cis, boots
 
     return cis, out
+
+
+@ensure_r_input
+def is_singular(model):
+    """Check if a model is singular using the implementation in [`lmerTest`](https://www.rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/isSingular)
+
+    Args:
+        model (R model): `lmer` or `glmer` model
+    """
+    return R2numpy(lib_lmer.isSingular(model))[0] == 1

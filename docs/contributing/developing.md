@@ -11,107 +11,24 @@ Version `0.9.0` involved a major-rewrite of the `pymer4` internals to follow a m
 
 Sitting on-top of this "functional core" is the `pymer4.models` module which  serves as the "imperative shell" that defines the 4 core classes intended for typical use (`lm`, `glm`, `lmer`, `glmer`). These models follow an inheritence diagram that looks like this:
 
+- `pymer4.models.base.model`: base class that implements most of the core functionality shared by all models
+- `pymer4.models.lm.lm`: extends the base class with support for boostrapping
+- `pymer4.models.lmer.lmer`: extends the base class with support for boostrapping and random-effects
+- `pymer4.models.glm.glm`: extends `lm` with support for `family` and `link` functions, parameter expontentiation (`False` by default), and predictions on the `'response'` scale by default
+- `pymer4.models.glmer.glmer`: extends `lmer` with support for `family` and `link` functions, parameter expontentiation (`False` by default), and predictions on the `'response'` scale by default
 
-:::{toggle}
+## How models are fit
 
-```{mermaid}
-classDiagram
-    class base {
-        --private--
-        -----------
-        _1_setup_R_model
-        _2_get_tidy_summary
-        _3_get_coefs
-        _4_get_glance_fit_stats
-        _5_get_augment_fits_resids
-        _6_get_design_matrix
-        -----------
-        --public--
-        -----------
-        fit
-        anova
-        predict
-        simulate
-        emmeans
-        empredict
-        vif
-        summary
-        summary_anova
-        report
-        to_sklearn
-        set_factors
-        unset_factors
-        show_factors
-        set_transforms
-        unset_transforms
-        show_transforms
-        set_contrasts
-        show_contrasts
-        show_logs
-        clear_logs
-    }
-    class lm {
-        --private--
-        -----------
-        _2_get_tidy_summary
-        _post_fit
-        _bootci
-        -----------
-        --public--
-        -----------
-        fit
-    }
-    class glm {
-        --private--
-        -----------
-        _1_setup_R_model
-        _2_get_tidy_summary
-        _5_get_augment_fits_resids
-        _coef_to_odds
-        _coef_to_probs
-        -----------
-        --public--
-        -----------
-        fit
-        summary
-        predict
-    }
-    class lmer {
-        --private--
-        -----------
-        _2_get_tidy_summary
-        _post_fit
-        _bootci
-        -----------
-        --public--
-        -----------
-        fit
-        anova
-        emmeans
-        predict
-    }
-    class glmer {
-        --private--
-        -----------
-        _1_setup_R_model
-        _2_get_tidy_summary
-        _5_get_augment_fits_resids
-        _coef_to_odds
-        _coef_to_probs
-        -----------
-        --public--
-        -----------
-        fit
-        summary
-        predict
-    }
+Calling `.fit()` on a model goes through the following sequence of steps with many pass-through key-word arguments going to the underlying R functions in `pymer4.tidystats`:
 
-    base --|> lm
-    lm --|> glm
-    lm --|> lmer
-    lmer --|> glmer
-```
-:::
+1. `._initialize()` to create an R-model object with optional contrasts and weights
+2. `._get_design()` to save the model's design-matrix
+3. `._get_params()` to estimate fixed-effects terms using `parameters::model_parameters()` with satterthwaite degrees-of-freedom for `lmer()` models
+4. `._get_fit_stats()` to get quality-of-fit estimates using `broom/broom.mixed::glance()` 
+5. `._get_fits_resids()` to add columns to `.data` using `broom/broom.mixed::augment()`
+
+To create new model classes, it's preferable to inherit from one of the existing models and define a new `.fit()` method that calls `super().fit(*args, **kwargs)` plus extra code.
+
 
 ## Development version
 

@@ -2,7 +2,7 @@ from .base import enable_logging, requires_fit, model
 from ..tidystats.broom import tidy
 from ..tidystats.lmerTest import ranef, lmer as lmer_, bootMer
 from ..tidystats.multimodel import coef
-from ..tidystats.easystats import get_param_names
+from ..tidystats.easystats import get_param_names, is_converged
 from ..tidystats.tables import summary_lmm_table
 from ..expressions import logit2odds
 from polars import DataFrame, col
@@ -35,6 +35,7 @@ class lmer(model):
         self.fixef = None
         self.ranef = None
         self.ranef_var = None
+        self.convergence_status = None
 
     def _handle_rfx(self, **kwargs):
         """Sets `.ranef_var` using ``broom.mixed::tidy()`` and ``lme4::ranef()`` and ``lme4::coef()`` to get random effects and BLUPs. Manually exponentiates random effects if ``exponentiate=True`` since ``broom.mixed::tidy()`` does not do this."""
@@ -199,6 +200,12 @@ class lmer(model):
                 ncpus=ncpus,
                 **bootMer_kwargs,
             )
+
+        # Handle convergence & singularity warnings
+        did_converge, message = is_converged(self.r_model)
+        self.convergence_status = message
+        if not did_converge:
+            self.r_console.append(message)
 
         if summary:
             return self.summary()

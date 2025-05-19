@@ -337,6 +337,17 @@ class model(object):
         Args:
             factors_and_levels (str | dict | list): factors and their levels
         """
+
+        if isinstance(factors_and_levels, str):
+            factors_and_levels = [factors_and_levels]
+
+        # Unset any existing factors that are being overwritten
+        if self.factors is not None:
+            to_unset = {
+                k: v for k, v in self.factors.items() if k in factors_and_levels
+            }
+            self.unset_factors(to_unset)
+
         # Convert categorical dtypes
         self.data, self.factors = make_factors(
             self.data, factors_and_levels, return_factor_dict=True
@@ -346,12 +357,20 @@ class model(object):
         contrasts = {factor: "contr.treatment" for factor in self.factors.keys()}
         self.set_contrasts(contrasts)
 
-    def unset_factors(self):
+    def unset_factors(self, factors: str | list | None = None):
         """Convert factors back to their original data types (e.g. strings, integers, or floats)"""
-        if self.factors is not None:
-            self.data = unmake_factors(self.data, self.factors)
-            self.factors = None
-            self.contrasts = None
+        if self.factors is None:
+            return
+
+        if factors is None:
+            to_unset = self.factors
+        else:
+            factors = [factors] if isinstance(factors, str) else factors
+            to_unset = {k: v for k, v in self.factors.items() if k in factors}
+
+        self.data = unmake_factors(self.data, to_unset)
+        self.factors = None
+        self.contrasts = None
 
     def show_factors(self):
         """Print any current factors and their levels. The order of factor levels determines what parameter estimates represent and what how post-hoc contrasts are specified."""
@@ -411,6 +430,8 @@ class model(object):
                 raise ValueError(
                     f"transform must be one of {supported_transforms.keys()}"
                 )
+            if self.transformed is not None and column in self.transformed.keys():
+                self.unset_transforms(column)
 
             backup_expr = col(column).alias(f"{column}_orig")
             if group is None:
@@ -442,7 +463,9 @@ class model(object):
             for original, transformed in zip(originals, cols):
                 compound_expression.append(col(original).alias(transformed))
             self.data = self.data.with_columns(compound_expression).drop(originals)
-            self.transformed = None
+            self.transformed = {
+                k: v for k, v in self.transformed.items() if k not in cols
+            }
 
     def show_transforms(self):
         """Show the columns that have been scaled"""

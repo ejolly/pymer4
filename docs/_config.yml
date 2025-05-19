@@ -6,6 +6,9 @@ logo: 'logo-bold.png'
 # See https://jupyterbook.org/content/execute.html
 execute:
   execute_notebooks: 'off'
+  exclude_patterns:
+    - '*bak.ipynb'
+  
 
 repository:
   url: https://github.com/ejolly/pymer4 
@@ -33,7 +36,6 @@ sphinx:
   - 'sphinx_design'
   - 'sphinx.ext.autodoc'
   - 'sphinx.ext.autosummary'
-  - 'sphinx.ext.intersphinx'
   - 'sphinx.ext.napoleon'
   - 'sphinx.ext.viewcode'
   - 'sphinxcontrib.mermaid'
@@ -47,13 +49,3 @@ sphinx:
     viewcode_follow_imported_members: true
     templates_path: templates
     suppress_warnings: ["etoc.toctree"]
-    intersphinx_mapping:
-      matplotlib:
-        - "https://matplotlib.org/stable/"
-        - null
-      numpy:
-        - "https://numpy.org/doc/stable/"
-        - null
-      polars:
-        - "https://docs.pola.rs/api/python/stable/"
-        - null

@@ -11,6 +11,7 @@ __all__ = [
     "get_param_names",
     "model_params",
     "is_mixed_model",
+    "is_converged",
 ]
 report_lib = importr("report")
 params = importr("parameters")
@@ -171,3 +172,16 @@ def is_mixed_model(r_model):
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
     """
     return R2numpy(insight.is_mixed_model(r_model)).astype(bool)[0]
+
+
+@ensure_r_input
+def is_converged(r_model):
+    """Check if a model is converged using the implementation in [`easystats`](https://easystats.github.io/insight/reference/is_converged.html)
+
+    Args:
+        r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
+    """
+    convergence = insight.is_converged(r_model)
+    did_converge = R2numpy(convergence).astype(bool)[0]
+    message = f"Convergence status\n: {str(convergence)}"
+    return did_converge, message

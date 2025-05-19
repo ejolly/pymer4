@@ -77,10 +77,32 @@ def test_model_basics(credit):
     assert "Income_orig" in m.data.columns
     assert "Limit_orig" in m.data.columns
 
+    income_orig = m.data.select("Income_orig").to_numpy().squeeze()
+    income_center = m.data.select("Income").to_numpy().squeeze()
+    limit_orig = m.data.select("Limit_orig").to_numpy().squeeze()
+    limit_zscore = m.data.select("Limit").to_numpy().squeeze()
+
+    assert not np.allclose(income_orig, income_center)
+    assert not np.allclose(limit_orig, limit_zscore)
+
     # Selectively unscale
     m.unset_transforms("Income")
+    assert m.transformed == {"Limit": "zscore"}
+
+    current_income = m.data.select("Income").to_numpy().squeeze()
+    assert np.allclose(current_income, income_orig)
     assert "Income_orig" not in m.data.columns
     assert "Limit_orig" in m.data.columns
+
+    # Rescale an existing transform which undoes it first
+    m.set_transforms({"Limit": "rank"})
+    limit_rank = m.data.select("Limit").to_numpy().squeeze()
+    current_limit_orig = m.data.select("Limit_orig").to_numpy().squeeze()
+
+    assert not np.allclose(limit_zscore, limit_rank)
+    assert not np.allclose(limit_orig, limit_rank)
+    assert not np.allclose(limit_orig, limit_zscore)
+    assert np.allclose(limit_orig, current_limit_orig)
 
 
 def test_model_comparison(credit):
@@ -182,6 +204,11 @@ def test_factor_levels_and_planned_contrasts(poker):
     assert np.allclose(model.params.select("estimate")[2, 0], neutral_mean - bad_mean)
 
     # We can also re-order factor levels by using a dictionary instead
+    # If we don't unset factors first we'll get an error
+    # with pytest.raises(ValueError):
+    #     model.set_factors({"hand": ["good", "bad", "neutral"]})
+
+    # model.unset_factors()
     model.set_factors({"hand": ["good", "bad", "neutral"]})
     model.fit()
     assert model.factors == {"hand": ["good", "bad", "neutral"]}
@@ -190,6 +217,7 @@ def test_factor_levels_and_planned_contrasts(poker):
 
     # Changing the default contrast type will also respect the level order
     # bad < neutral < good
+    # model.unset_factors()
     model.set_factors({"hand": ["bad", "neutral", "good"]})
     model.set_contrasts({"hand": "contr.poly"})
     model.fit()
@@ -201,6 +229,7 @@ def test_factor_levels_and_planned_contrasts(poker):
 
     # We can also specify custom contrasts in terms of cell means and they'll
     # be convert to R contrast codes for us
+    # model.unset_factors()
     model.set_factors({"hand": ["bad", "neutral", "good"]})
     model.set_contrasts({"hand": [-1, 0, 1]}, normalize=True)
     model.fit()
