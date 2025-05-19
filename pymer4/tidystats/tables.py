@@ -84,11 +84,11 @@ def summary_lm_table(model, decimals=2):
         stars=stars,
     )
 
-    if model.conf_method == "boot":
+    if model._fit_kwargs["conf_method"] == "boot":
         subtitle = md(
             f"""Number of observations: *{nobs}*  
-            Confidence intervals: *{model.conf_method} {model.ci_type}*  
-            Bootstrap Iterations: *{model.nboot}*  
+            Confidence intervals: *{model._fit_kwargs["conf_method"]}*  
+            Bootstrap Iterations: *{model._fit_kwargs["nboot"]}*  
             ---------------------  
             R-squared: *{r_squared}*  
             R-squared-adj: *{adj_r_squared}*  
@@ -101,7 +101,7 @@ def summary_lm_table(model, decimals=2):
     else:
         subtitle = md(
             f"""Number of observations: *{nobs}*  
-            Confidence intervals: *{model.conf_method}*  
+            Confidence intervals: *parametric*  
             ---------------------  
             R-squared: *{r_squared}*  
             R-squared-adj: *{adj_r_squared}*  
@@ -186,12 +186,12 @@ def summary_glm_table(model, show_odds=False, decimals=2):
         stars=stars,
     )
 
-    if model.conf_method == "boot":
+    if model._fit_kwargs["conf_method"] == "boot":
         subtitle = md(
             f"""Family: *{model.family} (link: *{model.link}*)*  
             Number of observations: *{model.result_fit_stats["nobs"].item()}*  
-            Confidence intervals: *{model.conf_method} {model.ci_type}*  
-            Bootstrap Iterations: *{model.nboot}*   
+            Confidence intervals: *{model._fit_kwargs["conf_method"]}*  
+            Bootstrap Iterations: *{model._fit_kwargs["nboot"]}*   
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  
@@ -202,7 +202,7 @@ def summary_glm_table(model, show_odds=False, decimals=2):
         subtitle = md(
             f"""Family: *{model.family} (link: *{model.link}*)*  
             Number of observations: *{model.result_fit_stats["nobs"].item()}*  
-            Confidence intervals: *{model.conf_method}*  
+            Confidence intervals: *parametric*  
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  
@@ -294,7 +294,7 @@ def summary_lmm_table(model, decimals=2):
         .struct.unnest()
     ).with_columns(col("term").str.split(".").list.get(0))
 
-    if model.conf_method == "parametric":
+    if model._fit_kwargs["conf_method"] == "satterthwaite":
         rfx = rfx.select("group", "statistic", "term", "estimate")
     else:
         rfx = rfx.select(
@@ -318,11 +318,11 @@ def summary_lmm_table(model, decimals=2):
     table = pl.concat([rfx, table], how="diagonal_relaxed")
     table = table.rename({"group": "rfx", "term": "param"})
 
-    if model.conf_method == "boot":
+    if model._fit_kwargs["conf_method"] == "boot":
         subtitle = md(
             f"""Number of observations: *{nobs}*  
-            Confidence intervals: *{model.conf_method} {model.ci_type}*  
-            Bootstrap Iterations: *{model.nboot}*  
+            Confidence intervals: *{model._fit_kwargs["conf_method"]}*  
+            Bootstrap Iterations: *{model._fit_kwargs["nboot"]}*  
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  
@@ -332,7 +332,7 @@ def summary_lmm_table(model, decimals=2):
     else:
         subtitle = md(
             f"""Number of observations: *{nobs}*  
-            Confidence intervals: *{model.conf_method}*  
+            Confidence intervals: *parametric*  
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  
@@ -432,7 +432,7 @@ def summary_glmm_table(model, show_odds=False, decimals=2):
         .struct.unnest()
     ).with_columns(col("term").str.split(".").list.get(0))
 
-    if model.conf_method == "parametric":
+    if model._fit_kwargs["conf_method"] == "satterthwaite":
         rfx = rfx.select("group", "statistic", "term", "estimate")
     else:
         rfx = rfx.select(
@@ -456,12 +456,12 @@ def summary_glmm_table(model, show_odds=False, decimals=2):
     table = pl.concat([rfx, table], how="diagonal_relaxed")
     table = table.rename({"group": "rfx", "term": "param"})
 
-    if model.conf_method == "boot":
+    if model._fit_kwargs["conf_method"] == "boot":
         subtitle = md(
             f"""Family: *{model.family} (link: *{model.link}*)*  
             Number of observations: *{nobs}*  
-            Confidence intervals: *{model.conf_method} {model.ci_type}*   
-            Bootstrap Iterations: *{model.nboot}*  
+            Confidence intervals: *{model._fit_kwargs["conf_method"]}*   
+            Bootstrap Iterations: *{model._fit_kwargs["nboot"]}*  
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  
@@ -472,7 +472,7 @@ def summary_glmm_table(model, show_odds=False, decimals=2):
         subtitle = md(
             f"""Family: *{model.family} (link: *{model.link}*)*  
             Number of observations: *{model.result_fit_stats["nobs"].item()}*  
-            Confidence intervals: *{model.conf_method}*  
+            Confidence intervals: *parametric*  
             ---------------------  
             Log-likelihood: *{log_likelihood}*  
             AIC: *{aic}* | BIC: *{bic}*  

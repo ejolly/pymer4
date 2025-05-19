@@ -1,8 +1,11 @@
-from ..tidystats.broom import tidy, glance, augment
+from ..tidystats.broom import glance, augment
 from ..tidystats.stats import model_matrix, anova
 from ..tidystats.multimodel import predict, simulate
 from ..tidystats.emmeans_lib import emmeans, emtrends, joint_tests, ref_grid
-from ..tidystats.easystats import report as report_, get_fixed_params, model_params
+from ..tidystats.easystats import (
+    report as report_,
+    model_params,
+)
 from ..tidystats.tables import anova_table
 from ..tidystats.plutils import join_on_common_cols, make_factors, unmake_factors
 from ..tidystats.bridge import con2R
@@ -95,11 +98,14 @@ class model(object):
         data (DataFrame): polars DataFrame
     """
 
-    def __init__(self, formula, data, family=None, link="default", **kwargs):
+    def __init__(
+        self, formula, data, family=None, link="default", weights=None, **kwargs
+    ):
         self._r_func: callable = lambda _: None
         self._r_contrasts = None
         self._summary_func: callable = lambda _: None
         self.formula = formula.replace(" ", "")
+        self.weights = None
         self.factors = None
         self.transformed = None
         self.data = data
@@ -108,7 +114,7 @@ class model(object):
         self.result_fit = None
         self.result_fit_stats = None
         self.result_anova = None
-        self.result_bootci = None
+        self.result_boots = None
         self.result_emmeans = None
         self.result_vif = None
         self.r_model = None
@@ -126,6 +132,7 @@ class model(object):
         callbacks.consolewrite_print = self._r_console_handler
         callbacks.consolewrite_warnerror = self._r_console_handler
         self._configure_family_link()
+        self._handle_weights(weights)
 
     def _r_console_handler(self, msg):
         """Handle console messages from R.
@@ -191,109 +198,119 @@ class model(object):
             "logit",
         ]
 
-    def _1_setup_R_model(self, **kwargs):
+    def _handle_weights(self, weights):
+        """Set the weights for the model."""
+        if weights is None:
+            return
+
+        if isinstance(weights, str):
+            self.weights = self.data[weights].to_numpy()
+        elif isinstance(weights, list):
+            self.weights = np.array(weights)
+        elif isinstance(weights, np.ndarray):
+            self.weights = weights
+        else:
+            raise ValueError(
+                "weights must be a string (column name), list, or numpy array"
+            )
+
+    def _initialize(self):
         """Set up the R model with optional contrasts, family, and link.
 
         Args:
             **kwargs: Additional keyword arguments to pass to the R model function
         """
-        if self.contrasts:
-            if self.family is None:
-                self.r_model = self._r_func(
-                    self.formula, self.data, contrasts=self._r_contrasts, **kwargs
-                )
-            else:
-                self.r_model = self._r_func(
-                    self.formula,
-                    self.data,
-                    contrasts=self._r_contrasts,
-                    family=self._r_family_link,
-                    **kwargs,
-                )
-        else:
-            if self.family is None:
-                self.r_model = self._r_func(self.formula, self.data, **kwargs)
-            else:
-                self.r_model = self._r_func(
-                    self.formula, self.data, family=self._r_family_link, **kwargs
-                )
+        init_kwargs = dict()
+        if self.weights is not None:
+            init_kwargs["weights"] = self.weights
+        if self.contrasts is not None:
+            init_kwargs["contrasts"] = self._r_contrasts
+        if self.family is not None:
+            init_kwargs["family"] = self._r_family_link
 
-    def _2_get_tidy_summary(self, **kwargs):
-        """Get a summary of fixed effects from the fitted model using broom's ``tidy`` function.
+        self.r_model = self._r_func(self.formula, self.data, **init_kwargs)
 
-        Creates a `.result_fit` attribute containing a polars DataFrame parameter estimates, uncertainty, and inference statistics
-        """
+    def _get_params(self, conf_method, exponentiate, **kwargs):
+        """Sets `.result_fit` and `.params` using `easystats` `model_parameters()` function."""
 
-        self.result_fit = (
-            tidy(self.r_model, effects="fixed", conf_int=True, **kwargs)
-            .drop("effect", strict=False)
-            .select(
-                "term",
-                "estimate",
-                "conf_low",
-                "conf_high",
-                "std_error",
-                "statistic",
-                "p_value",
-            )
+        # Don't allow bootstrapping via this call to model_params()
+        # Sub-classes should implement their own bootstrapping and
+        # call it within their .fit() after calling super().fit()
+        self.result_fit = model_params(
+            self.r_model,
+            ci_method=None if conf_method == "boot" else conf_method,
+            exponentiate=exponentiate,
+            bootstrap=False,
+            **kwargs,
         )
+        self.result_fit = self.result_fit.drop(
+            ["effect", "conf_level"], strict=False
+        ).rename({"df_error": "df"}, strict=False)
 
-    def _3_get_coefs(self):
-        """Extract model coefficients (fixed effects)."""
-        self.params = get_fixed_params(self.r_model)
+        if self.family is None or self.family == "gaussian":
+            self.result_fit = self.result_fit.rename(
+                {"statistic": "t_stat"}, strict=False
+            )
+        else:
+            self.result_fit = self.result_fit.rename(
+                {"statistic": "z_stat"}, strict=False
+            )
 
-    def _4_get_glance_fit_stats(self):
-        """Get model fit statistics using broom's ``glance`` function."""
+        self.params = self.result_fit[:, :2]
+
+    def _get_fit_stats(self):
+        """Sets `.result_fit_stats` using broom's `glance` function."""
         self.result_fit_stats = glance(self.r_model)
 
-    def _5_get_augment_fits_resids(self, **kwargs):
-        """Add model predictions and residuals to the data using broom's ``augment`` function to the data."""
-        self.data = join_on_common_cols(self.data, augment(self.r_model, **kwargs))
+    def _get_fits_resids(self, type_predict):
+        """Updates `.data` with model predictions and residuals using broom's `augment` function."""
+        self.data = join_on_common_cols(self.data, augment(self.r_model))
+        # Make predictions on the response scale rather that relying on
+        # augment()'s kwarg which doesn't work for glmer models
+        self.data = self.data.with_columns(
+            fitted=self.predict(self.data, type_predict=type_predict)
+        )
 
-    def _6_get_design_matrix(self):
-        """Get the model design matrix with unique rows."""
+    def _get_design(self):
+        """Sets `.design_matrix` using `stats` `model_matrix` function."""
         self.design_matrix = model_matrix(self.r_model, unique=True)
 
     @enable_logging
-    def fit(self, summary=False, **kwargs):
-        """Fit the model to the data.
+    def fit(
+        self,
+        conf_method="wald",
+        exponentiate=False,
+        nboot=1000,
+        save_boots=True,
+        type_predict="response",
+        **kwargs,
+    ):
+        """Fit a model. All kwargs are passed to [``model_parameters()``](https://easystats.github.io/parameters/reference/model_parameters.html)"""
 
-        This method performs the following steps:
-        1. Sets up and fits the R model
-        2. Gets tidy fixed effects summary
-        3. Extracts fixed effects coefficients
-        4. Gets model fit statistics
-        5. Adds predictions and residuals to data
-        6. Gets model design matrix
+        self._fit_kwargs = dict(
+            conf_method=conf_method,
+            exponentiate=exponentiate,
+            nboot=nboot,
+            save_boots=save_boots,
+            **kwargs,
+        )
+        # Initialize model which handles weights, contrasts, and family
+        # attributes if they exist
+        self._initialize()
 
-        Args:
-            summary (bool): Whether to return a ``great_tables`` summary of the fitted model
-            **kwargs: Additional keyword arguments passed to the R model fitting function
+        # Get model design matrix
+        self._get_design()
 
-        Returns:
-            GT, optional: ``great_tables`` summary of the fitted model if ``summary=True``
-        """
-        # 1) Fit model
-        self._1_setup_R_model(**kwargs)
+        # Get parameter estimates and inference statistics
+        self._get_params(conf_method, exponentiate, **kwargs)
 
-        # 2) Get tidy fixed effects summary table
-        self._2_get_tidy_summary()
+        # Get fit stats from broom
+        self._get_fit_stats()
 
-        # 3) Get fixed effects; coefs for lms; BLUPs for lmms
-        self._3_get_coefs()
-
-        # 4) Get fit stats from broom
-        self._4_get_glance_fit_stats()
-
-        # 5) Add predictions to data
-        self._5_get_augment_fits_resids()
-
-        # 6) Get model design matrix
-        self._6_get_design_matrix()
+        # Add fits and residuals
+        self._get_fits_resids(type_predict=type_predict)
 
         self.fitted = True
-        if summary:
-            return self.summary()
 
     def show_logs(self):
         """Show any captured messages and warnings from R.
@@ -374,49 +391,40 @@ class model(object):
         else:
             print(self.contrasts)
 
-    # TODO: change params to be more like set_factors and set_contrasts and take
-    # dict as input
-    def set_transforms(self, cols, transform="center", group=None):
+    def set_transforms(self, cols_and_transforms: dict, group=None):
         """Scale numeric columns by centering and/or scaling
 
         Args:
-            cols (str/list): column name(s) to scale
-            center (bool): whether to center the data
-            scale (bool): whether to scale the data
+            cols_and_transforms (dict): a dictionary where keys are column names and values are transform functions as strings, e.g. "center", "scale", "zscore", "rank"
             group (str; optional): column name to group by before scaling
         """
 
-        # TODO: move to a separate module
-        # rank_func = lambda column, method="average", descending=False: col(column).rank(
-        #     method, descending=descending
-        # )
-        # center_func = lambda column: col(column) - col(column).mean()
-        # scale_func = lambda column: col(column) / col(column).std()
-        # zscore_func = (
-        #     lambda column: (col(column) - col(column).mean()) / col(column).std()
-        # )
         supported_transforms = dict(
             center=center, scale=scale, zscore=zscore, rank=rank
         )
-        if transform not in supported_transforms.keys():
-            raise ValueError(f"transform must be one of {supported_transforms.keys()}")
 
-        func = supported_transforms[transform]
-        transform = transform if group is None else f"{transform}_by_{group}"
-
-        cols = [cols] if isinstance(cols, str) else cols
         compound_expression = []
-        transforms = dict()
-        for column in cols:
-            compound_expression.append(col(column).alias(f"{column}_orig"))
+        applied_transforms = dict()
+        for column, transform in cols_and_transforms.items():
+            func = supported_transforms.get(transform, None)
+            if func is None:
+                raise ValueError(
+                    f"transform must be one of {supported_transforms.keys()}"
+                )
+
+            backup_expr = col(column).alias(f"{column}_orig")
             if group is None:
-                compound_expression.append(func(col(column)).alias(column))
+                new_expr = func(col(column)).alias(column)
             else:
-                compound_expression.append(func(col(column)).over(group).alias(column))
-            transforms[column] = transform
+                new_expr = func(col(column)).over(group).alias(column)
+            compound_expression.append(backup_expr)
+            compound_expression.append(new_expr)
+
+            transform = transform if group is None else f"{transform}_by_{group}"
+            applied_transforms[column] = transform
 
         self.data = self.data.with_columns(compound_expression)
-        self.transformed = transforms
+        self.transformed = applied_transforms
 
     def unset_transforms(self, cols=None):
         """Undo the effect of calling `.set_transforms()`
@@ -444,18 +452,23 @@ class model(object):
             print(self.transformed)
 
     @enable_logging
-    def anova(self, auto_ss_3=True, summary=False, **fitkwargs):
+    def anova(
+        self, auto_ss_3=True, summary=False, jointtest_kwargs={}, anova_kwargs={}
+    ):
         """Calculate a Type-III ANOVA table for the model using `joint_tests()` in R.
 
         Args:
+            summary (bool): whether to return the ANOVA summary. Defaults to False
             auto_ss_3 (bool): whether to automatically use balanced contrasts when calculating the result via `joint_tests()`. When False, will use the contrasts specified with `set_contrasts()` which defaults to `"contr.treatment"` and R's `anova()` function; Default is True.
+            jointtest_kwargs (dict): additional arguments to pass to `joint_tests()`
+            anova_kwargs (dict): additional arguments to pass to `anova()`
         """
         if not self.fitted:
-            self.fit(**fitkwargs)
+            self.fit()
         if auto_ss_3:
-            self.result_anova = joint_tests(self.r_model)
+            self.result_anova = joint_tests(self.r_model, **jointtest_kwargs)
         else:
-            self.result_anova = anova(self.r_model)
+            self.result_anova = anova(self.r_model, **anova_kwargs)
         if summary:
             return self.summary_anova()
 
@@ -578,7 +591,6 @@ class model(object):
             self.r_model, at=_at, type=type, infer=np.array([True, False]), **kwargs
         )
 
-    @requires_fit
     def predict(self, data: DataFrame, **kwargs):
         """Make predictions using new data
 
@@ -588,7 +600,7 @@ class model(object):
         Returns:
             predictions (ndarray): predicted values
         """
-        return predict(self.r_model, data, **kwargs)
+        return predict(self.r_model, newdata=data, **kwargs)
 
     @requires_fit
     def simulate(self, nsim: int = 1, **kwargs):

@@ -12,27 +12,25 @@ def test_glmer_basics(titanic):
     titanic = load_dataset("titanic")
     model = glmer("survived ~ fare + (1 | pclass)", data=titanic, family="binomial")
     model.fit()
-    assert model.result_fit.shape == (2, 7)
+    assert model.result_fit.shape == (2, 8)
 
     # Check that we have the right attributes
     assert model.family == "binomial"
     assert model.ranef is not None
     assert model.ranef_var is not None
     assert model.result_fit is not None
-    assert model.result_fit_odds is not None
 
     # Basic assertions for a binomial model
     num_rfx = titanic.select("pclass").n_unique()
     assert model.ranef.shape == (num_rfx, 2)  # Intercept + by group
 
     # Intercept var
-    assert model.ranef_var.shape == (1, 3)
+    assert model.ranef_var.shape == (1, 5)
 
     # Test different summary displays
     assert isinstance(model.summary(), GT)
-    assert isinstance(model.summary(show_odds=True), GT)
 
-    # Predictions are on response scale by default, i.e. proabilitites for logistic lmm
+    # Predictions are on response scale by default, i.e. probabilities for logistic lmm
     preds = model.predict(model.data)
     assert 0 <= preds.max() <= 1
     assert 0 <= preds.min() <= 1
@@ -87,18 +85,9 @@ def test_glmer_boot(titanic):
     standard_ci = model.result_fit.select("conf_low", "conf_high").to_numpy()
 
     # Glmer default CIs are Wald
-    # and we calculate them for both fixed and random effects
-    model.fit(conf_method="Wald")
+    model.fit(conf_method="wald")
     wald_ci = model.result_fit.select("conf_low", "conf_high").to_numpy()
     assert np.allclose(standard_ci, wald_ci)
-
-    # Any non-default CIs will also be calculated for random effects
-    assert model.ranef_var.shape == (1, 5)
-
-    model.fit(conf_method="profile")
-    profile_ci = model.result_fit.select("conf_low", "conf_high").to_numpy()
-
-    assert not np.allclose(standard_ci, profile_ci)
 
     # Fit with bootstrapped CIs
     model.fit(conf_method="boot", nboot=100)

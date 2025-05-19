@@ -1,5 +1,5 @@
 from rpy2.robjects.packages import importr
-from .bridge import ensure_py_output, to_dict
+from .bridge import ensure_py_output, to_dict, ensure_r_input
 import rpy2.robjects as ro
 
 __all__ = ["tidy", "glance", "augment"]
@@ -9,7 +9,8 @@ lib_broom_mixed = importr("broom.mixed")
 
 
 @ensure_py_output
-def tidy(model, /, **kwargs):
+@ensure_r_input
+def tidy(model, **kwargs):
     """Summarize information about model components"""
     if isinstance(model, ro.methods.RS4):
         func = lib_broom_mixed.tidy_merMod

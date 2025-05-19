@@ -130,26 +130,12 @@ def test_predict_simulate(sleep):
     assert sims.width == 3
 
 
-def test_boot(titanic):
-    formula = "survived ~ fare"
-    model = ts.glm(formula, data=titanic, family="binomial")
-
-    # Percentile CIs
-    out = ts.boot(titanic, model, formula, R=500, family="binomial")
-    assert isinstance(out, DataFrame)
-    assert out.height == 2
-
-    # BCa CIs
-    model = ts.lm(formula, data=titanic)
-    out, boots = ts.boot(
-        titanic,
-        model,
-        formula,
-        R=500,
-        conf_method="bca",
-        return_boots=True,
-    )
-    assert boots.height == 500
+def test_bootMer(sleep):
+    formula = "Reaction ~ Days + (1 | Subject)"
+    model = ts.lmer(formula, data=sleep)
+    cis, boots = ts.bootMer(model, nsim=500, ncpus=1)
+    assert cis.height == 4
+    assert boots.shape == (500, 4)
 
 
 def test_glm_family(titanic):
@@ -182,13 +168,10 @@ def test_easy_boot(sleep):
 def test_model_params(sleep):
     ols = lm("Reaction ~ Days", data=sleep)
     ols.fit()
-
     lmm = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
     lmm.fit()
-
     mle = glm("Reaction ~ Days", data=sleep, family="gaussian")
     mle.fit()
-
     log_lmm = glmer(
         "Reaction ~ Days + (Days | Subject)", data=sleep, family="gamma", link="log"
     )

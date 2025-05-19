@@ -17,11 +17,16 @@ def test_lmm_basics(sleep):
 
     lmm = lmer("Reaction ~ 1 + (1 | Subject)", data=sleep)
     lmm.fit()
+
     # lmms store Blups and deviances as a polars dataframe with rfx level as the first column
     assert lmm.fixef.shape == (num_rfx, 2)
     assert lmm.ranef.shape == (num_rfx, 2)
+
     # Intercept & Residual
-    assert lmm.ranef_var.shape == (2, 3)
+    assert lmm.ranef_var.shape == (2, 5)
+    # without bootstrapping CIs are always null
+    assert lmm.ranef_var["conf_low"].is_null().sum() == 2
+    assert lmm.ranef_var["conf_high"].is_null().sum() == 2
     # We augment with fits
     assert lmm.data.width == 14
 
@@ -32,26 +37,26 @@ def test_lmm_basics(sleep):
     assert lmm.fixef.shape == (num_rfx, 3)
     assert lmm.ranef.shape == (num_rfx, 3)
     # Intercept, Slope, Correlation & Residual
-    assert lmm.ranef_var.shape == (4, 3)
+    assert lmm.ranef_var.shape == (4, 5)
 
-    # Multiple RFX creates list of dataframes
+    # Multiple RFX creates dict of dataframes
     num_days = sleep.select("Days").n_unique()
     lmm = lmer("Reaction ~ Days + (1 | Subject) + (1 | Days)", data=sleep)
     lmm.fit()
 
     # now we have a list of 2 dataframes
-    assert len(lmm.fixef) == 2
-    assert len(lmm.ranef) == 2
+    assert len(lmm.fixef.keys()) == 2
+    assert len(lmm.ranef.keys()) == 2
     # subID, intercept (varies), slope (fixed)
-    assert lmm.fixef[0].shape == (num_rfx, 3)
+    assert lmm.fixef["Subject"].shape == (num_rfx, 3)
     # dayID, intercept (varies), slope (fixed)
-    assert lmm.fixef[1].shape == (num_days, 3)
+    assert lmm.fixef["Days"].shape == (num_days, 3)
     # subID, intercept deviance
-    assert lmm.ranef[0].shape == (num_rfx, 2)
+    assert lmm.ranef["Subject"].shape == (num_rfx, 2)
     # dayID, intercept deviance
-    assert lmm.ranef[1].shape == (num_days, 2)
+    assert lmm.ranef["Days"].shape == (num_days, 2)
     # 2 intercepts and residual
-    assert lmm.ranef_var.shape == (3, 3)
+    assert lmm.ranef_var.shape == (3, 5)
 
     assert isinstance(lmm.summary(), GT)
 
@@ -59,42 +64,39 @@ def test_lmm_basics(sleep):
     assert np.allclose(preds, lmm.data["fitted"].to_numpy().squeeze())
 
 
-def test_lmm_boot(sleep):
+def test_lmm_conf_methods(sleep):
     # Bootstrapped CIs
     lmm = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
     lmm.fit()
-
-    # Lmer supports: profile, Wald, and boot CIs
-    # and we calculate them for both fixed and random effects
-    standard_ci = lmm.result_fit.select("conf_low", "conf_high").to_numpy()
-    lmm.fit(conf_method="profile")
-
     # Any non-default CIs will also be calculated for random effects
     assert lmm.ranef_var.shape == (4, 5)
+    assert lmm.ranef_var["conf_low"].is_null().sum() == 4
+    assert lmm.ranef_var["conf_high"].is_null().sum() == 4
 
-    profile_ci = lmm.result_fit.select("conf_low", "conf_high").to_numpy()
-    assert "conf_low" in lmm.ranef_var.columns
-
-    lmm.fit(conf_method="Wald")
+    # Lmer supports: satterthwaite, wald, and boot
+    standard_ci = lmm.result_fit.select("conf_low", "conf_high").to_numpy()
+    lmm.fit(conf_method="wald")
     wald_ci = lmm.result_fit.select("conf_low", "conf_high").to_numpy()
 
-    lmm.fit(conf_method="boot")
+    lmm.fit(conf_method="boot", nboot=100)
+    assert lmm.result_boots.shape == (100, 6)
+    assert lmm.ranef_var["conf_low"].is_null().sum() == 0
+    assert lmm.ranef_var["conf_high"].is_null().sum() == 0
     # This is equivalent to using the confint function directly
-    # boot_result = ts.confint(lmm.r_model, "beta_", method="boot", nsim=500)
     boot_ci = lmm.result_fit.select("conf_low", "conf_high").to_numpy()
 
-    assert not np.allclose(standard_ci, profile_ci)
     assert not np.allclose(standard_ci, wald_ci)
     assert not np.allclose(standard_ci, boot_ci)
-    assert not np.allclose(profile_ci, wald_ci)
-    assert not np.allclose(profile_ci, boot_ci)
     assert not np.allclose(wald_ci, boot_ci)
 
-    fix_ci, ran_ci = lmm._bootci(nboot=100)
-    assert fix_ci.height == lmm.result_fit.height
-    assert ran_ci.height == lmm.ranef_var.height
-    assert fix_ci.width == 2
-    assert ran_ci.width == 2
+    # Make sure we can handle multiple RFX
+    lmm = lmer("Reaction ~ Days + (1 | Subject) + (1 | Days)", data=sleep)
+    lmm.fit(conf_method="boot", nboot=100)
+    assert lmm.result_boots.shape == (100, 5)
+    assert isinstance(lmm.fixef, dict)
+    assert isinstance(lmm.ranef, dict)
+    assert len(lmm.fixef.keys()) == 2
+    assert len(lmm.ranef.keys()) == 2
 
 
 def test_lmm_logging(sleep, capsys):
@@ -120,23 +122,9 @@ def test_lmm_logging(sleep, capsys):
     good_lmm = lmer("Reaction ~ Days + (1 | Subject)", data=sleep)
     good_lmm.fit()
     good_lmm.show_logs()
+
     # Good model no warnings
     assert not capsys.readouterr().out
-
-    # Boostrap message
-    good_lmm.fit(conf_method="boot", nboot=100)
-    assert capsys.readouterr().out
-
-    good_lmm.show_logs()
-    assert capsys.readouterr().out
-
-    # Suppress it
-    good_lmm.fit(conf_method="boot", nboot=100, verbose=False)
-    assert not capsys.readouterr().out
-
-    # Get it on demand
-    good_lmm.show_logs()
-    assert capsys.readouterr().out
 
 
 def test_categorical_lmm(penguins):
@@ -178,7 +166,7 @@ def test_categorical_lmm(penguins):
     model = lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df)
     model.set_factors({"IV3": ["0.5", "1.0", "1.5"], "DV_l": ["0", "1"]})
     model.set_contrasts({"IV3": "contr.sum", "DV_l": "contr.sum"})
-    model.set_transforms("IV1", transform="center")
+    model.set_transforms({"IV1": "center"})
     model.fit()
 
     # 3 means
@@ -205,7 +193,7 @@ def test_categorical_lmm(penguins):
 
     # 2 continuous and 1 factor
     model = lmer("DV ~ IV1*IV3*DV_l + (IV1|Group)", data=df)
-    model.set_transforms(["IV1", "IV3"], transform="center")
+    model.set_transforms({"IV1": "center", "IV3": "center"})
     model.set_factors({"DV_l": ["0", "1"]})
     model.set_contrasts({"DV_l": "contr.sum"})
     model.fit()

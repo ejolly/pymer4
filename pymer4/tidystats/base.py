@@ -1,22 +1,17 @@
 from rpy2.robjects.packages import importr
-from .bridge import ensure_py_output
 
-__all__ = ["summary", "row_names", "names"]
+__all__ = ["summary"]
 
 lib_base = importr("base")
 
 
-# @ensure_py_output
 def summary(arg):
-    """Generic function to product results summaries"""
+    """Produce a summary of the results. Currently unused.
+
+    Args:
+        arg (object): The object to summarize
+
+    Returns:
+        object: An R-type of the summarized object
+    """
     return lib_base.summary(arg)
-
-
-@ensure_py_output
-def row_names(arg):
-    return lib_base.row_names(arg)
-
-
-@ensure_py_output
-def names(arg):
-    return lib_base.names(arg)

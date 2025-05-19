@@ -1,5 +1,6 @@
-__all__ = ["get_summary"]
 import rpy2.robjects as ro
+
+__all__ = ["get_summary"]
 
 
 def get_summary(r_model):

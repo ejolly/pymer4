@@ -1,7 +1,5 @@
 from rpy2.robjects.packages import importr
-from .tibble import as_tibble
-from rpy2.robjects import RS4, ListVector
-from .bridge import ensure_py_output, to_dict
+from .bridge import ensure_py_output, to_dict, R2numpy, ensure_r_input
 
 __all__ = [
     "report",
@@ -12,6 +10,7 @@ __all__ = [
     "get_fixed_params",
     "get_param_names",
     "model_params",
+    "is_mixed_model",
 ]
 report_lib = importr("report")
 params = importr("parameters")
@@ -28,9 +27,9 @@ def report(model, **kwargs):
     return report_lib.report(model, **kwargs)
 
 
-def bootstrap_model(
-    r_model, nboot=1000, parallel="snow", n_cpus=4, as_df=True, **kwargs
-):
+@ensure_py_output
+@ensure_r_input
+def bootstrap_model(r_model, nboot=1000, parallel="multicore", n_cpus=4, **kwargs):
     """Generate bootstrap samples for model coefficients. Supports parallelization
 
     Args:
@@ -38,15 +37,41 @@ def bootstrap_model(
         nboot (int, optional): Number of bootstrap samples. Defaults to 1000.
         parallel (str, optional): Parallelization method. Defaults to "snow".
         n_cpus (int, optional): Number of CPUs to use. Defaults to 4.
-        as_df (bool, optional): Whether to return a polars DataFrame. Defaults to True.
     """
-    if not isinstance(r_model, (RS4, ListVector)):
-        r_model = r_model.r_model
     out = params.bootstrap_model(
         r_model, parallel=parallel, n_cpus=n_cpus, iterations=nboot, **kwargs
     )
-    if as_df:
-        return as_tibble(out)
+    return out
+
+
+@ensure_py_output
+@ensure_r_input
+def bootstrap_params(
+    r_model,
+    centrality="mean",
+    nboot=1000,
+    parallel="snow",
+    n_cpus=4,
+    **kwargs,
+):
+    """Generate bootstrap samples for model coefficients. Supports parallelization
+
+    Args:
+        r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
+        centrality (str, optional): Centrality measure. Defaults to "mean".
+        nboot (int, optional): Number of bootstrap samples. Defaults to 1000.
+        parallel (str, optional): Parallelization method. Defaults to "snow".
+        n_cpus (int, optional): Number of CPUs to use. Defaults to 4.
+        as_df (bool, optional): Whether to return a polars DataFrame. Defaults to True.
+    """
+    out = params.bootstrap_parameters(
+        r_model,
+        centrality=centrality,
+        parallel=parallel,
+        n_cpus=n_cpus,
+        iterations=nboot,
+        **kwargs,
+    )
     return out
 
 
@@ -54,6 +79,7 @@ def bootstrap_model(
 # 1) Join .result_fit_stats with performance.model_performance
 # 2) Rename: result_fit_stats to result_performance
 @ensure_py_output
+@ensure_r_input
 def model_performance(r_model, **kwargs):
     """Calculate model performance using the implementation in [`easystats`](https://easystats.github.io/performance/reference/model_performance.html)
 
@@ -61,12 +87,11 @@ def model_performance(r_model, **kwargs):
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
 
     """
-    if not isinstance(r_model, (RS4, ListVector)):
-        r_model = r_model.r_model
     return performance.model_performance(r_model, **kwargs)
 
 
 @ensure_py_output
+@ensure_r_input
 def model_performance_cv(r_model, method="k_fold", stack=False, **kwargs):
     """Calculate cross-validated model performance using the implementation in [`easystats`](https://easystats.github.io/performance/reference/performance_cv.html)
 
@@ -76,12 +101,11 @@ def model_performance_cv(r_model, method="k_fold", stack=False, **kwargs):
         stack (bool, optional): Whether to stack the results. Defaults to False.
 
     """
-    if not isinstance(r_model, (RS4, ListVector)):
-        r_model = r_model.r_model
     return performance.performance_cv(r_model, method=method, stack=stack, **kwargs)
 
 
 @ensure_py_output
+@ensure_r_input
 def model_icc(r_model, by_group=True, **kwargs):
     """Calculate the intraclass correlation coefficient (ICC) for a model using the implementation in [`easystats`](https://easystats.github.io/performance/reference/icc.html)
 
@@ -92,12 +116,11 @@ def model_icc(r_model, by_group=True, **kwargs):
     Returns:
         DataFrame: Table of ICCs
     """
-    if not isinstance(r_model, (RS4, ListVector)):
-        r_model = r_model.r_model
     return performance.icc(r_model, by_group=by_group, **kwargs)
 
 
 @ensure_py_output
+@ensure_r_input
 def get_fixed_params(r_model):
     """Get the parameters for a model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/get_parameters.html)
 
@@ -107,6 +130,7 @@ def get_fixed_params(r_model):
     return insight.get_parameters(r_model, effects="fixed")
 
 
+@ensure_r_input
 def get_param_names(r_model):
     """Get the parameter names for a model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/find_parameters.html)
 
@@ -125,26 +149,25 @@ def get_param_names(r_model):
 
 
 @ensure_py_output
-def model_params(
-    r_model,
-    effects="fixed",
-    exponentiate=False,
-    bootstrap=False,
-    **kwargs,
-):
-    """Get model parameters using the implementation in [`easystats`](https://easystats.github.io/parameters/reference/model_parameters.html)
+@ensure_r_input
+def model_params(r_model, **kwargs):
+    """Get model parameters using the implementation in [`easystats`](https://easystats.github.io/parameters/reference/model_parameters.html) and standardize names using the implementation in [`insight`](https://easystats.github.io/insight/reference/standardize_names.html)
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
         effects (str, optional): Whether to include fixed or random effects. Defaults to "fixed".
         exponentiate (bool, optional): Whether to exponentiate the parameters. Defaults to False.
     """
-    if not isinstance(r_model, (RS4, ListVector)):
-        r_model = r_model.r_model
-    return params.model_parameters(
-        r_model,
-        effects=effects,
-        exponentiate=exponentiate,
-        bootstrap=bootstrap,
-        **kwargs,
-    )
+    out = params.model_parameters(r_model, **kwargs)
+    out = insight.standardize_names(out, style="broom")
+    return out
+
+
+@ensure_r_input
+def is_mixed_model(r_model):
+    """Check if a model is a mixed model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/is_mixed_model.html)
+
+    Args:
+        r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
+    """
+    return R2numpy(insight.is_mixed_model(r_model)).astype(bool)[0]

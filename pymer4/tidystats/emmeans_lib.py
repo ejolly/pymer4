@@ -95,6 +95,7 @@ def emtrends(model, contrasts: str | dict | None = None, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def ref_grid(model, *args, **kwargs):
+    """Create a reference grid of model predictions"""
     ref = lib_emmeans.ref_grid(model, *args, **kwargs)
     grid_summary = lib_emmeans.summary_emmGrid(ref)
     return grid_summary

@@ -1,16 +1,16 @@
-from .base import enable_logging, requires_fit
-from .lm import lm
+from .base import enable_logging, requires_fit, model
 from ..tidystats.broom import tidy
-from ..tidystats.lmerTest import ranef, lmer as lmer_
-from ..tidystats.multimodel import coef, confint
+from ..tidystats.lmerTest import ranef, lmer as lmer_, bootMer
+from ..tidystats.multimodel import coef
+from ..tidystats.easystats import get_param_names
 from ..tidystats.tables import summary_lmm_table
-from ..tidystats.stats import anova
-from ..tidystats.emmeans_lib import joint_tests
-from polars import DataFrame
+from ..expressions import logit2odds
+from polars import DataFrame, col
+import polars.selectors as cs
 from rpy2.robjects import NULL, NA_Real
 
 
-class lmer(lm):
+class lmer(model):
     """Linear mixed effects model estimated via ML/REML. Inherits from ``lm``.
 
     This class implements linear mixed effects models using Maximum Likelihood or
@@ -32,181 +32,199 @@ class lmer(lm):
         super().__init__(formula, data, **kwargs)
         self._r_func = lmer_
         self._summary_func = summary_lmm_table
-        # In addition to params like lm models
-        # lmer models have fixed-effects ("BLUPs")
-        # and random-effects ("deviances") for each cluster
         self.fixef = None
         self.ranef = None
         self.ranef_var = None
 
-    def _2_get_tidy_summary(self, ddf_method="Satterthwaite", **kwargs):
-        """Get summary of fixed effects using Satterthwaite degrees of freedom.
+    def _handle_rfx(self, **kwargs):
+        """Sets `.ranef_var` using ``broom.mixed::tidy()`` and ``lme4::ranef()`` and ``lme4::coef()`` to get random effects and BLUPs. Manually exponentiates random effects if ``exponentiate=True`` since ``broom.mixed::tidy()`` does not do this."""
 
-        Args:
-            ddf_method (str): Method for computing denominator degrees of freedom. Defaults to "Satterthwaite"
-        """
-        self.result_fit = tidy(
-            self.r_model,
-            effects="fixed",
-            conf_int=True,
-            ddf_method=ddf_method,
-            **kwargs,
+        self.ranef_var = tidy(
+            self.r_model, effects="ran_pars", conf_int=True, **kwargs
         ).drop("effect", strict=False)
-
-        # For glmer sub-class we don't have df column
-        if self.family is None:
-            cols = [
-                "term",
-                "estimate",
-                "conf_low",
-                "conf_high",
-                "std_error",
-                "statistic",
-                "df",
-                "p_value",
-            ]
-        else:
-            cols = [
-                "term",
-                "estimate",
-                "conf_low",
-                "conf_high",
-                "std_error",
-                "statistic",
-                "p_value",
-            ]
-        self.result_fit = self.result_fit.select(cols)
-        self.result_fit = self.result_fit.rename({"statistic": "t_stat"})
-
-    def _post_fit(self, conf_method, ci_type, nboot, conf_level):
-        """Process post-fitting operations including confidence interval calculation and random effects extraction.
-
-        Args:
-            conf_method (str): Method for confidence interval calculation
-            ci_type (str): Type of bootstrap confidence intervals
-            nboot (int): Number of bootstrap samples
-            conf_level (float): Confidence level for intervals
-        """
-        # Save meta-data
-        self.conf_method = conf_method
-        self.ci_type = ci_type
-        self.nboot = nboot
-        self.conf_level = conf_level
-
-        # BLUPs
+        self.ranef = ranef(self.r_model)
         self.fixef = coef(self.r_model)
 
-        # RFX deviances
-        self.ranef = ranef(self.r_model)
+        # Ensure multiple rfx are returned as a dict
+        if isinstance(self.fixef, list):
+            fixed_names, random_names = get_param_names(self.r_model)
+            self.fixef = dict(zip(random_names.keys(), self.fixef))
+            self.ranef = dict(zip(random_names.keys(), self.ranef))
 
-        # RFX variance-covariance
-        self.ranef_var = tidy(self.r_model, effects="ran_pars").drop("effect")
+        # Exponentiate params if requested
+        exponentiate = kwargs.get("exponentiate", False)
+        if exponentiate:
+            if isinstance(self.fixef, dict):
+                self.fixef = {
+                    k: v.with_columns(col("level"), logit2odds(cs.exclude("level")))
+                    for k, v in self.fixef.items()
+                }
+            else:
+                self.fixef = self.fixef.with_columns(
+                    col("level"), logit2odds(cs.exclude("level"))
+                )
+            if isinstance(self.ranef, dict):
+                self.ranef = {
+                    k: v.with_columns(col("level"), logit2odds(cs.exclude("level")))
+                    for k, v in self.ranef.items()
+                }
+            else:
+                self.ranef = self.ranef.with_columns(
+                    col("level"), logit2odds(cs.exclude("level"))
+                )
 
-        # If bootsrapped CI's requested replace result_fit with bootstrapped CI's
-        if conf_method == "parametric":
-            return
-        else:
-            fix_cis, rfx_cis = self._bootci(
-                method=conf_method,
-                conf_method=ci_type,
-                conf_level=conf_level,
-                nboot=nboot,
-            )
-            self.result_fit = self.result_fit.with_columns(
-                conf_low=fix_cis[:, 0], conf_high=fix_cis[:, 1]
-            )
-            self.ranef_var = self.ranef_var.with_columns(
-                conf_low=rfx_cis[:, 0], conf_high=rfx_cis[:, 1]
-            )
-
-    @enable_logging
-    def fit(
+    def _bootstrap(
         self,
-        summary=False,
-        conf_method="parametric",
-        ci_type="perc",
-        ddf_method="Satterthwaite",
-        nboot=1000,
-        conf_level=0.95,
-        **kwargs,
-    ):
-        """Fit a linear mixed effects model using ``lmer()`` in R with Satterthwaite degrees of freedom and p-values calculated using ``lmerTest``. Unlike ``lm`` models, ``lmer`` models do not support saving bootstrap samples when ``conf_method="boot"``.
-
-        Args:
-            summary (bool, optional): Whether to return the model summary. Defaults to False
-            conf_method (str, optional): Method for confidence interval calculation. Defaults to ``"parametric"``. Alternatively, ``"boot"`` for bootstrap CIs.
-            ci_type (str, optional): Type of bootstrap confidence intervals. Defaults to "perc"
-            ddf_method (str, optional): Method for computing denominator degrees of freedom. Defaults to "Satterthwaite"
-            nboot (int, optional): Number of bootstrap samples. Defaults to 1000
-            conf_level (float, optional): Confidence level for intervals. Defaults to 0.95
-            **kwargs: Additional arguments passed to the R lmer function
-
-        Returns:
-            GT, optional: Model summary if ``summary=True``
-        """
-
-        super()._1_setup_R_model(**kwargs)
-        self._2_get_tidy_summary(ddf_method)
-        super()._3_get_coefs()
-        super()._4_get_glance_fit_stats()
-        super()._5_get_augment_fits_resids()
-        super()._6_get_design_matrix()
-        self.fitted = True
-        self._post_fit(conf_method, ci_type, nboot, conf_level)
-        if summary:
-            return self.summary()
-
-    @enable_logging
-    def anova(self, auto_ss_3=True, **fitkwargs):
-        """Calculate a Type-III ANOVA table for the model using ``joint_tests()`` in R.
-
-        Args:
-            auto_ss_3 (bool): whether to automatically use balanced contrasts when calculating the result via `joint_tests()`. When False, will use the contrasts specified with `set_contrasts()` which defaults to `"contr.treatment"` and R's `anova()` function; Default is True.
-        """
-        if not self.fitted:
-            self.fit(**fitkwargs)
-        if auto_ss_3:
-            self.result_anova = joint_tests(
-                self.r_model, mode="satterthwaite", lmer_df="satterthwaite"
-            )
-        else:
-            self.result_anova = anova(self.r_model)
-
-    def _bootci(
-        self,
-        method="profile",
-        nboot=1000,
+        nboot,
+        save_boots,
         conf_method="perc",
+        parallel="multicore",
+        ncpus=4,
         conf_level=0.95,
         **kwargs,
     ):
-        """Calculate confidence intervals for model parameters.
-
-        Uses `lme4's confint.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-36/topics/confint.merMod>`_
-        to compute confidence intervals for both fixed and random effects parameters.
-        Despite the name, this function can use non-bootstrap methods (profile, Wald).
+        """Get bootstrapped estimates of model parameters using `lme4's confint.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-36/topics/confint.merMod>`_. Unlike with `lm()`, we don't use `easystats` functions because they don't return the full bootstrap distribution for rfx, only ffx. We use `tidy` to summarize the bootstrap distributions and can therefore can use all the `conf_method` that it supports (e.g. `"perc"`, `"bca"`, `"norm"`, `"basic"`).
 
         Args:
-            method (str, optional): Method for computing intervals. Defaults to ``"profile"``. Alternatively, ``"Wald"`` or ``"boot"``.
-            nboot (int, optional): Number of bootstrap samples. Defaults to 1000
             conf_method (str, optional): Type of bootstrap confidence intervals. Defaults to "perc"
+            nboot (int, optional): Number of bootstrap samples. Defaults to 1000
+            parallel (str, optional): Parallelization method. Defaults to "multicore"
+            ncpus (int, optional): Number of CPUs to use. Defaults to 4
             conf_level (float, optional): Confidence level for intervals. Defaults to 0.95
+            save_boots (bool, optional): Whether to save bootstrap samples. Defaults to True
             **kwargs: Additional arguments passed to confint
 
         Returns:
             tuple: (fix_cis, rfx_cis) - Fixed effects CIs and random effects CIs as polars DataFrames
         """
-        cis = confint(
+        cis, boots = bootMer(
             self.r_model,
-            method=method,
             nsim=nboot,
-            boot_type=conf_method,
-            level=conf_level,
+            conf_level=conf_level,
+            conf_method=conf_method,
+            parallel=parallel,
+            ncpus=ncpus,
+            save_boots=save_boots,
+            **kwargs,
         )
-        # Split fixed and random
-        rfx_cis = cis[: self.ranef_var.height, :]
-        fix_cis = cis[self.ranef_var.height :, :]
-        return fix_cis, rfx_cis
+        self.cis = cis
+
+        # Fixed CIs
+        fixed_names = self.params["term"].to_list()
+        fixed_lower = (
+            cis.filter(col("term").is_in(fixed_names)).select("conf_low").to_series()
+        )
+        fixed_upper = (
+            cis.filter(col("term").is_in(fixed_names)).select("conf_high").to_series()
+        )
+        self.result_fit = self.result_fit.with_columns(
+            conf_low=fixed_lower,
+            conf_high=fixed_upper,
+        )
+
+        # Drop fixed-effect rows and split out term col to term and group cols
+        ranef_cis = (
+            cis.filter(~col("term").is_in(fixed_names))
+            .with_columns(
+                col("term")
+                .str.split_exact("___", 2)
+                .explode()
+                .struct.rename_fields(["term", "group"])
+                .struct.unnest()
+            )
+            .select("group", "term", "conf_low", "conf_high")
+        )
+        self.ranef_var = self.ranef_var.drop("conf_low", "conf_high").join(
+            ranef_cis, on=["term", "group"]
+        )
+
+        if save_boots:
+            self.result_boots = boots
+
+    @enable_logging
+    def fit(
+        self,
+        summary=False,
+        conf_method="satterthwaite",
+        nboot=1000,
+        save_boots=True,
+        parallel="multicore",
+        ncpus=4,
+        conf_type="perc",
+        bootMer_kwargs={},
+        **kwargs,
+    ):
+        """Fit a linear mixed effects model using ``lmer()`` in R with Satterthwaite degrees of freedom and p-values calculated using ``lmerTest``.
+
+        Args:
+            summary (bool, optional): Whether to return the model summary. Defaults to False
+            conf_method (str, optional): Method for confidence interval calculation. Defaults to ``"satterthwaite"``. Alternatively, ``"boot"`` for bootstrap CIs.
+            nboot (int, optional): Number of bootstrap samples. Defaults to 1000
+            parallel (str, optional): Parallelization for bootstrapping. Defaults to "multicore"
+            ncpus (int, optional): Number of cores to use for parallelization. Defaults to 4
+            conf_type (str, optional): Type of confidence interval to calculate. Defaults to "perc"
+
+        Returns:
+            GT, optional: Model summary if ``summary=True``
+        """
+
+        # Use super to get fixed effects via easystats::model_parameters()
+        if conf_method == "boot":
+            if self.family is None:
+                default_conf_method = "satterthwaite"
+            else:
+                default_conf_method = "wald"
+        super().fit(
+            conf_method=conf_method if conf_method != "boot" else default_conf_method,
+            effects="fixed",
+            ci_random=False,
+            parallel=parallel,
+            ncpus=ncpus,
+            conf_type=conf_type,
+            **kwargs,
+        )
+
+        # Store the conf_method in the fit_kwargs since we overwrite it in the super call
+        self._fit_kwargs["conf_method"] = conf_method
+
+        # Get random effects
+        self._handle_rfx(**kwargs)
+
+        if conf_method == "boot":
+            self._bootstrap(
+                nboot=nboot,
+                save_boots=save_boots,
+                conf_method=conf_type,
+                parallel=parallel,
+                ncpus=ncpus,
+                **bootMer_kwargs,
+            )
+
+        if summary:
+            return self.summary()
+
+    @enable_logging
+    def anova(
+        self,
+        summary=False,
+        auto_ss_3=True,
+        jointtest_kwargs={"mode": "satterthwaite", "lmer_df": "satterthwaite"},
+        anova_kwargs={},
+    ):
+        """Calculate a Type-III ANOVA table for the model using ``joint_tests()`` in R.
+
+        Args:
+            summary (bool): whether to return the ANOVA summary. Defaults to False
+            auto_ss_3 (bool): whether to automatically use balanced contrasts when calculating the result via `joint_tests()`. When False, will use the contrasts specified with `set_contrasts()` which defaults to `"contr.treatment"` and R's `anova()` function; Default is True.
+            jointtest_kwargs (dict): additional arguments to pass to `joint_tests()` Defaults to using Satterthwaite degrees of freedom
+            anova_kwargs (dict): additional arguments to pass to `anova()`
+        """
+        super().anova(
+            summary=summary,
+            auto_ss_3=auto_ss_3,
+            jointtest_kwargs=jointtest_kwargs,
+            anova_kwargs=anova_kwargs,
+        )
 
     @enable_logging
     @requires_fit
@@ -233,7 +251,6 @@ class lmer(lm):
             **kwargs,
         )
 
-    @requires_fit
     def predict(self, data: DataFrame, use_rfx=True, **kwargs):
         """Make predictions using new data.
 

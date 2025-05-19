@@ -1,7 +1,9 @@
-from .base import model, requires_fit
+from .base import model
 from ..tidystats.stats import lm as lm_
 from ..tidystats.tables import summary_lm_table
-from ..tidystats.multimodel import boot
+from ..tidystats.easystats import bootstrap_model
+import polars as pl
+from polars import col
 
 
 class lm(model):
@@ -34,134 +36,87 @@ class lm(model):
         self._r_func = lm_
         self._summary_func = summary_lm_table
 
-    def _2_get_tidy_summary(self, **kwargs):
-        """Process and format the model summary.
-
-        This method gets the base model summary and renames the 'statistic' column to 't_stat'
-        for OLS regression output.
-        """
-        # Get base model tidy summary
-        super()._2_get_tidy_summary(**kwargs)
-        # Rename to t-stat for OLS
-        self.result_fit = self.result_fit.rename({"statistic": "t_stat"})
-
-    def _post_fit(
-        self, conf_method, ci_type, nboot, conf_level, save_boots, add_df=True
+    def _bootstrap(
+        self,
+        nboot,
+        save_boots,
+        parallel="multicore",
+        ncpus=4,
+        **kwargs,
     ):
-        """Process post-fitting operations including adding dof to summary and confidence interval calculation.
+        """
+        Get bootstrap estimates of model parameters. We use the implementation in `easystats::bootstrap_model()` which handles calling [`boot`](https://rdrr.io/cran/boot/man/boot.html) for us and aggregating results. This is a less error prone that using `boot()` directly as it requires an R function string via rpy2. The downside we that we can only offer percentile confidence intervals calculated from the bootstrap distribution.
 
         Args:
-            conf_method (str): Method for confidence interval calculation.
-            ci_type (str): How to calculate CIs; only applies to `conf_method='boot'`
             nboot (int): Number of bootstrap samples.
-            conf_level (float): Confidence level for intervals.
             save_boots (bool): Whether to save bootstrap samples.
+            **kwargs: Additional arguments passed to `bootstrap_model`.
+
         """
-        self.conf_method = conf_method
-        self.ci_type = ci_type
-        self.nboot = nboot
-        self.conf_level = conf_level
+        result_boot = bootstrap_model(
+            self.r_model, nboot=nboot, parallel=parallel, ncpus=ncpus, **kwargs
+        )
 
-        # Add df to result_fit
-        if add_df:
-            self.result_fit = self.result_fit.with_columns(
-                df=self.result_fit_stats["df_residual"].item()
-            ).select(
-                "term",
-                "estimate",
-                "conf_low",
-                "conf_high",
-                "std_error",
-                "t_stat",
-                "df",
-                "p_value",
+        boot_cis = (
+            result_boot.select(
+                pl.quantile("*", 0.025).name.suffix("_lower"),
+                pl.quantile("*", 0.975).name.suffix("_upper"),
             )
-
-        # If bootsrapped CI's requested replace result_fit with bootstrapped CI's
-        if conf_method == "boot":
-            results = self._bootci(
-                nboot=nboot,
-                conf_method=ci_type,
-                conf_level=conf_level,
-                return_boots=save_boots,
+            .unpivot()
+            .with_columns(
+                col("variable")
+                .str.split_exact("_", 1)
+                .struct.rename_fields(["term", "ci_bound"])
+                .struct.unnest()
             )
-            if save_boots:
-                self.result_boots = results[1]
-                self.result_fit = self.result_fit.with_columns(
-                    results[0].select("conf_low", "conf_high")
-                )
-            else:
-                self.result_fit = self.result_fit.with_columns(
-                    results.select("conf_low", "conf_high")
-                )
+            .drop("variable")
+            .select("term", "ci_bound", "value")
+        )
+        lower = boot_cis.filter(col("ci_bound") == "lower").select("value").to_series()
+        upper = boot_cis.filter(col("ci_bound") == "upper").select("value").to_series()
+        self.result_fit = self.result_fit.with_columns(
+            conf_low=lower,
+            conf_high=upper,
+        )
+        if save_boots:
+            self.result_boots = result_boot
 
     def fit(
         self,
         summary=False,
-        conf_method="parametric",
-        ci_type="bca",
+        conf_method="wald",
         nboot=1000,
-        conf_level=0.95,
-        save_boots=False,
+        save_boots=True,
+        parallel="multicore",
+        ncpus=4,
+        conf_type="perc",
         **kwargs,
     ):
         """Fit a model using ``lm()`` in R.
 
         Args:
             summary (bool, optional): Whether to return the model summary. Defaults to False.
-            conf_method (str, optional): Method for confidence interval calculation. Defaults to "parametric". Alternatively, ``"boot"`` for bootstrap CIs.
-            ci_type (str, optional): How to calculate CIs; only applies to ``conf_method='boot'``. Defaults to ``"bca"``. Other options include ``"norm"``, ``"basic"``, ``"perc"``
+            conf_method (str, optional): Method for confidence interval calculation. Defaults to "wald". Alternatively, ``"boot"`` for bootstrap CIs.
             nboot (int, optional): Number of bootstrap samples. Defaults to 1000.
-            conf_level (float, optional): Confidence level for intervals. Defaults to 0.95.
-            save_boots (bool, optional): Whether to save bootstrap samples. Defaults to False.
-            **kwargs: Additional arguments passed to the base model's fit method.
+            save_boots (bool, optional): Whether to save bootstrap samples. Defaults to True.
+            parallel (str, optional): Parallelization for bootstrapping. Defaults to "multicore"
+            ncpus (int, optional): Number of cores to use for parallelization. Defaults to 4
+            conf_type (str, optional): Type of confidence interval to calculate. Defaults to "perc"
+            **kwargs: Additional arguments to ``easystats::model_parameters()``
 
         Returns:
             ``GT``, optional: Model summary if ``summary=True``, otherwise ``None``.
         """
-        super().fit(**kwargs)
-        self._post_fit(conf_method, ci_type, nboot, conf_level, save_boots)
+        super().fit(
+            conf_method=conf_method,
+            nboot=nboot,
+            save_boots=save_boots,
+            parallel=parallel,
+            ncpus=ncpus,
+            conf_type=conf_type,
+            **kwargs,
+        )
+        if conf_method == "boot":
+            self._bootstrap(nboot, save_boots, **kwargs)
         if summary:
             return self.summary()
-
-    @requires_fit
-    def _bootci(
-        self,
-        nboot=1000,
-        conf_method="bca",
-        conf_level=0.95,
-        return_boots=False,
-    ):
-        """Calculate bootstrap confidence intervals for model parameters.
-
-        Args:
-            nboot (int, optional): Number of bootstrap samples. Defaults to 1000.
-            conf_method (str, optional): Type of bootstrap method. Defaults to "bca".
-            conf_level (float, optional): Confidence level for intervals. Defaults to 0.95.
-            return_boots (bool, optional): Whether to return bootstrap samples. Defaults to False.
-
-        Returns:
-            Union[polars.DataFrame, Tuple[polars.DataFrame, Any]]: If ``return_boots`` is ``True``,returns a tuple of (results, boots), otherwise returns just the results. Results include term, estimate, confidence intervals, and standard error.
-        """
-        self.nboot = nboot
-        results = boot(
-            self.data,
-            self.r_model,
-            self.formula,
-            nboot,
-            self.family,
-            conf_method,
-            conf_level,
-            return_boots,
-        )
-        # return_boots is True
-        if isinstance(results, tuple):
-            boots = results[1]
-            results = results[0]
-            results = (
-                results.drop("bias")
-                .rename({"statistic": "estimate"})
-                .select("term", "estimate", "conf_low", "conf_high", "std_error")
-            )
-            return results, boots
-        return results

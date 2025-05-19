@@ -79,9 +79,9 @@ def simulate(model, *args, **kwargs):
     return func(model, *args, **kwargs)
 
 
-@ensure_py_output
 @ensure_r_input
-def confint(model, *args, **kwargs):
+def confint(model, *args, as_df=True, **kwargs):
+    """Confidence intervals including via bootstrapping using [`confint`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/confint) or [`confint.merMod`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/confint)"""
     if isinstance(model, RS4):
         func = lib_lmer.confint_merMod
     elif isinstance(model, ListVector):
@@ -90,11 +90,14 @@ def confint(model, *args, **kwargs):
             func = lib_stats.confint_glm
         else:
             func = lib_stats.confint_lm
-    return as_tibble(func(model, *args, **kwargs))
+    result = func(model, *args, **kwargs)
+    if as_df:
+        return as_tibble(result)
+    return result
 
 
-# TODO: Switch out to `easystats` ?
-# @ensure_py_output
+# NOTE: Experimental
+@ensure_py_output
 @ensure_r_input
 def boot(
     data,
@@ -102,13 +105,14 @@ def boot(
     formula,
     R,
     family=None,
+    link=None,
     conf_method="perc",
     conf_level=0.95,
     return_boots=False,
     **kwargs,
 ):
     """
-    Generate bootstrapped confidence intervals for a model using [`boot`](https://www.rdocumentation.org/packages/boot/versions/1.3-31/topics/boot) and [`tidy.boot`](https://broom.tidymodels.org/reference/tidy.boot.html) or for lme4 model using [`confint`](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/confint.merMod)
+    NOTE: Experimental. Generate bootstrapped confidence intervals for a model using [`boot`](https://www.rdocumentation.org/packages/boot/versions/1.3-31/topics/boot) and [`tidy.boot`](https://broom.tidymodels.org/reference/tidy.boot.html) or for lme4 model using [`confint`](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/confint.merMod)
 
     Args:
         data (DataFrame): polars DataFrame to resample
@@ -119,16 +123,19 @@ def boot(
         conf_method (str, optional): how to calculated intervalsl: "perc", "bca", "basic", "norm". Defaults to "perc".
         conf_level (float, optional): _description_. Defaults to 0.95.
 
-    Raises:
-        NotImplementedError: _description_
 
     Returns:
         summary (DataFrame): bootstrap results
     """
+    import warnings
+
+    warnings.warn(
+        "This function is experimental and not reliable because it does not guarantee that each bootstrapped model is called in the same way as the input model"
+    )
 
     if isinstance(model, RS4):
         raise NotImplementedError(
-            "To perform bootstrapping on lmer models, use the `tidy` function with `conf_method='boot'"
+            "To perform bootstrapping on lmer models, use the `bootMer()`"
         )
     elif isinstance(model, ListVector):
         method = to_dict(model).get("method", None)
@@ -136,7 +143,7 @@ def boot(
             r_string = f"""
                     function(d, indices){{
                     d <- d[indices,]
-                    fit <- glm({formula}, data=d, family={family})
+                    fit <- glm({formula}, data=d, family={family}, link={link})
                     return(coef(fit))
                     }}
                     """

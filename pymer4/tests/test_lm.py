@@ -45,20 +45,20 @@ def test_model_basics(credit):
 
     # We can mean-center the data
     unscaled_params = m.params
-    m.set_transforms("Income", transform="center")
+    m.set_transforms({"Income": "center"})
     assert "Income_orig" in m.data.columns
     assert m.transformed == {"Income": "center"}
     m.fit()
     scaled_params = m.params
     # Intercepts should change
     assert not np.allclose(
-        scaled_params.select("Estimate")[0, 0],
-        unscaled_params.select("Estimate")[0, 0],
+        scaled_params.select("estimate")[0, 0],
+        unscaled_params.select("estimate")[0, 0],
     )
     # But slope wont
     assert np.allclose(
-        scaled_params.select("Estimate")[1, 0],
-        unscaled_params.select("Estimate")[1, 0],
+        scaled_params.select("estimate")[1, 0],
+        unscaled_params.select("estimate")[1, 0],
     )
 
     # And unscale it
@@ -68,12 +68,12 @@ def test_model_basics(credit):
     new_params = m.params
     # Check the values are restored after unscaling
     assert np.allclose(
-        new_params.get_column("Estimate").to_list(),
-        unscaled_params.get_column("Estimate").to_list(),
+        new_params.get_column("estimate").to_list(),
+        unscaled_params.get_column("estimate").to_list(),
     )
 
     # Scale multiple columns
-    m.set_transforms(["Income", "Limit"], transform="center")
+    m.set_transforms({"Income": "center", "Limit": "zscore"})
     assert "Income_orig" in m.data.columns
     assert "Limit_orig" in m.data.columns
 
@@ -177,16 +177,16 @@ def test_factor_levels_and_planned_contrasts(poker):
     assert model.emmeans("hand")["hand"].to_list() == default_order
 
     # By default b0 = bad, b1 = good-bad, b2 = neutral-bad
-    assert np.allclose(model.params.select("Estimate")[0, 0], bad_mean)
-    assert np.allclose(model.params.select("Estimate")[1, 0], good_mean - bad_mean)
-    assert np.allclose(model.params.select("Estimate")[2, 0], neutral_mean - bad_mean)
+    assert np.allclose(model.params.select("estimate")[0, 0], bad_mean)
+    assert np.allclose(model.params.select("estimate")[1, 0], good_mean - bad_mean)
+    assert np.allclose(model.params.select("estimate")[2, 0], neutral_mean - bad_mean)
 
     # We can also re-order factor levels by using a dictionary instead
     model.set_factors({"hand": ["good", "bad", "neutral"]})
     model.fit()
     assert model.factors == {"hand": ["good", "bad", "neutral"]}
     assert model.emmeans("hand")["hand"].to_list() == ["good", "bad", "neutral"]
-    assert np.allclose(model.params.select("Estimate")[1, 0], bad_mean - good_mean)
+    assert np.allclose(model.params.select("estimate")[1, 0], bad_mean - good_mean)
 
     # Changing the default contrast type will also respect the level order
     # bad < neutral < good
@@ -197,26 +197,26 @@ def test_factor_levels_and_planned_contrasts(poker):
     # Check against the linear combination of means
     contrast_weights = model.design_matrix.select("hand_L").to_numpy().squeeze()
     lin_poly = np.dot(contrast_weights, [bad_mean, neutral_mean, good_mean])
-    assert np.allclose(model.params.select("Estimate")[1, 0], lin_poly)
+    assert np.allclose(model.params.select("estimate")[1, 0], lin_poly)
 
     # We can also specify custom contrasts in terms of cell means and they'll
     # be convert to R contrast codes for us
     model.set_factors({"hand": ["bad", "neutral", "good"]})
     model.set_contrasts({"hand": [-1, 0, 1]}, normalize=True)
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[1, 0], lin_poly)
+    assert np.allclose(model.params.select("estimate")[1, 0], lin_poly)
 
     # If we don't normalize then we'll just use the raw contrast values
     model.set_contrasts({"hand": [-1, 0, 1]}, normalize=False)
     model.fit()
     raw_lin_con = np.dot([-1, 0, 1], [bad_mean, neutral_mean, good_mean])
-    assert np.allclose(model.params.select("Estimate")[1, 0], raw_lin_con)
+    assert np.allclose(model.params.select("estimate")[1, 0], raw_lin_con)
 
     # We can also set multiple, potentially non-orthgonal contrasts
     model.set_contrasts({"hand": np.array([[-1, 0, 1], [-1, 1, 0]])}, normalize=False)
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[1, 0], good_mean - bad_mean)
-    assert np.allclose(model.params.select("Estimate")[2, 0], neutral_mean - bad_mean)
+    assert np.allclose(model.params.select("estimate")[1, 0], good_mean - bad_mean)
+    assert np.allclose(model.params.select("estimate")[2, 0], neutral_mean - bad_mean)
 
 
 def test_unbalanced_anova(poker):
@@ -355,24 +355,24 @@ def test_mixed_emmeans(credit):
     # Check against default lm parameter estimates:
     # Model parameters will not match emmeans
     # because beta estimates assume Income = 0
-    assert model.params.select("Estimate")[0, 0] != no_mean
-    assert model.params.select("Estimate")[2, 0] != yes_minus_no
+    assert model.params.select("estimate")[0, 0] != no_mean
+    assert model.params.select("estimate")[2, 0] != yes_minus_no
     # And the continuous term is the slope just for Student=No
-    assert np.allclose(model.params.select("Estimate")[1, 0], no_slope)
+    assert np.allclose(model.params.select("estimate")[1, 0], no_slope)
     # But the interaction is correct: difference between slopes across factor levels
-    assert np.allclose(model.params.select("Estimate")[3, 0], yes_slope_minus_no_slope)
+    assert np.allclose(model.params.select("estimate")[3, 0], yes_slope_minus_no_slope)
 
     # If we mean center then our categorical parameters match
-    model.set_transforms("Income", transform="center")
+    model.set_transforms({"Income": "center"})
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[0, 0], no_mean)
-    assert np.allclose(model.params.select("Estimate")[2, 0], yes_minus_no)
+    assert np.allclose(model.params.select("estimate")[0, 0], no_mean)
+    assert np.allclose(model.params.select("estimate")[2, 0], yes_minus_no)
 
     # Which is the same as computing a contrast of the marginal means
     # because emmeans holds covariates at their mean.
     # In this case the order is flipped from the beta estimate
     estimate = marginal_mean_diff.select("estimate").item()
-    assert np.allclose(model.params.select("Estimate")[2, 0], -estimate)
+    assert np.allclose(model.params.select("estimate")[2, 0], -estimate)
     assert np.allclose(estimate, no_minus_yes)
 
     # Specifying 'by' doesn't change anything for marginal mean contrasts
@@ -387,21 +387,21 @@ def test_mixed_emmeans(credit):
     )
 
     # However the slope estimate for Income is still only for Student=No
-    assert np.allclose(model.params.select("Estimate")[1, 0], no_slope)
+    assert np.allclose(model.params.select("estimate")[1, 0], no_slope)
     # And the interaction is unaffected by centering
-    assert np.allclose(model.params.select("Estimate")[3, 0], yes_slope_minus_no_slope)
+    assert np.allclose(model.params.select("estimate")[3, 0], yes_slope_minus_no_slope)
 
     # To fix the slope, we need to code our factor using sum coding
     # which estimates a slope "in between" factor levels, i.e. their average
     model.set_contrasts({"Student": "contr.sum"})
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[1, 0], average_slope)
+    assert np.allclose(model.params.select("estimate")[1, 0], average_slope)
 
     # however this will change the scale of the interaction and categorical parameters
     # contr.sum will do No: 1; Yes: -1 by default
-    assert np.allclose(model.params.select("Estimate")[2, 0], no_minus_yes / 2)
+    assert np.allclose(model.params.select("estimate")[2, 0], no_minus_yes / 2)
     assert np.allclose(
-        model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2
+        model.params.select("estimate")[3, 0], no_slope_minus_yes_slope / 2
     )
 
     # We can set them manually to check
@@ -410,16 +410,16 @@ def test_mixed_emmeans(credit):
     # This will reproduce R's result
     model.set_contrasts({"Student": [0.5, -0.5]})
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[2, 0], no_minus_yes / 2)
+    assert np.allclose(model.params.select("estimate")[2, 0], no_minus_yes / 2)
     assert np.allclose(
-        model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope / 2
+        model.params.select("estimate")[3, 0], no_slope_minus_yes_slope / 2
     )
 
     # But we can just do this, which gives us the contrast we actually want
     model.set_contrasts({"Student": [1, -1]})
     model.fit()
-    assert np.allclose(model.params.select("Estimate")[2, 0], no_minus_yes)
-    assert np.allclose(model.params.select("Estimate")[3, 0], no_slope_minus_yes_slope)
+    assert np.allclose(model.params.select("estimate")[2, 0], no_minus_yes)
+    assert np.allclose(model.params.select("estimate")[3, 0], no_slope_minus_yes_slope)
 
     # We can also compute slope contrasts, i.e. the interaction by comparing marginal
     # estimates
@@ -428,7 +428,7 @@ def test_mixed_emmeans(credit):
     # Should match the diff in marginal estimates we calculated manually
     assert np.allclose(contrast_estimate, no_slope_minus_yes_slope)
     # And the interaction term
-    assert np.allclose(contrast_estimate, model.params.select("Estimate")[3, 0])
+    assert np.allclose(contrast_estimate, model.params.select("estimate")[3, 0])
 
     # We can also generate more specific marginal predictions
     # using emmeans reference grid
@@ -450,7 +450,7 @@ def test_mixed_emmeans(credit):
     # The default uncentered, dummy-coded parameter estimate for student
     # is the difference between levels when Income = 0
     # let's verify that
-    beta = model.params.select("Estimate")[2, 0]
+    beta = model.params.select("estimate")[2, 0]
     # Compute a contrast at a specific value of continuous predictor
     marginal_diff = model.emmeans(
         "Student", contrasts={"yes_minus_no": [-1, 1]}, at={"Income": 0}
@@ -462,7 +462,7 @@ def test_mixed_emmeans(credit):
     marginal_pred = (
         model.empredict(at={"Income": 0, "Student": "No"}).select("prediction").item()
     )
-    intercept = model.params.select("Estimate")[0, 0]
+    intercept = model.params.select("estimate")[0, 0]
     assert np.allclose(intercept, marginal_pred)
 
 
@@ -488,17 +488,22 @@ def test_wls(credit):
     non_student = credit.filter(col("Student") == "No").select("Balance")
     results = ttest_ind(student, non_student, equal_var=False)
 
-    model = lm("Balance ~ Student", data=credit)
-    model.set_factors("Student")
-
     # Create weight column that's inverse of variance of each factor level
-    model.data = model.data.with_columns(
-        weights=pl.when(col("Student") == "No")
+    credit = credit.with_columns(
+        pl.when(col("Student") == "No")
         .then(pl.lit(1 / non_student.var(ddof=1).item()))
         .otherwise(pl.lit(1 / student.var(ddof=1).item()))
+        .alias("student_weights")
     )
 
-    # Pass that into weights
-    model.fit(weights=model.data["weights"].to_numpy())
+    # Test by referring to weights as a string
+    wls = lm("Balance ~ Student", weights="student_weights", data=credit)
+    wls.set_factors("Student")
+    wls.fit()
 
-    assert np.allclose(results.statistic[0], model.result_fit[-1, "t_stat"])
+    ols = lm("Balance ~ Student", data=credit)
+    ols.set_factors("Student")
+    ols.fit()
+
+    assert np.allclose(results.statistic[0], wls.result_fit[-1, "t_stat"])
+    assert not ols.params.equals(wls.params)

@@ -1,11 +1,15 @@
 from numpy import ndarray
 from rpy2.robjects.packages import importr
 from .bridge import ensure_py_output, ensure_r_input
+from rpy2.robjects import RS4, r
+from .bridge import R2polars, R2numpy
+import polars as pl
 
-__all__ = ["lmer", "glmer", "fixef", "ranef"]
+__all__ = ["lmer", "glmer", "fixef", "ranef", "bootMer"]
 
 lib_lmerTest = importr("lmerTest")
 lib_lmer = importr("lme4")
+lib_broom = importr("broom")
 
 
 @ensure_r_input
@@ -52,3 +56,52 @@ def ranef(model, *args, **kwargs) -> ndarray:
 def lmer_control(*args, **kwargs):
     """Set control options for lmer models"""
     return lib_lmer.lmerControl(*args, **kwargs)
+
+
+# TODO: Add support for returning coef(model) for BLUPs CIs
+@ensure_r_input
+def bootMer(
+    model,
+    nsim=1000,
+    parallel="multicore",
+    ncpus=4,
+    conf_level=0.95,
+    conf_method="perc",
+    exponentiate=False,
+    save_boots=True,
+    **kwargs,
+):
+    if not isinstance(model, RS4):
+        raise TypeError(
+            "To perform bootstrapping on lm/glm models, use the boot() function"
+        )
+    r_string = """
+            function(model){{
+            # Get fixed effects
+            fe <- fixef(model)
+            re <- broom.mixed::tidy(model, effects="ran_pars")
+            vc <- re$estimate
+            names(vc) <- paste(re$term, re$group, sep="___")
+            return(c(fe, vc))
+            }}
+            """
+    extract_func = r(r_string)
+    out = lib_lmer.bootMer(
+        model, extract_func, nsim=nsim, parallel=parallel, ncpus=ncpus, **kwargs
+    )
+    cis = R2polars(
+        lib_broom.tidy_boot(
+            out,
+            conf_int=True,
+            conf_level=conf_level,
+            conf_method=conf_method,
+            exponentiate=exponentiate,
+        )
+    )
+
+    if save_boots:
+        boots = R2numpy(out.rx2("t"))
+        boots = pl.DataFrame(boots, schema=cis["term"].to_list())
+        return cis, boots
+
+    return cis, out
