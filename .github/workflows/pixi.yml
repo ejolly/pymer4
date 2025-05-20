@@ -3,7 +3,11 @@ on:
   push:
     branches:
       - main
-      - '0.9.X-rewrite'
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       upload_anaconda:
@@ -34,6 +38,7 @@ jobs:
           pixi-version: v0.45.0
           cache: true
 
+      # Always run linting, tests, and build docs
       - name: Pixi Check Errors & Formatting
         run: | 
          pixi run lint
@@ -44,22 +49,25 @@ jobs:
          pixi run tests
          pixi run docs-build
 
-      #  # Upload the book's HTML as an artifact
-      # - name: Upload artifact
-      #   uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: "./_build/html"
+       # upload built docs on direct push to main
+      - name: upload artifact
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./_build/html"
 
-      # Deploy the book's HTML to GitHub Pages
-      # - name: Deploy to GitHub Pages
-      #   id: deployment
-      #   uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        id: deployment
+        uses: actions/deploy-pages@v4
 
+      # always build pip and conda packages
       - name: Pixi Build Conda & Pip Packages
         run: |
           pixi run build-pip
           pixi run build
 
+      # upload test pypi on non-release pushes
       - name: Upload Test PyPi?
         if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
         uses: pypa/gh-action-pypi-publish@v1.12.4
@@ -70,6 +78,7 @@ jobs:
           attestations: false
           skip-existing: true
 
+      # upload real pypi on release or when manually triggered
       - name: Upload Real PyPi?
         if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
         uses: pypa/gh-action-pypi-publish@v1.12.4
@@ -95,6 +104,8 @@ jobs:
           upload_file=$(pixi run build-output)
           anaconda -t $ANACONDA_TOKEN upload $upload_file -l "main"
 
+  # After the the main job is done we test the install on a variety
+  # of OSs and Python versions using the built package on pre-release label
   test-built-install:
     needs: pixi-test-and-docs
     runs-on: ${{ matrix.os }}
