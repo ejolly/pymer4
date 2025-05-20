@@ -1,4 +1,5 @@
 import rpy2.robjects as ro
+from .tidystats.bridge import ensure_r_input
 
 __all__ = ["get_summary", "make_rfunc"]
 
@@ -43,4 +44,4 @@ def make_rfunc(r_code):
     """
 
     func = ro.r(r_code)
-    return func
+    return ensure_r_input(func)

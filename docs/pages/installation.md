@@ -71,9 +71,7 @@ To support easy installation of the latest "bleeding-edge" version of `pymer4` o
 conda install -c ejolly/label/pre-release -c conda-forge pymer4
 ```
 
-## Technical Issues
-
-### I'm using an intel mac and having installation problems
+## Installation issues on intel macOS
 
 Some of the more cryptic error messages you might encounter on macOS are
 due to compiler issues that give `rpy2` (a package dependency of
@@ -126,22 +124,3 @@ that:
     `conda install -c conda-forge rpy2` if you don\'t.
 
 10. Now you should be able to `pip install pymer4` :)
-
-### Help my Kernel Crashes in Jupyter Notebooks/Lab!
-
-Sometimes using `pymer4` interactively can cause the Python kernel to
-crash. This is more likely to happen if you have multiple interactive
-sessions running simulatenously. One way around this is to put this at
-the top of your notebook/code:
-
-``` python
-import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-```
-
-Or set the following environment variable prior to launching your
-interactive sessions:
-
-``` bash
-export KMP_DUPLICATE_LIB_OK=TRUE
-```

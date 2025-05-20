@@ -4,7 +4,7 @@
 
 `pymer4` includes 4 types of models that share a consistent API and can be imported like this:
 
-```{python}
+```python
 from pymer4.models import lm, glm, lmer, glmer
 ```
 

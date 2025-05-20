@@ -76,6 +76,7 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
+          skip-existing: true
 
       # Run this from within the pixi env by shelling in
       # because passing ANACONDA_TOKEN to pixi run upload-*

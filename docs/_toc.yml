@@ -36,6 +36,6 @@ parts:
   - caption: Developer Guide
     maxdepth: 1
     chapters:
-    - file: contributing/contributing.md
-    - file: contributing/developing.md
-    - file: contributing/extending.ipynb
+    - file: development/contributing.md
+    - file: development/extending.ipynb
+    - file: development/design.md

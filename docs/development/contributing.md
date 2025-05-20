@@ -10,7 +10,7 @@ Install `pixi`
 curl -fsSL https://pixi.sh/install.sh | bash
 ```
 
-Fork & clone the repository, and setup a environment
+Fork the `main` branch on github, clone your fork, and install the development dependencies in an isolated Python environment:
 
   ```bash
   git clone https://github.com/YOURFORK/pymer4.git
@@ -37,6 +37,18 @@ Or try to fix code formatting
 pixi run lint-fix
 ```
 
+Or build docs
+
+```bash
+pixi run docs-build
+```
+
+And preview them
+
+```bash
+pixi run docs-preview
+```
+
 ## 3. Push your changes to Github and open a pull request!
 
 Opening a PR will setup a fresh `pymer4` install and rerun the test-suite with your changes while also ensuring the package can be built. We'll review your changes and request any modifications before accepting a merge!
@@ -52,7 +64,6 @@ Opening a PR will setup a fresh `pymer4` install and rerun the test-suite with y
 Documentation is written using [`jupyterbook`](https://jupyterbook.org/en/stable/intro.html) with the following sphinx extensions:
 - [sphinx autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html)
 - [sphinx autosummary](https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html)
-- [sphinxcontrib-mermaid](https://github.com/mgaitan/sphinxcontrib-mermaid)
 
 New documentation can be created by:
 

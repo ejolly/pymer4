@@ -40,4 +40,4 @@ Modeling. *Journal of Open Source Software*, 3(31), 862,
 ## Contributing
 
 Contributions are *always welcome*!  
-If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues) and check out the [contribution guidelines](https://eshinjolly.com/pymer4/contributing.html).
+If you are interested in contributing feel free to check out the [open issues](https://github.com/ejolly/pymer4/issues) and check out the [contribution guidelines](https://eshinjolly.com/pymer4/contributing/contributing.html).

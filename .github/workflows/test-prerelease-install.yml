@@ -1,8 +1,5 @@
 name: Test Pre-release Install
 on:
-  push:
-    branches:
-      - refactor
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'

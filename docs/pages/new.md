@@ -1,7 +1,7 @@
 # What's New
 
 ## 0.9.0
-This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and API breaking changes. You can check out the [migration guide](./migrating.md) for more details. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
+This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and **API breaking changes.** You can check out the [migration guide](./migrating.md) for more details. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
 
 As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect to move to the `conda-forge` channel soon.
 
@@ -11,7 +11,7 @@ As of this version, `pymer4` is now *only* installable via `conda` following the
 - Full support for factors and marginal-estimates/comparisons for all model types
 - Overhauled docs and tutorials with several included datasets for demo and teaching purposes
 - Much more extensive testing
-- Replaced bespoke code with "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`, `parameters`, `insight`)
+- Replaced bespoke code with "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`, `parameters`)
 - Switched `setup.py` and `requirements.txt/requirements-dev.txt` to `pyproject.toml`
 - Switched over to [Pixi.sh](../contributing/developing.md#development-tooling) for development-tooling and Github Actions
 - Switched documentation from `sphinx` to `jupyterbook`
