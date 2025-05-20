@@ -14,7 +14,7 @@ lib_broom = importr("broom")
 
 @ensure_r_input
 def lmer(*args, **kwargs):
-    """Fit a linear-mixed-model using [lme4](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/lmer) and get inferential stats using [lmerTest](https://www.rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/lmerTest-package)
+    """Fit a linear-mixed-model using `lmer <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/lmer>`_ and get inferential stats using `lmerTest <https://www.rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/lmerTest-package>`_
 
     Args:
         formula (str): model formula
@@ -28,11 +28,11 @@ def lmer(*args, **kwargs):
 
 @ensure_r_input
 def glmer(*args, **kwargs):
-    """Fit a generalized linear-mixed-modelglmm using [lme4](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/glmer)
+    """Fit a generalized linear-mixed-model using `glmer <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/glmer>`_
 
     Args:
         formula (str): model formula
-        family (str): glm [family](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family)
+        family (str): glm `family <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/family>`_
         data (pl.DataFrame): polars dataframe
     Returns:
         model (R RS4): R model object
@@ -42,13 +42,13 @@ def glmer(*args, **kwargs):
 
 @ensure_py_output
 def fixef(model, *args, **kwargs) -> ndarray:
-    """Extract model [fixed-effects](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/fixef)"""
+    """Extract model fixed-effects using `fixef <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/fixef>`_"""
     return lib_lmer.fixef_merMod(model, *args, **kwargs)
 
 
 @ensure_py_output
 def ranef(model, *args, **kwargs) -> ndarray:
-    """Extract model [random-effects/conditional-modes](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/ranef)"""
+    """Extract model random-effects/conditional-modes using `ranef <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/ranef>`_"""
     return lib_lmer.ranef_merMod(model, *args, **kwargs)
 
 
@@ -71,6 +71,17 @@ def bootMer(
     save_boots=True,
     **kwargs,
 ):
+    """Bootstrap model parameters using `bootMer <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/bootMer>`_ Extracts fixed effects using ``fixef()`` and random-effects using ``broom.mixed::tidy()``
+
+    Args:
+        model (R model): `lmer` or `glmer` model
+        nsim (int, optional): Number of bootstrap samples. Defaults to 1000.
+        parallel (str, optional): Parallelization method. Defaults to "multicore".
+        ncpus (int, optional): Number of cores to use. Defaults to 4.
+        conf_level (float, optional): Confidence level. Defaults to 0.95.
+        conf_method (str, optional): Confidence interval method. Defaults to "perc".
+        exponentiate (bool, optional): Whether to exponentiate the results. Defaults to False.
+    """
     if not isinstance(model, RS4):
         raise TypeError(
             "To perform bootstrapping on lm/glm models, use the boot() function"
@@ -109,7 +120,7 @@ def bootMer(
 
 @ensure_r_input
 def is_singular(model):
-    """Check if a model is singular using the implementation in [`lmerTest`](https://www.rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/isSingular)
+    """Check if a model is singular using the implementation in `lmerTest <https://www.rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/isSingular>`_
 
     Args:
         model (R model): `lmer` or `glmer` model

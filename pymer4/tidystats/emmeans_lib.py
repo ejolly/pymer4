@@ -11,7 +11,7 @@ lib_emmeans = importr("emmeans")
 @ensure_py_output
 @ensure_r_input
 def joint_tests(model, **kwargs):
-    """Compute [joint_tests](https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/joint_tests)
+    """Compute ANOVA-style F-tests using `emmeans::joint_tests <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/joint_tests>`_
 
     Args:
         model (R model): `lm`, `glm`, `lmer` model
@@ -25,7 +25,7 @@ def joint_tests(model, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def emmeans(model, specs, contrasts: str | dict | None = None, **kwargs):
-    """This function combines `emmeans` and `contrast` from the emmeans package, by first generating a grid and then computing contrasts over it
+    """This function combines functionality from `emmeans::emmeans <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/emmeans>`_  and `emmeans::contrast <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/contrast>`_, by first generating a grid and then optionally computing contrasts over it if ``contrasts`` is not None.
 
     Args:
         model (R model): `lm`, `glm`, `lmer` model
@@ -60,7 +60,7 @@ def emmeans(model, specs, contrasts: str | dict | None = None, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def emtrends(model, contrasts: str | dict | None = None, **kwargs):
-    """This function combines `emtrends` and `contrast` from the emmeans package, by first generating a grid and then computing contrasts over it
+    """This function combines functionality from `emmeans::emtrends <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/emtrends>`_ and `emmeans::contrast <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/contrast>`_, by first generating a grid and then optionally computing contrasts over it if ``contrasts`` is not None.
 
     Args:
         model (R model): `lm`, `glm`, `lmer` model
@@ -95,7 +95,7 @@ def emtrends(model, contrasts: str | dict | None = None, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def ref_grid(model, *args, **kwargs):
-    """Create a reference grid of model predictions"""
+    """Create a reference grid of model predictions. Uses `emmeans::ref_grid <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/ref_grid>`_ and `emmeans::summary_emmGrid <https://www.rdocumentation.org/packages/emmeans/versions/1.3.5.1/topics/summary_emmGrid>`_."""
     ref = lib_emmeans.ref_grid(model, *args, **kwargs)
     grid_summary = lib_emmeans.summary_emmGrid(ref)
     return grid_summary

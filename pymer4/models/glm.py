@@ -58,7 +58,6 @@ class glm(lm):
         """
 
         super().fit(
-            summary=summary,
             conf_method=conf_method,
             exponentiate=exponentiate,
             nboot=nboot,
@@ -69,6 +68,8 @@ class glm(lm):
             conf_type=conf_type,
             **kwargs,
         )
+        if summary:
+            return self.summary()
 
     def predict(self, data: DataFrame, type_predict="response", **kwargs):
         """Make predictions from the model accounting for the link function.

@@ -20,7 +20,7 @@ insight = importr("insight")
 
 
 def report(model, **kwargs):
-    """Generate a report for a model using the implementation in [`easystats`](https://easystats.github.io/report/reference/report.html)
+    """Generate a report for a model using the implementation in `easystats <https://easystats.github.io/report/reference/report.html>`_
 
     Args:
         model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -31,7 +31,7 @@ def report(model, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def bootstrap_model(r_model, nboot=1000, parallel="multicore", n_cpus=4, **kwargs):
-    """Generate bootstrap samples for model coefficients. Supports parallelization
+    """Generate bootstrap samples for model fixed effects coefficients using the implementation in `parameters::bootstrap_model <https://easystats.github.io/parameters/reference/bootstrap_model.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -55,7 +55,7 @@ def bootstrap_params(
     n_cpus=4,
     **kwargs,
 ):
-    """Generate bootstrap samples for model coefficients. Supports parallelization
+    """Generate bootstrapped summary statistics for model fixed effects coefficients using the implementation in `parameters::bootstrap_parameters <https://easystats.github.io/parameters/reference/bootstrap_parameters.html>`_. Does not return bootstrap samples.
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -82,7 +82,7 @@ def bootstrap_params(
 @ensure_py_output
 @ensure_r_input
 def model_performance(r_model, **kwargs):
-    """Calculate model performance using the implementation in [`easystats`](https://easystats.github.io/performance/reference/model_performance.html)
+    """Calculate model performance using the implementation in `performance::model_performance <https://easystats.github.io/performance/reference/model_performance.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -94,7 +94,7 @@ def model_performance(r_model, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def model_performance_cv(r_model, method="k_fold", stack=False, **kwargs):
-    """Calculate cross-validated model performance using the implementation in [`easystats`](https://easystats.github.io/performance/reference/performance_cv.html)
+    """Calculate cross-validated model performance using the implementation in `performance::performance_cv <https://easystats.github.io/performance/reference/performance_cv.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -108,7 +108,7 @@ def model_performance_cv(r_model, method="k_fold", stack=False, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def model_icc(r_model, by_group=True, **kwargs):
-    """Calculate the intraclass correlation coefficient (ICC) for a model using the implementation in [`easystats`](https://easystats.github.io/performance/reference/icc.html)
+    """Calculate the intraclass correlation coefficient (ICC) for a model using the implementation in `performance::icc <https://easystats.github.io/performance/reference/icc.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -123,7 +123,7 @@ def model_icc(r_model, by_group=True, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def get_fixed_params(r_model):
-    """Get the parameters for a model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/get_parameters.html)
+    """Get the fixed-effects parameters for a model using the implementation in `insight::get_parameters <https://easystats.github.io/insight/reference/get_parameters.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -133,7 +133,7 @@ def get_fixed_params(r_model):
 
 @ensure_r_input
 def get_param_names(r_model):
-    """Get the parameter names for a model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/find_parameters.html)
+    """Get the parameter names for a model using the implementation in `insight::find_parameters <https://easystats.github.io/insight/reference/find_parameters.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -152,7 +152,7 @@ def get_param_names(r_model):
 @ensure_py_output
 @ensure_r_input
 def model_params(r_model, **kwargs):
-    """Get model parameters using the implementation in [`easystats`](https://easystats.github.io/parameters/reference/model_parameters.html) and standardize names using the implementation in [`insight`](https://easystats.github.io/insight/reference/standardize_names.html)
+    """Get model parameters using the implementation in `parameters::model_parameters <https://easystats.github.io/parameters/reference/model_parameters.html>`_ and standardize names using the implementation in `insight::standardize_names <https://easystats.github.io/insight/reference/standardize_names.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -166,7 +166,7 @@ def model_params(r_model, **kwargs):
 
 @ensure_r_input
 def is_mixed_model(r_model):
-    """Check if a model is a mixed model using the implementation in [`easystats`](https://easystats.github.io/insight/reference/is_mixed_model.html)
+    """Check if a model is a mixed model using the implementation in `insight::is_mixed_model <https://easystats.github.io/insight/reference/is_mixed_model.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
@@ -176,10 +176,13 @@ def is_mixed_model(r_model):
 
 @ensure_r_input
 def is_converged(r_model):
-    """Check if a model is converged using the implementation in [`easystats`](https://easystats.github.io/insight/reference/is_converged.html)
+    """Check if a model is converged using the implementation in `insight::is_converged <https://easystats.github.io/insight/reference/is_converged.html>`_
 
     Args:
         r_model (R model): `lm`, `glm`, `lmer`, or `glmer` model
+
+    Returns:
+        tuple: Whether the model converged and the convergence message
     """
     convergence = insight.is_converged(r_model)
     did_converge = R2numpy(convergence).astype(bool)[0]

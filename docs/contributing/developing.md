@@ -12,8 +12,8 @@ Version `0.9.0` involved a major-rewrite of the `pymer4` internals to follow a m
 Sitting on-top of this "functional core" is the `pymer4.models` module which  serves as the "imperative shell" that defines the 4 core classes intended for typical use (`lm`, `glm`, `lmer`, `glmer`). These models follow an inheritence diagram that looks like this:
 
 - `pymer4.models.base.model`: base class that implements most of the core functionality shared by all models
-- `pymer4.models.lm.lm`: extends the base class with support for boostrapping
-- `pymer4.models.lmer.lmer`: extends the base class with support for boostrapping and random-effects
+- `pymer4.models.lm.lm`: extends the base class with support for bootstrapping
+- `pymer4.models.lmer.lmer`: extends the base class with support for bootstrapping and random-effects
 - `pymer4.models.glm.glm`: extends `lm` with support for `family` and `link` functions, parameter expontentiation (`False` by default), and predictions on the `'response'` scale by default
 - `pymer4.models.glmer.glmer`: extends `lmer` with support for `family` and `link` functions, parameter expontentiation (`False` by default), and predictions on the `'response'` scale by default
 
@@ -25,20 +25,10 @@ Calling `.fit()` on a model goes through the following sequence of steps with ma
 2. `._get_design()` to save the model's design-matrix
 3. `._get_params()` to estimate fixed-effects terms using `parameters::model_parameters()` with satterthwaite degrees-of-freedom for `lmer()` models
 4. `._get_fit_stats()` to get quality-of-fit estimates using `broom/broom.mixed::glance()` 
-5. `._get_fits_resids()` to add columns to `.data` using `broom/broom.mixed::augment()`
+5. `._get_fits_resids()` to add columns to `.data` using `broom/broom.mixed::augment()`, with predictions (`'fitted'`) values coming from a model's `.predict()` method to support `type_predict = 'response'`
 
 To create new model classes, it's preferable to inherit from one of the existing models and define a new `.fit()` method that calls `super().fit(*args, **kwargs)` plus extra code.
 
-
-## Development version
-
-To support easy installation of the latest "bleeding-edge" version of `pymer4`, synchronized with the `main` branch on Github you can use: 
-
-```bash
-conda install -c ejolly/label/pre-release -c conda-forge pymer4
-```
-
-The `main` branch may often contain upcoming fixes and features slated for a new release.
 
 ## Development Tooling
 

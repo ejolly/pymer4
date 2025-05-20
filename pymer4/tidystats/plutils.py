@@ -3,7 +3,7 @@ import polars as pl
 import numpy as np
 from string import ascii_uppercase
 
-__all__ = ["join_on_common_cols", "make_factors", "unmake_factors"]
+__all__ = ["join_on_common_cols", "make_factors", "unmake_factors", "RandomExpr"]
 
 
 def get_str_numeric_type(x):
@@ -94,42 +94,65 @@ def unmake_factors(df, factors: dict | None):
     return df.with_columns(*compound_expression)
 
 
-@pl.api.register_expr_namespace("stats")
-class StatsExpr:
-    """Polars expression namespace for statistical functions"""
+@pl.api.register_expr_namespace("random")
+class RandomExpr:
+    """Polars expression namespace for random number generation accessilble as ``.random.*`` as part of a polars expression.
+
+    Examples:
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> np.random.seed(0)
+        >>>
+        >>> # Create a DataFrame with random numbers from different distributions
+        >>> example = pl.DataFrame().with_columns(
+        >>>     # Normal distribution
+        >>>     pl.col('*').random.norm(1000, .5, .1).alias('x'),
+        >>>
+        >>>     # Binomial distribution
+        >>>     pl.col('*').random.binom(1000, 1, .5).alias('y'),
+        >>>
+        >>>     # Random selection from a group of 3
+        >>>     pl.col('*').random.group(1000, 3).alias('group'),
+        >>>
+        >>>     # Repeated value
+        >>>     pl.repeat('site_1', 1000).alias('dataset')
+        >>> )
+        >>> example.head()
+
+    """
 
     def __init__(self, expr: pl.Expr) -> None:
         self._expr = expr
 
-    def rnorm(self, n: int, mean: float = 0, std: float = 1):
+    def norm(self, n: int, mean: float = 0, std: float = 1):
         """Generate random numbers from a normal distribution"""
         return pl.lit(np.random.normal(mean, std, n))
 
-    def rbinom(self, n: int, size: int, prob: float):
+    def binom(self, n: int, size: int, prob: float):
         """Generate random numbers from a binomial distribution"""
         return pl.lit(np.random.binomial(size, prob, n))
 
-    def runiform(self, n: int, min: float = 0, max: float = 1):
+    def uniform(self, n: int, min: float = 0, max: float = 1):
         """Generate random numbers from a uniform distribution"""
         return pl.lit(np.random.uniform(min, max, n))
 
-    def rgroup(self, n: int, ngroups: int, replace: bool = True):
+    def group(self, n: int, ngroups: int, replace: bool = True):
         """Generate random numbers from a group distribution"""
         g = list(ascii_uppercase[:ngroups])
         return pl.lit(np.random.choice(g, n, replace=replace))
 
-    def rpoisson(self, n: int, lamb: float):
+    def poisson(self, n: int, lamb: float):
         """Generate random numbers from a Poisson distribution"""
         return pl.lit(np.random.poisson(lamb, n))
 
-    def rbeta(self, n: int, _alpha: float, _beta: float):
+    def beta(self, n: int, _alpha: float, _beta: float):
         """Generate random numbers from a beta distribution"""
         return pl.lit(np.random.beta(_alpha, _beta, n))
 
-    def rgamma(self, n: int, shape: float, scale: float = 1):
+    def gamma(self, n: int, shape: float, scale: float = 1):
         """Generate random numbers from a gamma distribution"""
         return pl.lit(np.random.gamma(shape, scale, n))
 
-    def rchisq(self, n: int, df: float):
+    def chisq(self, n: int, df: float):
         """Generate random numbers from a chi-squared distribution"""
         return pl.lit(np.random.chisquare(df, n))

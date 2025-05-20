@@ -13,7 +13,7 @@ LMMs are also commonly known as linear-mixed-effects (LMEs), multi-level-models 
 
 ```python
 from pymer4 import load_dataset('sleep')
-from pymer4.models import lmer
+from pymer4.models import lmer, compare
 
 sleep = load_dataset('sleep')
 
@@ -22,6 +22,10 @@ lmm_i = lmer('Reaction ~ Days + (1 | Subject)', data=sleep)
 
 # Random intercept and slope for each Subject
 lmm_s = lmer('Reaction ~ Days + (Days | Subject)', data=sleep)
+
+# Compare models with different rfx
+compare(lmm_s, lmm_i)
+
 ```
 
 ---

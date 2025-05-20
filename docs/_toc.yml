@@ -4,7 +4,7 @@ parts:
   - caption: Pymer4
     maxdepth: 1
     chapters:
-    # - file: pages/installation
+    - file: pages/installation
     - file: pages/quickstart.ipynb
     - file: pages/new
     - file: pages/migrating
@@ -28,9 +28,10 @@ parts:
         - file: api/models/lmer.md
         - file: api/models/glmer.md
       - file: api/tidystats.md
+      - file: api/config.md
       - file: api/expressions.ipynb
-      - file: api/rfuncs.ipynb
       - file: api/io.md
+      - file: api/rfuncs.ipynb
 
   - caption: Developer Guide
     maxdepth: 1

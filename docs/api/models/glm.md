@@ -9,9 +9,9 @@ Check out the [linear regression](../../tutorials/01_lm.ipynb) and [GLMs tutoria
 
 **G**eneralized **L**inear **M**odels fit using Maximum-Likelihood-Estimation (MLE)
 
-GLMs are useful for estimating models with non-gaussian outcome variables. These include models like logistic regression for binary data and poisson regression for count data.
+GLMs are useful for estimating models with non-gaussian outcome variables. These include models like logistic regression for binary data and poisson regression for count data that are controlled using the `family` and `link` arguments when initializing a model along with a formula and data. 
 
-GLMs work just like LMs but additionally take a `family` and `link` argument when being initialized. For convenience, when estimating a logistic regression specifically (`family ='binomial'`), parameter estimates and uncertainty can be auto-converted to log-odd and probability scales.
+For some models like logistic regression, it can be helpful to use `.fit(exponentiate=True)` to transform estimates to the odds scale to aid interpretability. By default the `'fitted'` column in `model.data` and the output of `model.predict()` uses `type_predict = 'response'` so that model predictions are on the *response* scale, i.e. probabilities for logistic regression.
 
 ```python
 from pymer4 import load_dataset('titanic')
@@ -21,13 +21,15 @@ titanic = load_dataset('titanic')
 
 # Logistic regression with logit link
 log_reg = glm('survived ~ fare', family='binomial', data=titanic)
-log_reg.fit()
 
-# See parameter estimates on probability scale
-log_reg.summary(to_probs=True)
+# See parameter estimates on odds scale
+log_reg.fit(exponentiate=True)
 
 # Logistic regression with probit link
 probit_reg = glm('survived ~ fare', family='binomial', link='probit', data=titanic)
+
+# Now estimates on the link scale
+# which is z-score of p(survived)
 probit_reg.fit()
 
 ```

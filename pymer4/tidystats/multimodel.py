@@ -16,7 +16,7 @@ __all__ = ["coef", "predict", "simulate", "confint", "boot"]
 @ensure_py_output
 @ensure_r_input
 def coef(model, *args, **kwargs):
-    """Extract coefficients from `lm`, `glm`, `lmer` or `glmer` models
+    """Extract coefficients from ``lm``, ``glm``, ``lmer`` or ``glmer`` models. Uses `lme4::coef.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/coef.merMod>`_ for linear-mixed-models and `stats::coef.lm <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/coef.lm>`_ for linear models.
 
     Args:
         model (R ListVector or RS4): R model
@@ -36,7 +36,7 @@ def coef(model, *args, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def predict(model, *args, **kwargs):
-    """Generate predictions from a model given existing or new data
+    """Generate predictions from a model given existing or new data. Uses `lme4::predict.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/predict.merMod>`_ for linear-mixed-models, `stats::predict.lm <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.lm>`_ for linear models, and `stats::predict.glm <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/predict.glm>`_ for generalized linear models.
 
     Args:
         model (R ListVector or RS4): R model
@@ -60,7 +60,7 @@ def predict(model, *args, **kwargs):
 @ensure_py_output
 @ensure_r_input
 def simulate(model, *args, **kwargs):
-    """Simulate a new dataset from a model
+    """Simulate a new dataset from a model. Uses `lme4::simulate.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/simulate.merMod>`_ for linear-mixed-models, `stats::simulate.lm <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/simulate.lm>`_ for linear models, and `stats::simulate.glm <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/simulate.glm>`_ for general linear models.
 
     Args:
         model (R ListVector or RS4): R model
@@ -81,7 +81,8 @@ def simulate(model, *args, **kwargs):
 
 @ensure_r_input
 def confint(model, *args, as_df=True, **kwargs):
-    """Confidence intervals including via bootstrapping using [`confint`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/confint) or [`confint.merMod`](https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/confint)"""
+    """Confidence intervals including via bootstrapping using `stats::confint <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/confint>`_ or `lme4::confint.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/confint.merMod>`_"""
+
     if isinstance(model, RS4):
         func = lib_lmer.confint_merMod
     elif isinstance(model, ListVector):
@@ -112,7 +113,8 @@ def boot(
     **kwargs,
 ):
     """
-    NOTE: Experimental. Generate bootstrapped confidence intervals for a model using [`boot`](https://www.rdocumentation.org/packages/boot/versions/1.3-31/topics/boot) and [`tidy.boot`](https://broom.tidymodels.org/reference/tidy.boot.html) or for lme4 model using [`confint`](https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/confint.merMod)
+    NOTE: Experimental - may not reliably handle ``glm`` models. Currently unused.
+    Generate bootstrapped confidence intervals for a model using `boot::boot <https://www.rdocumentation.org/packages/boot/versions/1.3-31/topics/boot>`_ and `broom::tidy.boot <https://broom.tidymodels.org/reference/tidy.boot.html>`_ or for lme4 model using `lme4::confint.merMod <https://www.rdocumentation.org/packages/lme4/versions/1.1-37/topics/confint.merMod>`_
 
     Args:
         data (DataFrame): polars DataFrame to resample

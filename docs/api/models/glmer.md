@@ -13,6 +13,7 @@ GLMMs generalize LMMs like GLMs generalize LMs. They are well suited for non-ind
 
 Like LMMs they are particularly useful in situations when observations are non-independent (e.g. repeated-measures designs, hierarchical data, panel-data, time-series, clustered data). To account for this GLMMs estimate additional *random-effects* estimates that reflect how a cluster of observations deviates from fixed effects estimates (e.g. random-intercepts and/or random-slopes)
 
+For some models like mixed logistic-regression, it can be helpful to use `.fit(exponentiate=True)` to transform estimates to the odds scale to aid interpretability. By default the `'fitted'` column in `model.data` and the output of `model.predict()` uses `type_predict = 'response'` so that model predictions are on the *response* scale, i.e. probabilities for mixed logistic-regression.
 
 ```python
 from pymer4 import load_dataset('titanic')
@@ -23,7 +24,10 @@ titanic = load_dataset('titanic')
 # Logistic regression accounting repeated observations within pclass
 # by estimating a random intercept per level of pclass
 log_reg = glm('survived ~ fare + (1|plass)', family='binomial', data=titanic)
-log_ref.set_factors('pclass')
+log_reg.set_factors('pclass')
+
+# See parameter estimates on odds scale
+log_reg.fit(exponentiate=True)
 ```
 
 ---

@@ -36,6 +36,16 @@ Wraps functionality from the [`broom`](https://broom.tidymodels.org/) and [`broo
   :member-order: alphabetical
 ```
 
+## `easystats`
+
+Wraps functionality from various sub-libraries in the [`easystats`](https://easystats.github.io/easystats/) ecoysystem
+
+```{eval-rst}
+.. automodule:: pymer4.tidystats.easystats
+  :members:
+  :member-order: alphabetical
+```
+
 ## `emmeans_lib`
 
 Wraps functionality from the [`emmeans`](https://rvlenth.github.io/emmeans/index.html) library
@@ -92,6 +102,32 @@ This is a special module that helps with converting between R and Python datatyp
 
 ```{eval-rst}
 .. automodule:: pymer4.tidystats.bridge
+  :members:
+  :member-order: alphabetical
+```
+
+## `plutils`
+
+Utility functions for working with `polars` dataframes
+
+```{eval-rst}
+.. automodule:: pymer4.tidystats.plutils
+  :members:
+  :member-order: alphabetical
+```
+
+```{eval-rst}
+.. autoclass:: pymer4.tidystats.plutils.RandomExpr
+  :members:
+
+```
+
+## `tables`
+
+Functions to generate [`great tables`](https://posit-dev.github.io/great-tables/articles/intro.html) formatted summary tables for models
+
+```{eval-rst}
+.. automodule:: pymer4.tidystats.tables
   :members:
   :member-order: alphabetical
 ```

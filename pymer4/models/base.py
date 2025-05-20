@@ -275,6 +275,23 @@ class model(object):
         """Sets `.design_matrix` using `stats` `model_matrix` function."""
         self.design_matrix = model_matrix(self.r_model, unique=True)
 
+    # TODO: Update to handle .over() transforms
+    def _apply_transforms(self, v, k: str):
+        """Apply transform to array based on internally stored transforms. Used by empredict and emmeans"""
+
+        if not isinstance(v, (list, np.ndarray)):
+            v = [v]
+        transform = self.transformed.get(k, None)
+        if transform == "center":
+            v = np.array(v) - self.data[f"{k}_orig"].mean()
+        elif transform == "scale":
+            v = np.array(v) / self.data[f"{k}_orig"].std()
+        elif transform == "zscore":
+            v = (np.array(v) - self.data[f"{k}_orig"].mean()) / self.data[
+                f"{k}_orig"
+            ].std()
+        return v
+
     @enable_logging
     def fit(
         self,
@@ -499,19 +516,21 @@ class model(object):
     @requires_fit
     def emmeans(
         self,
-        marginal_var,
-        by=None,
+        marginal_var: str | list,
+        by: str | list | None = None,
         p_adjust="sidak",
         type="response",
         normalize=False,
+        apply_transforms=True,
         **kwargs,
     ):
         """Compute marginal means/trends and optionally contrasts between those means/trends at different factor levels. ``marginal_var`` is the predictor whose levels will have means or trends. ``by`` is an optional factor predictor to calculate separate means or trends for. If ``contrasts`` is provided, they are computed with respect to the marginal means or trends calculated
 
         Args:
-            marginal_var (str): name of predictor to compute means or contrasts for
+            marginal_var (str | list): name of predictor to compute means or contrasts for
             by (str/list): additional predictors to marginalize over
             contrasts (str | 'pairwise' | 'poly' | dict | None, optional): how to specify comparison within `marginal_var`. Defaults to None.
+            interaction (str | dict | None, optional): how to specify any contrasts between levels of `by`. Defaults to None.
             normalize (bool): normalize numerical contrasts to generate orthogonal polynomial similar to R; preferable for contrasts across more that 2 factor levels; Default False
             type (str): compute marginal means and contrasts on the 'response' or 'link' scale; Default 'response' (e.g. probabilities for logistic regression)
 
@@ -526,6 +545,14 @@ class model(object):
             }
             kwargs["contrasts"] = contrasts
 
+        at = kwargs.get("at", None)
+        if at and apply_transforms:
+            _at = dict()
+            for k, v in at.items():
+                _at[k] = self._apply_transforms(v, k)
+            kwargs["at"] = _at
+
+        # P-values and CIs display
         infer = np.array([True, False]) if contrasts is None else np.array([True, True])
         marginal_var = [marginal_var] if isinstance(marginal_var, str) else marginal_var
 
@@ -545,7 +572,7 @@ class model(object):
         # Guard against the fact that emtrends works a little differently than emmeans.
         # It will always return slopes per factor level even when by is not specified
         # however specifying a contrast when by=None will produce an error as the
-        # categorical variable will be missing in emmgrid. So to marginalize overall
+        # categorical variable will be missing in emmgrid. So to marginalize over all
         # factor levels we pass in the continuous variable to both var and specs
         if all_marginal_trends:
             self.result_emmeans = emtrends(
@@ -573,42 +600,29 @@ class model(object):
         return self.result_emmeans
 
     @requires_fit
-    def empredict(self, at: dict, invert_transforms=True, type="response", **kwargs):
-        """Compute marginal predictions at arbitrary levels of predictors.
-
-        This method allows computing model predictions at specific values of predictors while
-        marginalizing over other variables in the model. It handles both raw and transformed
-        predictors.
+    def empredict(self, at: dict, apply_transforms=True, type="response", **kwargs):
+        """Compute marginal predictions at arbitrary levels of predictors by passing in a dictionary of predictor names and values. If the string 'data' is used for predictor, then all observed values for that predictor will be used. If a predictor is ommitted, then it's marginal value will be used (e.g. mean for continuous predictors, grand-mean for factors).
 
         Args:
             at (dict): Dictionary mapping predictor names to values at which to compute predictions. Use "data" as the value to use all observed values for that predictor.
-            invert_transforms (bool, optional): Whether to invert any transformations (center/scale/zscore) that were applied to predictors. Defaults to True.
+            apply_transforms (bool, optional): Whether to apply any transformations (center/scale/zscore) that were applied to predictors. Doesn't currently handle `.over()` transforms. Defaults to True.
 
         Returns:
-            emmGrid: An R emmGrid object containing the predicted values and their standard errors.
-                    This can be further processed using emmeans functions.
+            predictions (DataFrame): A DataFrame containing the predicted values and their uncertainty.
 
         Examples:
-            >>> model.empredict({'x': [1, 2, 3], 'group': 'data'})  # Predictions at x=1,2,3 using all group values
-            >>> model.empredict({'x': [-1, 0, 1]}, invert_transforms=False)  # Use values on transformed scale
+            >>> # Assuming model is y ~ x * group and x has been mean-centered
+            >>> model.empredict({'x': [1, 2, 3]})  # Predictions at x=1,2,3 for each level of group
+            >>> model.empredict({'x': [1, 2, 3], 'group': 'data'})  # Predictions at x=1,2,3 using all group level assignment of each observation
+            >>> model.empredict({'x': [-1, 0, 1]}, apply_transforms=False)  # Pass-in values on the mean-centered scale
         """
         _at = dict()
-        # TODO: support ommitting predictors and using all data as default
         for k, v in at.items():
             if isinstance(v, str) and v == "data":
                 _at[k] = self.data[k].to_numpy()
             else:
-                # TODO: refactor this into a new function based on supported transforms
-                if invert_transforms and self.transformed:
-                    transform = self.transformed.get(k, None)
-                    if transform == "center":
-                        v = np.array(v) + self.data[f"{k}_orig"].mean()
-                    elif transform == "scale":
-                        v = np.array(v) * self.data[f"{k}_orig"].std()
-                    elif transform == "zscore":
-                        v = (np.array(v) + self.data[f"{k}_orig"].mean()) * self.data[
-                            f"{k}_orig"
-                        ].std()
+                if apply_transforms and self.transformed:
+                    v = self._apply_transforms(v, k)
                 _at[k] = v
         return ref_grid(
             self.r_model, at=_at, type=type, infer=np.array([True, False]), **kwargs

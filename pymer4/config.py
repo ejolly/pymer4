@@ -9,10 +9,12 @@ __all__ = ["Rhome", "check_rlibs", "check_modelfit", "test_install"]
 
 
 def Rhome():
+    """Get the path to the R executable"""
     return get_r_home()
 
 
 def check_rlibs():
+    """Check that the required R packages are installed"""
     required = (
         "lmerTest",
         "emmeans",
@@ -36,6 +38,7 @@ def check_rlibs():
 
 
 def check_modelfit():
+    """Check that the model fitting works"""
     try:
         lm("Reaction ~ Days", data=load_dataset("sleep")).fit()
         print("Installation working successfully!")
@@ -44,6 +47,7 @@ def check_modelfit():
 
 
 def test_install():
+    """Test the installation of pymer4"""
     Rhome()
     check_rlibs()
     check_modelfit()

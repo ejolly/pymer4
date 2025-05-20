@@ -227,11 +227,12 @@ class lmer(model):
             anova_kwargs (dict): additional arguments to pass to `anova()`
         """
         super().anova(
-            summary=summary,
             auto_ss_3=auto_ss_3,
             jointtest_kwargs=jointtest_kwargs,
             anova_kwargs=anova_kwargs,
         )
+        if summary:
+            return self.summary_anova()
 
     @enable_logging
     @requires_fit

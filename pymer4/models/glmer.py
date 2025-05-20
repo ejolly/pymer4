@@ -62,7 +62,6 @@ class glmer(lmer):
         """
         super().fit(
             exponentiate=exponentiate,
-            summary=summary,
             conf_method=conf_method,
             nboot=nboot,
             save_boots=save_boots,
@@ -72,6 +71,8 @@ class glmer(lmer):
             type_predict=type_predict,
             **kwargs,
         )
+        if summary:
+            return self.summary()
 
     def predict(self, data: DataFrame, use_rfx=True, type_predict="response", **kwargs):
         """Make predictions using new data accounting for the link function.

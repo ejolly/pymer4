@@ -11,18 +11,6 @@ Check out the [linear regression](../../tutorials/01_lm.ipynb) and [ANOVA](../..
 
 Linear models estimate a response $y$ as a linear combination of predictors $X$
 
-A variety of common statistical tests are simply linear models with different numbers or types of predictors:
-
-| often called | GLM predictor(s) $X$ | Example |
-|-------------|---------|-------------|
-| univariate regression | 1 continuous | `y ~ x` |
-| multiple regression | 2+ continuous with/without interaction | `y ~ x + y * z` |
-| t-test | 1 two-level categorical | `y ~ group` |
-| one-way ANOVA | 1 three+ level categorical | `y ~ group` |
-| ANCOVA | 1 three+ level categorical & 1+ continuous | `y ~ group + covariate` |
-| moderation | 1 three+ level categorical & 1+ continuous & interaction | `y ~ group * covariate` |
-| two-way ANOVA | 2 two+ level categoricals | `y ~ group * category` |
-
 ---
 
 ```{eval-rst}

@@ -63,6 +63,14 @@ Once the kernel restarts, you'll have the `!mamba` command available that you ca
 
 Then you should be all set!
 
+## Using the development version of `pymer4`
+
+To support easy installation of the latest "bleeding-edge" version of `pymer4` on the `main` branch of Github you can use the command below to install from the `pre-release` channel on anaconda.org. The `main` branch may often contain upcoming fixes and features slated for a new release.
+
+```bash
+conda install -c ejolly/label/pre-release -c conda-forge pymer4
+```
+
 ## Technical Issues
 
 ### I'm using an intel mac and having installation problems

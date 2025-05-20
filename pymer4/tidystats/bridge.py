@@ -29,7 +29,7 @@ __all__ = [
 
 
 def to_dict(listVector):
-    "Recursively convert an R ListVector into a Python dict with all Python types. Ignores R 'call' and 'terms'. Useful for seeing an lm() or lmer() model object or the output of summary() as a Python dict."
+    """Recursively convert an R ListVector into a Python dict with all Python types. Ignores R 'call' and 'terms'. Useful for seeing an ``lm()`` or ``lmer()`` model object or the output of ``summary()`` as a Python dict."""
 
     if not isinstance(listVector, ro.vectors.ListVector):
         raise TypeError("Input must be an R ListVector")
@@ -194,9 +194,12 @@ def _Rdot_to_Pyunder(df):
 
 def ensure_py_output(func):
     """
-    Decorator that converts R outputs to Python equivalents:
+    Decorator that converts R outputs to Python equivalents. Currently this includes:
+
     - R FloatVector -> numpy array
+    - R StrVector -> list
     - R dataframe/tibble -> polars dataframe
+    - R ListVector of Dataframes -> list of polars dataframes
     """
 
     @wraps(func)
@@ -264,9 +267,11 @@ def ensure_r_input(func):
     """Decorator that converts function arguments that are Pyton types into corresponding R types. Currently this includes:
 
     - polars DataFrames
+    - python lists
+    - numpy arrays
     - python dictionaries
     - python None types
-
+    - pymer4 model objects
     """
 
     @wraps(func)
@@ -291,7 +296,7 @@ def ensure_r_input(func):
 
 def con2R(arr):
     """
-    Convert human-readable contrasts into a form that R requires. Works like the make.contrasts() function from the gmodels package, in that it will auto-solve for the remaining orthogonal k-1 contrasts if fewer than k-1 contrasts are specified.
+    Convert human-readable contrasts into a form that R requires. Works like the `make.contrasts() <https://www.rdocumentation.org/packages/gmodels/versions/2.18.1/topics/make.contrasts>`_ function from the `gmodels <https://cran.r-project.org/web/packages/gmodels/index.html>`_ package, in that it will auto-solve for the remaining orthogonal k-1 contrasts if fewer than k-1 contrasts are specified.
 
     Arguments:
         arr (np.ndarray): 1d or 2d numpy array with each row reflecting a unique contrast and each column a factor level
@@ -335,7 +340,7 @@ def con2R(arr):
 
 def R2con(arr):
     """
-    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user. Reference: https://goo.gl/E4Mms2
+    Convert R-flavored contrast matrix to intepretable contrasts as would be specified by user. `Reference <https://goo.gl/E4Mms2>`_
 
     Args:
         arr (np.ndarry): 2d contrast matrix output from R's contrasts() function.
