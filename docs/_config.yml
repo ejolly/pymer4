@@ -1,0 +1,51 @@
+# Learn more at https://jupyterbook.org/customize/config.html
+title: Pymer4
+author: Eshin Jolly
+logo: 'logo-bold.png'
+
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: 'off'
+  exclude_patterns:
+    - '*bak.ipynb'
+  
+
+repository:
+  url: https://github.com/ejolly/pymer4 
+  path_to_book: docs
+  branch: main
+
+html:
+  home_page_in_navbar: false
+  use_edit_page_button: false
+  use_issues_button: true
+  use_multitoc_numbering: false
+  use_repository_button: true
+  announcement: "Version 0.9.0 includes a totally new API and new features that are not backwards compatible with previous versions! Check out the <a style='color: #87CEEB;' href='pages/migrating.html'>migration guide</a> for more information."
+parse:
+  myst_enable_extensions:
+    - amsmath
+    - colon_fence
+    - dollarmath
+    - linkify
+    - substitution
+    - tasklist
+
+sphinx:
+  extra_extensions:  
+  - 'sphinx_design'
+  - 'sphinx.ext.autodoc'
+  - 'sphinx.ext.autosummary'
+  - 'sphinx.ext.napoleon'
+  - 'sphinx.ext.viewcode'
+  - 'sphinxcontrib.mermaid'
+
+  config:
+    add_function_parentheses: true
+    add_module_names: true
+    autosummary_generate: true
+    autosummary_generate_overwrite: true
+    viewcode_line_numbers: true
+    viewcode_follow_imported_members: true
+    templates_path: templates
+    suppress_warnings: ["etoc.toctree"]

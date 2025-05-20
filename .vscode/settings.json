@@ -1,0 +1,20 @@
+{
+    "python.defaultInterpreterPath": ".pixi/envs/default/bin/python",
+    "python.analysis.exclude": [ ".pixi" ],
+    "[python]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+    },
+    "ruff.nativeServer": "on",
+    "ruff.importStrategy": "fromEnvironment",
+    "ruff.lint.ignore": [
+        "W292",
+        "E501",
+        "E731",
+        "E741",
+        "F401",
+        "E703"
+    ],
+}

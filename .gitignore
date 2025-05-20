@@ -14,7 +14,6 @@ dist/*
 **/__pycache__
 dev/
 .coverage
-.vscode/settings.json
 *.key
 pytest.ini
 env/*
@@ -26,3 +25,17 @@ conda_noarch/build/*
 environment.yml
 *.pickle
 *.joblib
+docs_bak
+
+# pixi environments
+.pixi
+*.egg-info
+# mkdocs site
+site
+.ruff_cache
+dev*.ipynb
+# WIP
+distributions.py
+bak/
+.cursor
+test_new.py

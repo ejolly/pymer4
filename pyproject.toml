@@ -1,0 +1,106 @@
+[project]
+name = "pymer4"
+requires-python = ">=3.10"
+dynamic = ["version"]
+authors = [
+    {name = "Eshin Jolly", email = "eshin.jolly@gmail.com"},
+]
+description = "pymer4: all the convenience of lme4 in python"
+readme = "README.md"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+]
+keywords = ["statistics", "multi-level-modeling", "regression", "analysis"]
+
+dependencies = ["pandas>=2.2.0", "numpy>=2.0", "seaborn>=0.13.0", "patsy>=1.0.1", "joblib>=1.4.2", "scipy>=1.13.0", "scikit-learn>=1.4", "polars>=1.24.0,<2", "toolz>=1.0.0,<2"]
+
+[project.urls]
+Homepage = "http://eshinjolly.com/pymer4/"
+
+[build-system]
+requires = ["setuptools>=61.0.0", "setuptools-scm", "hatchling"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["pymer4/tests"]
+
+[tool.setuptools]
+package-data = {"pymer4" = ["resources/*"]}
+
+[tool.setuptools.dynamic]
+version = {attr = "pymer4.version.__version__"}
+
+[tool.ruff]
+exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+ignore = ["W292","E501", "E731", "E741"]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+pymer4 = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+r-lmertest = ">=3.1_3,<4"
+r-emmeans = ">=1.10.7,<2"
+rpy2 = ">=3.5.11,<4"
+r-tidyverse = ">=2.0.0,<3"
+r-broom = ">=1.0.7,<2"
+"r-broom.mixed" = ">=0.2.9.6,<0.3"
+pyarrow = ">=19.0.1,<20"
+r-arrow = ">=19.0.1,<20"
+r-report = ">=0.6.1,<0.7"
+great_tables = ">=0.14.0,<0.18"
+
+[tool.pixi.feature.dev.dependencies]
+ruff = "==0.11.0"
+pytest = "*"
+conda-build = ">=25.1.2,<26"
+anaconda-client = ">=1.13.0,<2"
+jupyter-book = ">=1.0.4.post1,<2"
+altair = ">=5.5.0,<6"
+
+[tool.pixi.feature.dev.tasks]
+lint = "ruff check"
+lint-fix = "ruff check --fix && ruff format"
+
+tests = "pytest pymer4/tests/"
+tests-failed = "pytest pymer4/tests/ --lf"
+test-install = "python -c 'from pymer4 import test_install; test_install()'"
+
+docs-build = "jupyter-book build docs/"
+docs-clean = "jupyter-book clean docs/"
+docs-preview = "open docs/_build/html/index.html"
+
+# Because Pixi build is still in beta, these comands can be used to emulate what GAs are doing locally
+build-pip = "python -m build --sdist --wheel --outdir dist/"
+build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
+build-check = "conda-build ./conda --check"
+build-output = "conda-build ./conda --output"
+build-clean = "conda-build ./conda purge-all"
+
+# You need to set the env variables $token and $file before running this command
+# in a single line, e.g. token=1234567890 file=path/to/build/file pixi run upload-pre
+upload-pre = { cmd = "anaconda -t $token upload $file -l 'pre-release'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
+upload-main = { cmd = "anaconda -t $token upload $file -l 'main'", env = { token = 'replace_with_secret', file = 'path_to_build_file'}}
+
+[tool.pixi.feature.dev.tasks.test]
+args = ['test_name']
+cmd ="pytest pymer4/tests -k '{{ test_name }}'"
+
+[tool.pixi.environments]
+default = { features = ["dev"], solve-group = "default" }
+
+[dependency-groups]
+dev = [ "build>=1.2.2.post1,<2", "sphinx-autodoc2>=0.5.0,<0.6", "sphinxcontrib-mermaid>=1.0.0,<2"]

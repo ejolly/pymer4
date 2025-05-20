@@ -1,55 +1,60 @@
-{% set name = "pymer4" %}
-{% set data = load_setup_py_data() %}
+# Get information from pyproject.toml file
+{% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
+{% set project = pyproject.get('project', {}) %}
+{% set min_python = project.get('requires-python') %}
+{% set pip_deps = project.get('dependencies', []) %}
+{% set conda_deps = pyproject.get('tool', {}).get('pixi', {}).get('dependencies', []) %}
+{% set name = project.get('name')%}
+{% set version_match = load_file_regex(
+  load_file="../pymer4/version.py",
+  from_recipe_dir=True,
+  regex_pattern='__version__ = "([0-9.]+)"') %}
+{% set version = version_match[1] %}
 
 package:
-  name: "{{ name|lower }}"
-  version: "{{ data.get('version') }}"
+  name: {{ name }}
+  version: {{ version }}
 
 source:
-    git_url: ../  # to enable GIT_X_Y env vars
-    path_url: ../ # so conda build will grab source to read version
+    git_url: ../
+    path: ../
 
 build:
-    script: pip install . -vv --no-deps
-    string: py{{environ.get("CONDA_PY", "XX")}}{{environ.get("GIT_DESCRIBE_HASH", "no_git_abbrev_commit") }}_{{ environ.get("PKG_BUILDNUM", "no_pkg_buildnum") }}
+  noarch: python
+  script: pip install . -vv --no-deps
+  string: {{ GIT_DESCRIBE_HASH }}
 
 requirements:
-
   host:
-    - python {{ python }}
+    - python
     - pip
     - numpy >=1.20
+    - setuptools >=61.0.0
+    - setuptools-scm
+    - hatchling
 
+# Load both Python and R requirements from pyproject.toml
   run:
-    - python {{ python }}
-    - r-lmerTest
-    - r-emmeans
-    - pandas >=1.1.0
-    - numpy >=1.20
-    - rpy2 >=3.5.3
-    - seaborn
-    - matplotlib
-    - patsy
-    - joblib
-    - scipy
-    - scikit-learn
+    - python {{ min_python }}
+    {% for dep, ver in conda_deps.items() %}
+    - {{ dep }} {{ ver }}
+    {% endfor %}
+    {% for dep in pip_deps %}
+    - {{ dep.lower() }}
+    {% endfor %}
 
+# Run basic import tests and full test suite after building
 test:
   imports:
    - pymer4
-   - pymer4.models
-  requires:
-   - pytest
-   - black
+  commands:
+   - python -c "from pymer4 import test_install; test_install()"
 
 about:
   home: "https://eshinjolly.com/pymer4/"
   license: MIT
   license_family: MIT
-  license_file:
   summary: "pymer4: all the convenience of lme4 in python"
-  doc_url:
-  dev_url:
 
 extra:
   recipe-maintainers:

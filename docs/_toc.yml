@@ -1,0 +1,41 @@
+format: jb-book
+root: index
+parts:
+  - caption: Pymer4
+    maxdepth: 1
+    chapters:
+    - file: pages/installation
+    - file: pages/quickstart.ipynb
+    - file: pages/new
+    - file: pages/migrating
+    - file: pages/faqs
+
+  - caption: Tutorials
+    maxdepth: 1
+    chapters:
+    - file: tutorials/01_lm.ipynb
+    - file: tutorials/02_categorical.ipynb
+    - file: tutorials/03_lmms.ipynb
+    - file: tutorials/04_glmms.ipynb
+  
+  - caption: API Reference
+    maxdepth: 3
+    chapters:
+      - file: api/models/index.md
+        sections:
+        - file: api/models/lm.md
+        - file: api/models/glm.md
+        - file: api/models/lmer.md
+        - file: api/models/glmer.md
+      - file: api/tidystats.md
+      - file: api/config.md
+      - file: api/expressions.ipynb
+      - file: api/io.md
+      - file: api/rfuncs.ipynb
+
+  - caption: Developer Guide
+    maxdepth: 1
+    chapters:
+    - file: development/contributing.md
+    - file: development/extending.ipynb
+    - file: development/design.md
