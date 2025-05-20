@@ -6,16 +6,16 @@ This is release is a **major overhaul** of `pymer4` that involved a near complet
 As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect to move to the `conda-forge` channel soon.
 
 ### Summary of changes
+- Adoption of `polars` as dataframe "backend"
 - New consistent API that supports `lm`, `glm`, `lmer` and `glmer` models
 - Full support for factors and marginal-estimates/comparisons for all model types
-- Overhauled docs and tutorials
+- Overhauled docs and tutorials with several included datasets for demo and teaching purposes
 - Much more extensive testing
-- Replaced bespoke code with "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`)
-- Adoption of `polars` as dataframe "backend"
+- Replaced bespoke code with "battle-tested" implementations of helper and utility functions in different R libaries (e.g. `broom`, `insight`, `parameters`, `insight`)
 - Switched `setup.py` and `requirements.txt/requirements-dev.txt` to `pyproject.toml`
-- Switche over to Pixi for development-tooling and Github Actions
-- Switched `sphinx` docs to `jupyterbook`
-- Dropped `black` in favor of `ruff`
+- Switched over to [Pixi.sh](../contributing/developing.md#development-tooling) for development-tooling and Github Actions
+- Switched documentation from `sphinx` to `jupyterbook`
+- Switched project linting from `black` to `ruff`
 - Exclusively create `noarch` builds for conda
   - Currently implemented as a `pixi task` using `conda build`, with plans to switch to [`pixi build` when ready](https://pixi.sh/latest/build/python/)
 
@@ -31,6 +31,8 @@ As of this version, `pymer4` is now *only* installable via `conda` following the
 - [#139](https://github.com/ejolly/pymer4/pull/139)
 
 ### Planned features
+These following features are planned for upcoming versions in `0.9.x` line
+
 - support for `lmerControl` options
 - automatic convertion to `scikit-learn` compatible estimators via `.to_sklearn()`
 - simulation and power modules
