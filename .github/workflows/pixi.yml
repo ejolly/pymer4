@@ -27,6 +27,9 @@ jobs:
     env:
       ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
