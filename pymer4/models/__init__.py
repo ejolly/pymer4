@@ -10,7 +10,6 @@ from .lmer import lmer
 from .glmer import glmer
 from ..tidystats.stats import anova
 from ..tidystats.tables import compare_anova_table
-from itertools import product
 
 __all__ = ["lm", "glm", "lmer", "glmer", "compare"]
 
@@ -58,10 +57,3 @@ def compare(*models, as_dataframe=False, test="F"):
     )
 
     return out if as_dataframe else compare_anova_table(out, *models)
-
-
-def expand_grid(*args, column_names=None):
-    """Expand a list of lists into a dataframe of all combinations"""
-    if column_names is None:
-        raise ValueError("column_names must be provided")
-    return DataFrame(list(product(*args)), schema=column_names)

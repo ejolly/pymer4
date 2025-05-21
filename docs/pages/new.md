@@ -8,6 +8,11 @@
 
 - make `compare()` more robust by automatically refitting all models if any are not fit *or* if any have been fit via bootstrapping
 
+### Development
+
+- Move all dependencies from `pip` to `conda-forge`
+- move `expand_grid()` to `tidystats.plutils` 
+
 ## 0.9.0
 This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and **API breaking changes.** You can check out the [migration guide](./migrating.md) for more details. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
 

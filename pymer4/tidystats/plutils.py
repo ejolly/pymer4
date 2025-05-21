@@ -1,9 +1,23 @@
-from polars import col, Enum, String, concat, Float64, Int64
+from polars import col, Enum, String, concat, Float64, Int64, DataFrame
 import polars as pl
 import numpy as np
 from string import ascii_uppercase
+from itertools import product
 
-__all__ = ["join_on_common_cols", "make_factors", "unmake_factors", "RandomExpr"]
+__all__ = [
+    "expand_grid",
+    "join_on_common_cols",
+    "make_factors",
+    "unmake_factors",
+    "RandomExpr",
+]
+
+
+def expand_grid(*args, column_names=None):
+    """Expand a list of lists into a dataframe of all combinations"""
+    if column_names is None:
+        raise ValueError("column_names must be provided")
+    return DataFrame(list(product(*args)), schema=column_names)
 
 
 def get_str_numeric_type(x):

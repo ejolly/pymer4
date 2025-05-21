@@ -6,9 +6,6 @@ logo: 'logo-bold.png'
 # See https://jupyterbook.org/content/execute.html
 execute:
   execute_notebooks: 'off'
-  exclude_patterns:
-    - '*bak.ipynb'
-  
 
 repository:
   url: https://github.com/ejolly/pymer4 
@@ -38,7 +35,6 @@ sphinx:
   - 'sphinx.ext.autosummary'
   - 'sphinx.ext.napoleon'
   - 'sphinx.ext.viewcode'
-  - 'sphinxcontrib.mermaid'
 
   config:
     add_function_parentheses: true
