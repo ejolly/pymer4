@@ -2,7 +2,7 @@
 
 *You can checkout the [development roadmap on Github](https://github.com/users/ejolly/projects/1/views/1?query=sort%3Aupdated-desc+is%3Aopen)*
 
-## 0.9.1 (forthcoming)
+## 0.9.1 (May '25)
 
 ### Fixes
 
@@ -10,10 +10,10 @@
 
 ### Development
 
-- Move all dependencies from `pip` to `conda-forge`
 - move `expand_grid()` to `tidystats.plutils` 
+- Move all dependencies from `pip` to `conda-forge` anticipating `conda-forge` availability
 
-## 0.9.0
+## 0.9.0 (May '25)
 This is release is a **major overhaul** of `pymer4` that involved a near complete re-write of internals to faciliate future maintenance and integrate more advanced functionality from additional R libraries. This is a **backwards incompatible** release with numerous dependency and **API breaking changes.** You can check out the [migration guide](./migrating.md) for more details. The `0.8.x` version line is still available on github for community contributions/maintenance if desired.
 
 As of this version, `pymer4` is now *only* installable via `conda` following the instructions [here](./installation.md) using the `ejolly` channel. We expect to move to the `conda-forge` channel soon.
