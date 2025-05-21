@@ -104,11 +104,13 @@ class model(object):
         self._r_func: callable = lambda _: None
         self._r_contrasts = None
         self._summary_func: callable = lambda _: None
+        self._augmented_cols = None
         self.formula = formula.replace(" ", "")
         self.weights = None
         self.factors = None
         self.transformed = None
         self.data = data
+        self._data_cols = data.columns
         self.family = family.capitalize() if family == "gamma" else family
         self.link = link
         self.result_fit = None

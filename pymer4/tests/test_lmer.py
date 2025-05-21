@@ -246,6 +246,12 @@ def test_model_comparison(sleep):
     slope_only = lmer("Reaction ~ Days + (0 + Days | Subject)", data=sleep)
     out2 = compare(intercept_only, slope_only, as_dataframe=True)
 
+    # Or if models are fit via different methods
+    intercept_only.fit()
+    slope_only.fit(conf_method="boot", nboot=100)
+    out3 = compare(intercept_only, slope_only, as_dataframe=True)
+    assert out.equals(out3)
+
     # We can't compute p-vals if models have same number of params
     # so we replace with nans
     pvals = out2[:, -1].to_numpy()
@@ -253,8 +259,8 @@ def test_model_comparison(sleep):
 
     # Compare 3 models
     both = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
-    out3 = compare(intercept_only, slope_only, both, as_dataframe=True)
-    assert out3.shape == (3, 8)
+    out4 = compare(intercept_only, slope_only, both, as_dataframe=True)
+    assert out4.shape == (3, 8)
 
     # Compare to OLS via LRT
     ols = lm("Reaction ~ Days", data=sleep)

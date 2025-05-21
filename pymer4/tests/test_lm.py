@@ -116,6 +116,23 @@ def test_model_comparison(credit):
     table = compare(null_model, full_model, as_dataframe=True)
     assert isinstance(table, DataFrame)
 
+    # And handle cases where some models are fit and others aren't
+    null_model = lm("Balance ~ 1", data=credit)
+    full_model = lm("Balance ~ Income", data=credit)
+    full_model.fit()
+
+    out = compare(null_model, full_model)
+    assert isinstance(out, GT)
+
+    # Or fit via different methods
+    null_model = lm("Balance ~ 1", data=credit)
+    full_model = lm("Balance ~ Income", data=credit)
+    null_model.fit()
+    full_model.fit(conf_method="boot")
+
+    out = compare(null_model, full_model, as_dataframe=True)
+    assert isinstance(out, DataFrame)
+
 
 def test_factors_and_default_R_contrasts(chickweight):
     # For testing purposes we'll cast an integer to float and recover it

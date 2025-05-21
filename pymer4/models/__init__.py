@@ -26,11 +26,14 @@ def compare(*models, as_dataframe=False, test="F"):
         result (polars.DataFrame or GreatTables): A dataframe with the model comparison results
     """
 
-    # Make sure to fit any unfit models
-    for m in models:
-        if not m.fitted:
+    # Refit if any models are not fit or were fit via different methods
+    if not all(m.fitted for m in models) or any(
+        m.result_boots is not None for m in models
+    ):
+        for m in models:
+            # Drop augmented columns
+            m.data = m.data.select(m._data_cols)
             m.fit()
-
     if test is None:
         if any(isinstance(m, (lmer, glmer)) for m in models):
             test = "LRT"
