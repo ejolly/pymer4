@@ -105,7 +105,7 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
-          anaconda -t $ANACONDA_TOKEN upload $upload_file
+          anaconda -t $ANACONDA_TOKEN upload $upload_file --force
 
   # After the the main job is done we test the install on a variety
   # of OSs and Python versions using the built package on pre-release label
