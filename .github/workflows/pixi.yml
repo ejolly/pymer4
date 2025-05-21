@@ -131,9 +131,18 @@ jobs:
         activate-environment: build-env
         auto-activate-base: false
 
-    - name: Test install
+    - name: Test install pre-release?
+      if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release'}}
       shell: bash -el {0}
       run: | 
         conda config --set always_yes yes
         conda install pymer4 -c ejolly/label/pre-release -c conda-forge
+        python -c "from pymer4 import test_install; test_install()"
+
+    - name: Test install main?
+      if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main'}}
+      shell: bash -el {0}
+      run: | 
+        conda config --set always_yes yes
+        conda install pymer4 -c ejolly -c conda-forge
         python -c "from pymer4 import test_install; test_install()"
