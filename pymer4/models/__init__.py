@@ -3,7 +3,7 @@ Pymer4 model types.
 """
 
 import numpy as np
-from polars import col, when, selectors as cs, DataFrame
+from polars import col, when, selectors as cs
 from .lm import lm
 from .glm import glm
 from .lmer import lmer
