@@ -1,10 +1,10 @@
 # How to Contribute
 
-We **always welcome contributions** and have tried to simplify the process of adding new features or fixing bugs to `pymer4`
+We **always welcome contributions** and have tried to simplify the process of adding new features or fixing bugs to `pymer4`. You can checkout the [development roadmap on Github](https://github.com/users/ejolly/projects/1/views/1?query=sort%3Aupdated-desc+is%3Aopen)
 
 ## 1. Get the code & setup a development environment
 
-Install `pixi`
+Install [`pixi`](https://pixi.sh/latest/) the Python project manager that handles environments and dependencies (*won't conflict with any exist Python tools like `conda` or `pip`!*)
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | bash
@@ -19,7 +19,9 @@ Fork the `main` branch on github, clone your fork, and install the development d
   ```
 ## 2. Make code changes and test them
 
-After editing any files with your changes you can run the full test-suite with 
+After editing any files with your changes you can run use a variety of pixi tasks defined in the `pyproject.toml` file to perform common development tasks:
+
+Run the full test-suite with 
 
 ```bash
 pixi run tests
@@ -51,7 +53,7 @@ pixi run docs-preview
 
 ## 3. Push your changes to Github and open a pull request!
 
-Opening a PR will setup a fresh `pymer4` install and rerun the test-suite with your changes while also ensuring the package can be built. We'll review your changes and request any modifications before accepting a merge!
+Opening a PR will setup a fresh `pymer4` install and rerun the test-suite with your changes while also ensuring the package can be built and subsequently installed. We'll review your changes and request any modifications before accepting a merge!
 
 ## General Recommendations
 
@@ -69,5 +71,6 @@ New documentation can be created by:
 
 - Adding new markdown files to `docs/` to create new pages
 - Adding new jupyter notebooks to `docs/tutorials/` to create new tutorials
+- Adding an `eval-rst` block to auto-generate any new API documentation (see existing)
 - Adding the filename(s) to the `nav` section of `docs/_toc.yml`
 - Using `pixi run doc-build` and `pixi run docs-preview` to preview changes

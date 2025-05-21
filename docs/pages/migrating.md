@@ -29,8 +29,11 @@ If you were using a version of `pymer4` older than `v0.9.X` you can refer to the
 - Removed support for `Lm2()` models
 - Removed plotting methods (please use `seaborn` or `matplotlib`)
 - Removed permutation-based inference for, e.g. `model.fit(permute=1000)`
+- Removed miscellaneous stats and simulation functions
 
 ## Planned Improvements
+
+You can see the updated [development roadmap on github](https://github.com/users/ejolly/projects/1/views/1?query=sort%3Aupdated-desc+is%3Aopen)
 
 - integration with `scikit-learn` Estimators and cross-validation tools
 - additional models (e.g. ordinal regression via `ordinal::clm`)
