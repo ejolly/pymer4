@@ -66,6 +66,8 @@ numpy = ">=2.2.6,<3"
 polars = ">=1.29.0,<2"
 joblib = ">=1.5.0,<2"
 pandas = ">=2.2.3,<3"
+scikit-learn = ">=1.6.1,<2"
+formulae = ">=0.5.4,<0.6"
 
 [tool.pixi.feature.dev.dependencies]
 ruff = "==0.11.0"
