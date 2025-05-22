@@ -26,24 +26,22 @@ build:
 
 requirements:
   host:
-    - python
+    - python {{ min_python }}
     - pip
-    - numpy >=1.20
     - setuptools >=61.0.0
     - setuptools-scm
-    - hatchling
 
-# Load both Python and R requirements from pyproject.toml
   run:
     - python {{ min_python }}
     {% for dep, ver in conda_deps.items() %}
     - {{ dep }} {{ ver }}
     {% endfor %}
+    {% if pip_deps %}
     {% for dep in pip_deps %}
     - {{ dep.lower() }}
     {% endfor %}
+    {% endif %}
 
-# Run basic import tests and full test suite after building
 test:
   imports:
    - pymer4

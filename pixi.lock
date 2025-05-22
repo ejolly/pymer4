@@ -7062,8 +7062,8 @@ packages:
   timestamp: 1736243563082
 - pypi: .
   name: pymer4
-  version: 0.9.0
-  sha256: c6fd2fdd54f922f9050ca50524158e0bf4ad9781f50508c984b96d3f6b20e1ce
+  version: 0.9.1
+  sha256: 6b5e18400369f922a5ce06ee47d5293de74e23a80c997587112dde07cf9fffd3
   requires_python: '>=3.10'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.3-pyhd8ed1ab_1.conda
