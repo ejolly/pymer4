@@ -2,6 +2,12 @@
 
 *You can checkout the [development roadmap on Github](https://github.com/users/ejolly/projects/1/views/1?query=sort%3Aupdated-desc+is%3Aopen)*
 
+## 0.9.2 (May '25)
+
+## New Features
+
+- `skmer()` class that acts as a `scikit-learn` `Estimator`. See the [api](../api/models/skmer.md) for usage examples
+
 ## 0.9.1 (May '25)
 
 ### Fixes

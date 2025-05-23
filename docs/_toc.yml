@@ -27,6 +27,7 @@ parts:
         - file: api/models/glm.md
         - file: api/models/lmer.md
         - file: api/models/glmer.md
+        - file: api/models/skmer.md
       - file: api/tidystats.md
       - file: api/config.md
       - file: api/expressions.ipynb
