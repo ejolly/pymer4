@@ -7,6 +7,7 @@
 ## New Features
 
 - `skmer()` class that acts as a `scikit-learn` `Estimator`. See the [api](../api/models/skmer.md) for usage examples
+- Models have additional `.result_fit_stats` from `performance::model_performance()`, including [variance partitioning](../tutorials/03_lmms.ipynb#variance-partitioning) of multi-level models
 
 ## 0.9.1 (May '25)
 
