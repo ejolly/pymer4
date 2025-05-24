@@ -1,14 +1,14 @@
 # Installation
 
-:::{admonition} Windows Users
-:class: info, dropdown
-*Unfortunately, Windows it not officially supported as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there. Alternatively you can try to follow [this guide](https://joonro.github.io/blog/posts/install-rpy2-windows-10/) to setup an R installation with the `rpy2` Python library.*
-:::
-
 :::{admonition} **Do NOT use `pip`**
 :class: danger
 Due to the cross-language nature of `pymer4` installing via `pip` is **not officially supported**.  
 Please use one of the two options below.
+:::
+
+:::{admonition} ATTENTION: Windows Users
+:class: info, dropdown
+*Unfortunately, Windows it not officially supported as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there. Alternatively you can try to follow [this guide](https://joonro.github.io/blog/posts/install-rpy2-windows-10/) to setup an R installation with the `rpy2` Python library.*
 :::
 
 ## 1. Using Anaconda
@@ -54,8 +54,6 @@ Then just install `pymer4` using:
 pixi add pymer4
 ```
 
-### Managing your project
-
 All the changes you make with `pixi` commands like `add` modify the `pyproject.toml` file. For example, we can add additional dependencies, e.g. jupyter notebook support, plotting, etc:
 
 ```bash
@@ -97,7 +95,7 @@ ipykernel = ">=6.29.5,<7"
 seaborn = ">=0.13.2,<0.14"
 ```
 
-We can simply place this file and the associated `pixi.lock` under version control and our environment becomes fully reproducible with `pixi install`
+We can simply place this file and the associated `pixi.lock` under version control and our environment becomes fully reproducible with `pixi install` !
 
 
 ## 3. Using Google Collab

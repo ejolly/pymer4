@@ -8,7 +8,8 @@
 
 - `skmer()` class that acts as a `scikit-learn` `Estimator`. See the [api](../api/models/skmer.md) for usage examples
 - Models have additional `.result_fit_stats` from `performance::model_performance()`, including [variance partitioning](../tutorials/03_lmms.ipynb#variance-partitioning) of multi-level models
-- Added [tutorial](./installation.md#2-using-pixi) on installing `pymer4` with `pixi` as an alternative to `conda`
+- Added [tutorial](./installation.md#using-pixi) on installing `pymer4` with `pixi` as an alternative to `conda`
+- Added [tutorial](./comingfromR.md) on similarities-and-differences in coming from R
 
 ## 0.9.1 (May '25)
 

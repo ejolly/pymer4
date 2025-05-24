@@ -6,9 +6,10 @@ parts:
     chapters:
     - file: pages/installation
     - file: pages/quickstart.ipynb
+    - file: pages/comingfromR
+    - file: pages/faqs
     - file: pages/new
     - file: pages/migrating
-    - file: pages/faqs
 
   - caption: Tutorials
     maxdepth: 1
