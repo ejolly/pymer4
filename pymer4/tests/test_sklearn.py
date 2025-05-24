@@ -6,10 +6,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
+from sklearn.model_selection import LeaveOneGroupOut
 from pymer4 import load_dataset
 from scipy.stats import pearsonr
-import pytest
 
 penguins = load_dataset("penguins")
 sleep = load_dataset("sleep")
