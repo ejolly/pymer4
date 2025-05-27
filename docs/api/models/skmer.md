@@ -2,7 +2,12 @@
 
 ## Scikit-learn compatible estimators
 
-`skmer()` models adhere to the `scikit-learn` API making them compatible with all model validation, estimation, and prediction tools:
+`skmer()` models adhere to the `scikit-learn` API making them compatible with all model validation, estimation, and prediction tools. After being initialized with a formula, they should be used with the `.fit()` / `.predict()` API passing in numpy arrays of features (`X`) and observations (`Y`). 
+
+```{note}
+**Note** Multilevel models currently support just 1 random-effect term and `.fit()` expects the feautures matrix `X` to include an extra column at the end with values for this term. `.predict()` can accept an `X` that with/without a feature column for the random-effects term. If present, random-effects will be used to make predictions otherwise predictions will be made using fixed-efffects only.
+```
+
 
 ### Linear Models
 
