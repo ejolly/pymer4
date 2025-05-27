@@ -10,7 +10,6 @@
   from_recipe_dir=True,
   regex_pattern='__version__ = "([0-9.]+)"') %}
 {% set version = version_match[1] %}
-{% set git_hash = GIT_DESCRIBE_HASH if GIT_DESCRIBE_HASH is defined else GIT_FULL_HASH[:7] %}
 
 package:
   name: {{ name }}
@@ -23,7 +22,7 @@ source:
 build:
   noarch: python
   script: pip install . -vv --no-deps
-  string: {{ git_hash }}
+  string: {{ GIT_DESCRIBE_HASH }}
 
 requirements:
   host:

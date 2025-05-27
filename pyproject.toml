@@ -95,7 +95,7 @@ docs-preview = "open docs/_build/html/index.html"
 build-pip = "python -m build --sdist --wheel --outdir dist/"
 build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
-build-output = "conda-build ./conda --output"
+build-output = "conda-build ./conda --output --verify"
 build-clean = "conda-build ./conda purge-all"
 
 # You need to set the env variables $token and $file before running this command
