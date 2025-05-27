@@ -24,7 +24,7 @@ dependencies = []
 Homepage = "http://eshinjolly.com/pymer4/"
 
 [build-system]
-requires = ["setuptools>=61.0.0", "setuptools-scm", "hatchling"]
+requires = ["setuptools>=61.0.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -66,6 +66,8 @@ numpy = ">=2.2.6,<3"
 polars = ">=1.29.0,<2"
 joblib = ">=1.5.0,<2"
 pandas = ">=2.2.3,<3"
+scikit-learn = ">=1.6.1,<2"
+formulae = ">=0.5.4,<0.6"
 
 [tool.pixi.feature.dev.dependencies]
 ruff = "==0.11.0"
@@ -93,7 +95,7 @@ docs-preview = "open docs/_build/html/index.html"
 build-pip = "python -m build --sdist --wheel --outdir dist/"
 build = "conda-build ./conda -c https://conda.anaconda.org/conda-forge --verify"
 build-check = "conda-build ./conda --check"
-build-output = "conda-build ./conda --output"
+build-output = "conda-build ./conda --output --verify"
 build-clean = "conda-build ./conda purge-all"
 
 # You need to set the env variables $token and $file before running this command
@@ -104,10 +106,7 @@ upload-main = { cmd = "anaconda -t $token upload $file -l 'main'", env = { token
 # Conda-forge commands to run locally
 # sub-task 1: Render static conda-forge meta.yaml from dynamic ./conda/meta.yaml
 conda-forge-render = "conda-render ./conda -f ./conda-forge/meta.yaml"
-# sub-task 2: Update meta.yaml source to point to PyPI instead of git
-conda-forge-pypi = "VERSION=$(python -c 'from pymer4.version import __version__; print(__version__)') && sed -i '' \"s|git_url: ../|url: https://pypi.org/packages/source/p/pymer4/pymer4-$VERSION.tar.gz|\" ./conda-forge/meta.yaml && sed -i '' '/path: /d' ./conda-forge/meta.yaml"
-# sub-task 3: Calculate and set the correct SHA256 hash for the PyPI source
-conda-forge-next = "echo 'Updated ./conda-forge/meta.yaml. Next steps:\n1. Visit pypi.org and copy to sha256: under source:\n2. Copy to forked staged-recipes/recipes/pymer4/ '"
+conda-forge-next = "echo 'Updated ./conda-forge/meta.yaml. Next steps:\n1. Visit pypi.org and copy to sha256: under source:\n2. Add number:0 under build:\n3. Add license_file: LICENSE.txt under about:\n4. Remove copy_test_source_files and final under extra:\n5. Copy to forked staged-recipes/recipes/pymer4/ '"
 
 # Main task: Execute all conda-forge preparation steps in sequence
 prep-conda-forge = { depends-on = ["conda-forge-render", "conda-forge-pypi", "conda-forge-next"] }

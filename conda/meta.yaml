@@ -10,6 +10,7 @@
   from_recipe_dir=True,
   regex_pattern='__version__ = "([0-9.]+)"') %}
 {% set version = version_match[1] %}
+{% set git_hash = GIT_FULL_HASH[:7] %}
 
 package:
   name: {{ name }}
@@ -22,28 +23,26 @@ source:
 build:
   noarch: python
   script: pip install . -vv --no-deps
-  string: {{ GIT_DESCRIBE_HASH }}
+  string: {{ git_hash }}
 
 requirements:
   host:
-    - python
+    - python {{ min_python }}
     - pip
-    - numpy >=1.20
     - setuptools >=61.0.0
     - setuptools-scm
-    - hatchling
 
-# Load both Python and R requirements from pyproject.toml
   run:
     - python {{ min_python }}
     {% for dep, ver in conda_deps.items() %}
     - {{ dep }} {{ ver }}
     {% endfor %}
+    {% if pip_deps %}
     {% for dep in pip_deps %}
     - {{ dep.lower() }}
     {% endfor %}
+    {% endif %}
 
-# Run basic import tests and full test suite after building
 test:
   imports:
    - pymer4

@@ -1,14 +1,14 @@
 # Installation
 
-:::{admonition} Windows Users
-:class: info, dropdown
-*Unfortunately, Windows it not officially supported as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there. Alternatively you can try to follow [this guide](https://joonro.github.io/blog/posts/install-rpy2-windows-10/) to setup an R installation with the `rpy2` Python library.*
-:::
-
 :::{admonition} **Do NOT use `pip`**
 :class: danger
 Due to the cross-language nature of `pymer4` installing via `pip` is **not officially supported**.  
 Please use one of the two options below.
+:::
+
+:::{admonition} ATTENTION: Windows Users
+:class: info, dropdown
+*Unfortunately, Windows it not officially supported as package installation can be unreliable. We recommend using the [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) and setting up a conda install through there. Alternatively you can try to follow [this guide](https://joonro.github.io/blog/posts/install-rpy2-windows-10/) to setup an R installation with the `rpy2` Python library.*
 :::
 
 ## 1. Using Anaconda
@@ -38,12 +38,72 @@ python -c "from pymer4 import test_install; test_install()"
 The `-c conda-forge` in the the `conda` commands above ensures that additional dependencies for `pymer4` are installed via the `conda-forge` channel which contains the relevant R packages, rather than Anaconda `defaults` which does not.
 :::
 
-## 2. Using Google Collab
+## 2. Using Pixi
 
-If you are having trouble or don't want to install `pymer4` locally, you can use it in a Google Colab notebook by following the directions below. Or you can just copy the [Example Notebook](https://colab.research.google.com/drive/19D15LAid9GgqSm9kU_TXy9ERUM7mBvnN?usp=sharing) that we've setup. 
+[Pixi.sh](https://pixi.sh/latest/python/tutorial/) is a new modern Python package and environment manager that works with [`uv`]() and `conda-forge` allowing you mix-and-match `pip` and `conda` packages. It uses a `pyproject.toml` file as the *blueprints* for an *isolated* environment and python package. Rather than updating that file yourself, you use various [pixi commands](../development/design.md#additional-pixi-commands) which will keep this file up-to-date. This works similarily to [`npm`](https://www.npmjs.com/) in Javascript.
+
+After [installing pixi](https://pixi.sh/latest/#installation), you can create a fresh project called `myproject` using:
+
+```bash
+pixi init --format pyproject --channel ejolly --channel conda-forge myproject
+```
+
+Then just install `pymer4` using:
+
+```bash
+pixi add pymer4
+```
+
+All the changes you make with `pixi` commands like `add` modify the `pyproject.toml` file. For example, we can add additional dependencies, e.g. jupyter notebook support, plotting, etc:
+
+```bash
+pixi add seaborn ipykernel
+```
+
+Or packages from `pip`:
+
+```bash
+pixi add --pypi polars
+```
+
+Which will produce a file like this tracking our channels (`ejolly`, `conda-forge`, `pip`), dependencies, and versions:
+
+```toml
+[project]
+authors = [{ name = "ejolly", email = "eshin.jolly@gmail.com" }]
+name = "myproject"
+requires-python = ">= 3.11"
+version = "0.1.0"
+dependencies = ["polars"]
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.workspace]
+channels = ["ejolly", "conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+myproject = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+pymer4 = ">=0.9.1,<0.10"
+ipykernel = ">=6.29.5,<7"
+seaborn = ">=0.13.2,<0.14"
+```
+
+We can simply place this file and the associated `pixi.lock` under version control and our environment becomes fully reproducible with `pixi install` !
 
 
-### Setting up `conda` on Collab 
+## 3. Using Google Collab
+
+If you are having trouble or don't want to install `pymer4` *locally*, you can use it in a Google Colab notebook by following the directions below. Or you can just copy the [Example Notebook](https://colab.research.google.com/drive/19D15LAid9GgqSm9kU_TXy9ERUM7mBvnN?usp=sharing) that we've setup. 
+
+
+### Manually setting up `conda` on Collab 
 
 In the first cell of your note book add the following code and run it. This will cause your notebook kernel to appear to "crash" and restart - **this is expected**
 
