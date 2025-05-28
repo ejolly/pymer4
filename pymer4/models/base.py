@@ -710,14 +710,3 @@ class model(object):
             str: A natural language description of the model results
         """
         print(report_(self.r_model))
-
-    @requires_fit
-    def to_sklearn(self):
-        """Convert the fitted model to a scikit-learn compatible format.
-
-        Note: This method is not yet implemented.
-
-        Raises:
-            NotImplementedError: This method is not yet implemented
-        """
-        raise NotImplementedError("Not yet implemented")

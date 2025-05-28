@@ -56,7 +56,6 @@ As of this version, `pymer4` is now *only* installable via `conda` following the
 These following features are planned for upcoming versions in `0.9.x` line
 
 - support for `lmerControl` options
-- automatic convertion to `scikit-learn` compatible estimators via `.to_sklearn()`
 - simulation and power modules
 
 ## 0.8.2

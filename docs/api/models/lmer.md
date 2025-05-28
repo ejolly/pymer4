@@ -84,7 +84,6 @@ Helper methods for more advanced functionality and debugging
 
 ```{eval-rst}
 
-.. autofunction:: pymer4.models.base.model.to_sklearn
 .. autofunction:: pymer4.models.base.model.report
 .. autofunction:: pymer4.models.base.model.show_logs
 .. autofunction:: pymer4.models.base.model.clear_logs
