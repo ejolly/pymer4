@@ -39,3 +39,4 @@ distributions.py
 bak/
 .cursor
 test_new.py
+conda-forge/*

@@ -72,7 +72,7 @@ jobs:
 
       # upload test pypi on non-release pushes
       - name: Upload Test PyPi?
-        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
         uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           password: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -94,7 +94,7 @@ jobs:
       # because passing ANACONDA_TOKEN to pixi run upload-*
       # tasks wasn't working
       - name: Upload to Anaconda Pre-release?
-        if: ${{ github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
         shell: pixi run bash -e {0}
         run: |
           upload_file=$(pixi run build-output)
@@ -111,6 +111,7 @@ jobs:
   # of OSs and Python versions using the built package on pre-release label
   test-built-install:
     needs: pixi-test-and-docs
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

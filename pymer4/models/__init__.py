@@ -8,10 +8,11 @@ from .lm import lm
 from .glm import glm
 from .lmer import lmer
 from .glmer import glmer
+from .skmer import skmer
 from ..tidystats.stats import anova
 from ..tidystats.tables import compare_anova_table
 
-__all__ = ["lm", "glm", "lmer", "glmer", "compare"]
+__all__ = ["lm", "glm", "lmer", "glmer", "skmer", "compare"]
 
 
 def compare(*models, as_dataframe=False, test="F"):

@@ -2,10 +2,7 @@ from ..tidystats.broom import glance, augment
 from ..tidystats.stats import model_matrix, anova
 from ..tidystats.multimodel import predict, simulate
 from ..tidystats.emmeans_lib import emmeans, emtrends, joint_tests, ref_grid
-from ..tidystats.easystats import (
-    report as report_,
-    model_params,
-)
+from ..tidystats.easystats import report as report_, model_params, model_performance
 from ..tidystats.tables import anova_table
 from ..tidystats.plutils import join_on_common_cols, make_factors, unmake_factors
 from ..tidystats.bridge import con2R
@@ -263,6 +260,12 @@ class model(object):
     def _get_fit_stats(self):
         """Sets `.result_fit_stats` using broom's `glance` function."""
         self.result_fit_stats = glance(self.r_model)
+        self.result_fit_stats = self.result_fit_stats.join(
+            model_performance(self.r_model), how="left", on=["AIC", "BIC"]
+        )
+        self.result_fit_stats = self.result_fit_stats.select(
+            sorted(self.result_fit_stats.columns)
+        )
 
     def _get_fits_resids(self, type_predict):
         """Updates `.data` with model predictions and residuals using broom's `augment` function."""
