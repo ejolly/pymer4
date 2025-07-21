@@ -78,6 +78,7 @@ jupyter-book = ">=1.0.4.post1,<2"
 altair = ">=5.5.0,<6"
 scipy = ">=1.15.2,<2"
 seaborn = ">=0.13.2,<0.14"
+ipykernel = ">=6.29.5,<7"
 
 [tool.pixi.feature.dev.tasks]
 lint = "ruff check"
@@ -110,6 +111,12 @@ conda-forge-next = "echo 'Updated ./conda-forge/meta.yaml. Next steps:\n1. Visit
 
 # Main task: Execute all conda-forge preparation steps in sequence
 prep-conda-forge = { depends-on = ["conda-forge-render", "conda-forge-pypi", "conda-forge-next"] }
+
+# Setup ipykernel for interactive sessions like Jupyter notebooks/interactive 
+# window in VSCode, or REPL in Zed/Neovim
+setup-kernel = "python -m ipykernel install --user --name=\"$(basename $(pwd))\" --display-name=\"$(basename $(pwd))\""
+
+list-kernels = "jupyter kernelspec list"
 
 [tool.pixi.feature.dev.tasks.test]
 args = ['test_name']

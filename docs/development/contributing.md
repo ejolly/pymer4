@@ -16,6 +16,7 @@ Fork the `main` branch on github, clone your fork, and install the development d
   git clone https://github.com/YOURFORK/pymer4.git
   cd pymer4
   pixi install
+  pixi run setup-kernel # optional if you want to run notebooks interactively
   ```
 ## 2. Make code changes and test them
 
