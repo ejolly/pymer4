@@ -36,6 +36,7 @@ class lmer(model):
         self.ranef = None
         self.ranef_var = None
         self.convergence_status = None
+        self._REML = self._init_kwargs.get("REML", True)
 
     def _handle_rfx(self, **kwargs):
         """Sets `.ranef_var` using ``broom.mixed::tidy()`` and ``lme4::ranef()`` and ``lme4::coef()`` to get random effects and BLUPs. Manually exponentiates random effects if ``exponentiate=True`` since ``broom.mixed::tidy()`` does not do this."""

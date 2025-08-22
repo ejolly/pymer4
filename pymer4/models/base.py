@@ -128,6 +128,7 @@ class model(object):
         self.ci_type = None
         self.conf_level = None
         self.r_console = []
+        self._init_kwargs = kwargs
         callbacks.consolewrite_print = self._r_console_handler
         callbacks.consolewrite_warnerror = self._r_console_handler
         self._configure_family_link()
@@ -219,15 +220,14 @@ class model(object):
         Args:
             **kwargs: Additional keyword arguments to pass to the R model function
         """
-        init_kwargs = dict()
         if self.weights is not None:
-            init_kwargs["weights"] = self.weights
+            self._init_kwargs["weights"] = self.weights
         if self.contrasts is not None:
-            init_kwargs["contrasts"] = self._r_contrasts
+            self._init_kwargs["contrasts"] = self._r_contrasts
         if self.family is not None:
-            init_kwargs["family"] = self._r_family_link
+            self._init_kwargs["family"] = self._r_family_link
 
-        self.r_model = self._r_func(self.formula, self.data, **init_kwargs)
+        self.r_model = self._r_func(self.formula, self.data, **self._init_kwargs)
 
     def _get_params(self, conf_method, exponentiate, **kwargs):
         """Sets `.result_fit` and `.params` using `easystats` `model_parameters()` function."""
@@ -261,7 +261,11 @@ class model(object):
         """Sets `.result_fit_stats` using broom's `glance` function."""
         self.result_fit_stats = glance(self.r_model)
         self.result_fit_stats = self.result_fit_stats.join(
-            model_performance(self.r_model), how="left", on=["AIC", "BIC"]
+            model_performance(
+                self.r_model, estimator=self._init_kwargs.get("REML", True)
+            ),
+            how="left",
+            on=["AIC", "BIC"],
         )
         self.result_fit_stats = self.result_fit_stats.select(
             sorted(self.result_fit_stats.columns)
@@ -709,4 +713,5 @@ class model(object):
         Returns:
             str: A natural language description of the model results
         """
-        print(report_(self.r_model))
+        self._report = str(report_(self.r_model))
+        print(self._report)

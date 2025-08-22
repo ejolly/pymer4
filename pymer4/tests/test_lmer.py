@@ -304,6 +304,21 @@ def test_predict_simulate(sleep):
     assert pearsonr(data, sims).statistic > pearsonr(data, sims_no_rfx).statistic
 
 
+def test_reml_ml(sleep):
+    reml = lmer("Reaction ~ Days + (Days | Subject)", data=sleep)
+    reml.fit()
+    assert reml._REML
+    reml.report()
+    assert "REML" in reml._report
+
+    ml = lmer("Reaction ~ Days + (Days | Subject)", data=sleep, REML=False)
+    ml.fit()
+    assert not ml._REML
+    assert not ml._init_kwargs["REML"]
+    ml.report()
+    assert "REML" not in ml._report
+
+
 @pytest.mark.skip(reason="lmer control options are WIP")
 def test_control_options(sleep):
     from pymer4.tidystats.lmerTest import lmer_control

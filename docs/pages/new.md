@@ -2,6 +2,20 @@
 
 *You can checkout the [development roadmap on Github](https://github.com/users/ejolly/projects/1/views/1?query=sort%3Aupdated-desc+is%3Aopen)*
 
+## 0.9.3 (Sep '25)
+
+## New
+
+All model classes gain the following new private attributes for convenience:  
+- `._init_kwargs` to track initialization arguments passed to `lm(), lmer()`, etc in R  
+- `._REML` to track whether REML or ML estimation was used (`lmer` models only)
+- `._report` the string printed by the `.report()` method (which returns `None`) 
+
+## Fixes
+
+- [#153](https://github.com/ejolly/pymer4/issues/153) all models now properly support R keyword arguments at initialization time, which is most useful for controlling REML vs ML estimation in `lmer4` models, i.e. `lmer('y~x + (1|x)', data=data, REML=False)`  
+
+
 ## 0.9.2 (May '25)
 
 ## New
