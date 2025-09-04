@@ -73,7 +73,7 @@ jobs:
       # upload test pypi on non-release pushes
       - name: Upload Test PyPi?
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name != 'release' || inputs.upload_anaconda == 'pre-release' }}
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           password: ${{ secrets.TEST_PYPI_TOKEN }}
           verbose: true
@@ -84,7 +84,7 @@ jobs:
       # upload real pypi on release or when manually triggered
       - name: Upload Real PyPi?
         if: ${{ github.event_name == 'release' || inputs.upload_anaconda == 'main' }}
-        uses: pypa/gh-action-pypi-publish@v1.12.4
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
