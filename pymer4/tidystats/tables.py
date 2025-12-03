@@ -69,7 +69,7 @@ def summary_lm_table(model, decimals=2):
 
     table = model.result_fit
     stars = np.array(list(map(_sig_stars, model.result_fit["p_value"].to_numpy())))
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     non_numeric = ["term", "stars", "p_value"]
     pcol = "p_value"
     table = table.with_columns(
@@ -171,7 +171,7 @@ def summary_glm_table(model, show_odds=False, decimals=2):
     else:
         table = model.result_fit
     stars = np.array(list(map(_sig_stars, model.result_fit["p_value"].to_numpy())))
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     non_numeric = ["term", "stars", "p_value"]
     pcol = "p_value"
     table = table.with_columns(
@@ -340,7 +340,7 @@ def summary_lmm_table(model, decimals=2):
         """
         )
 
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     non_numeric = ["rfx", "statistic", "param", "stars", "p_value"]
 
     out = (
@@ -480,7 +480,7 @@ def summary_glmm_table(model, show_odds=False, decimals=2):
         """
         )
 
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     non_numeric = ["rfx", "statistic", "param", "stars", "p_value"]
 
     out = (
@@ -518,7 +518,7 @@ def summary_glmm_table(model, show_odds=False, decimals=2):
 
 def anova_table(model, decimals=2):
     stars = np.array(list(map(_sig_stars, model.result_anova["p_value"].to_numpy())))
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     pcol = "p_value"
     table = model.result_anova.with_columns(
         pl.when(col(pcol).lt(0.001).and_(col(pcol).gt(0.0)))
@@ -554,22 +554,23 @@ def anova_table(model, decimals=2):
 def compare_anova_table(result, *models, decimals=2):
     subtitle = ""
     for i, m in enumerate(models):
+        formula = m.formula.replace('*', '\\*')
         if m.family:
             if hasattr(m, "ranef"):
-                subtitle += f"Model {i + 1}: glmer({m.formula})   \n"
+                subtitle += f"Model {i + 1}: glmer({formula})   \n"
             else:
-                subtitle += f"Model {i + 1}: glm({m.formula})   \n"
+                subtitle += f"Model {i + 1}: glm({formula})   \n"
         else:
             if hasattr(m, "ranef"):
-                subtitle += f"Model {i + 1}: lmer({m.formula})   \n"
+                subtitle += f"Model {i + 1}: lmer({formula})   \n"
             else:
-                subtitle += f"Model {i + 1}: lm({m.formula})   \n"
+                subtitle += f"Model {i + 1}: lm({formula})   \n"
 
     subtitle = md(subtitle)
     # NOTE: we use the last column because depending on the test type the name changes
     # PR(>F) or PR(>Chisq)
     stars = np.array(list(map(_sig_stars, result[:, -1].to_numpy())))
-    sig_codes = md("Signif. codes: *0 *** 0.001 ** 0.01 * 0.05 . 0.1*")
+    sig_codes = md("Signif. codes: *0 \\*\\*\\* 0.001 \\*\\* 0.01 \\* 0.05 . 0.1*")
     ids = np.array(range(len(models))) + 1
 
     pcol = result.columns[-1]
