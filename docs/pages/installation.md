@@ -25,7 +25,7 @@ conda install -c ejolly -c conda-forge pymer4
 To create a new environment with additional scientific Python libraries
 
 ```bash
-conda create --n pymer4 -c ejolly -c conda-forge pymer4
+conda create -n pymer4 -c ejolly -c conda-forge pymer4
 ```
 
 You can test the installation by running the following command in a terminal within the environment you installed `pymer4`
